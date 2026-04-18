@@ -15,7 +15,7 @@ Marketplace Produk & Jasa Antar BUMDes di Jawa Barat
 7. Yunita Nur ‘Aini  
 
 **Organisasi:** Prodi Sistem Informasi - Kelas A2 - Universitas Kebangsaan Republik Indonesia  
-**Tanggal:** April 2025  
+**Tanggal:** April 2026
 
 ---
 
