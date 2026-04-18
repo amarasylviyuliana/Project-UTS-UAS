@@ -23,7 +23,7 @@ Marketplace Produk & Jasa Antar BUMDes di Jawa Barat
 
 | Nama | Tanggal | Alasan Perubahan | Versi |
 |------|--------|----------------|------|
-| Tim Pengembang | April 2025 | Pembuatan dokumen awal | 1.0 |
+| Tim Pengembang | April 2026 | Pembuatan dokumen awal | 1.0 |
 
 ---
 
