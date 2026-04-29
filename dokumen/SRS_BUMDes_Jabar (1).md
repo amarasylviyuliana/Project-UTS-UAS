@@ -264,6 +264,7 @@ Sistem terdiri dari:
 - Rancangan Arsitektur teknologi
 - UI
 - Class Diagram
+- Sequence Diagram
 - Component Diagram
 - Deployment Diagram
 
