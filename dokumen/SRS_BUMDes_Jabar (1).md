@@ -259,9 +259,13 @@ Sistem terdiri dari:
 
 # Lampiran B - Model
 - Use Case  
-- ERD  
-- Sequence  
-- Deployment  
+- Perancangan Database 
+- Perancangan Arsitektur Sistem
+- Rancangan Arsitektur teknologi
+- UI
+- Class Diagram
+- Component Diagram
+- Deployment Diagram
 
 ---
 
