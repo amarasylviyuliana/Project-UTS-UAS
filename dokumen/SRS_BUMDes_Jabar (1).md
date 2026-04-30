@@ -258,13 +258,12 @@ Sistem terdiri dari:
 ---
 
 # Lampiran B - Model
-- Use Case  
+- Use Case
 - Perancangan Database
   <img width="400" height="500" alt="ERDDiagram1" src="https://github.com/user-attachments/assets/f1f961db-c91e-4952-9c12-599af1c6842e" />
-
+- Actifity Diagram
 - Perancangan Arsitektur Sistem
 - Rancangan Arsitektur teknologi
-- UI
 - Class Diagram
 - Sequence Diagram
 - Component Diagram
