@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Topology — BUMDes Jabar (Cisco Style)</title>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: #f0f2f0;
+    font-family: 'Barlow Condensed', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .hdr {
+    background: #1a237e;
+    color: white;
+    padding: 12px 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 3px solid #e53935;
+  }
+  .hdr-logo {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: #fff;
+  }
+  .hdr-logo span { color: #90caf9; }
+  .hdr-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #e3f2fd;
+    letter-spacing: 1px;
+  }
+  .hdr-sub {
+    font-family: 'Courier Prime', monospace;
+    font-size: 10px;
+    color: #7986cb;
+    margin-top: 2px;
+  }
+  .hdr-right {
+    margin-left: auto;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .hdr-badge {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #e3f2fd;
+    font-family: 'Courier Prime', monospace;
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 3px;
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    background: #fff;
+    border-bottom: 2px solid #e0e0e0;
+    display: flex;
+    padding: 0 24px;
+    overflow-x: auto;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .tab {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 10px 18px;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    color: #78909c;
+    white-space: nowrap;
+    background: none;
+    border-top: none; border-left: none; border-right: none;
+    transition: all 0.15s;
+  }
+  .tab:hover { color: #1a237e; }
+  .tab.active { color: #1a237e; border-bottom-color: #1a237e; }
+
+  /* ── MAIN CANVAS ── */
+  .canvas {
+    padding: 20px 24px 40px;
+  }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── DIAGRAM CONTAINER ── */
+  .diagram-box {
+    background: #ffffff;
+    border: 1px solid #cfd8dc;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  .diagram-toolbar {
+    background: #eceff1;
+    border-bottom: 1px solid #cfd8dc;
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .toolbar-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .toolbar-title {
+    font-family: 'Courier Prime', monospace;
+    font-size: 11px;
+    color: #546e7a;
+    margin-left: 4px;
+  }
+  .toolbar-tag {
+    margin-left: auto;
+    font-family: 'Courier Prime', monospace;
+    font-size: 10px;
+    color: #90a4ae;
+  }
+
+  /* ── LEGEND ── */
+  .legend {
+    background: #fafafa;
+    border-top: 1px solid #e0e0e0;
+    padding: 10px 16px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .leg { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #546e7a; font-family: 'Courier Prime', monospace; }
+  .leg-line { width: 24px; height: 2px; }
+  .leg-dash { width: 24px; height: 2px; background: repeating-linear-gradient(90deg,#90a4ae 0,#90a4ae 4px,transparent 4px,transparent 8px); }
+
+  /* ── NOTES BOX ── */
+  .notes-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .note-card {
+    background: #fff;
+    border: 1px solid #cfd8dc;
+    border-left: 4px solid #1a237e;
+    border-radius: 3px;
+    padding: 10px 14px;
+    flex: 1;
+    min-width: 200px;
+  }
+  .note-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #1a237e;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .note-item {
+    font-family: 'Courier Prime', monospace;
+    font-size: 10px;
+    color: #546e7a;
+    padding: 2px 0;
+    display: flex;
+    gap: 6px;
+  }
+  .note-item::before { content: '▸'; color: #1565c0; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div>
+    <div class="hdr-logo">NET<span>WORK</span> DIAGRAM</div>
+    <div class="hdr-title">BUMDes Jabar — System Architecture Topology</div>
+    <div class="hdr-sub">// Cisco Network Diagram Style · Marketplace Platform · Jawa Barat</div>
+  </div>
+  <div class="hdr-right">
+    <span class="hdr-badge">Rev 1.0</span>
+    <span class="hdr-badge">April 2025</span>
+    <span class="hdr-badge">Kelompok 5</span>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="sw('net')">Network Topology</button>
+  <button class="tab" onclick="sw('app')">Application Architecture</button>
+  <button class="tab" onclick="sw('deploy')">Server Deployment</button>
+  <button class="tab" onclick="sw('sec')">Security Zones</button>
+</div>
+
+<div class="canvas">
+
+<!-- ════════════════════════════════
+     TAB 1 — NETWORK TOPOLOGY
+════════════════════════════════ -->
+<div class="panel active" id="panel-net">
+  <div class="diagram-box">
+    <div class="diagram-toolbar">
+      <div class="toolbar-dot" style="background:#ef5350"></div>
+      <div class="toolbar-dot" style="background:#ffa726"></div>
+      <div class="toolbar-dot" style="background:#66bb6a"></div>
+      <span class="toolbar-title">bumdes-jabar / network-topology.xml</span>
+      <span class="toolbar-tag">CISCO PACKET TRACER STYLE</span>
+    </div>
+
+    <svg viewBox="0 0 1100 760" xmlns="http://www.w3.org/2000/svg"
+         style="width:100%; height:auto; background:#fff; display:block;">
+      <defs>
+        <!-- Arrow markers -->
+        <marker id="a1" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0,0 8,3 0,6" fill="#1565c0"/>
+        </marker>
+        <marker id="a2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0,0 8,3 0,6" fill="#e53935"/>
+        </marker>
+        <marker id="a3" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0,0 8,3 0,6" fill="#2e7d32"/>
+        </marker>
+        <marker id="a4" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0,0 8,3 0,6" fill="#f57f17"/>
+        </marker>
+        <marker id="a5" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0,0 8,3 0,6" fill="#6a1b9a"/>
+        </marker>
+        <!-- Grid pattern -->
+        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f5f5f5" stroke-width="0.5"/>
+        </pattern>
+      </defs>
+
+      <!-- Grid background -->
+      <rect width="1100" height="760" fill="url(#grid)"/>
+
+      <!-- ══ ZONE BACKGROUNDS ══ -->
+      <!-- Internet Zone -->
+      <rect x="20" y="20" width="200" height="720" rx="6" fill="#fff8e1" stroke="#f9a825" stroke-width="1.5" stroke-dasharray="6,3"/>
+      <text x="120" y="42" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#f57f17" letter-spacing="2">INTERNET ZONE</text>
+
+      <!-- DMZ -->
+      <rect x="240" y="20" width="200" height="720" rx="6" fill="#fce4ec" stroke="#e91e63" stroke-width="1.5" stroke-dasharray="6,3"/>
+      <text x="340" y="42" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#c2185b" letter-spacing="2">DMZ</text>
+
+      <!-- App Zone -->
+      <rect x="460" y="20" width="280" height="720" rx="6" fill="#e8eaf6" stroke="#3f51b5" stroke-width="1.5" stroke-dasharray="6,3"/>
+      <text x="600" y="42" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#1a237e" letter-spacing="2">APPLICATION ZONE</text>
+
+      <!-- Data Zone -->
+      <rect x="760" y="20" width="200" height="720" rx="6" fill="#e8f5e9" stroke="#43a047" stroke-width="1.5" stroke-dasharray="6,3"/>
+      <text x="860" y="42" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#2e7d32" letter-spacing="2">DATA ZONE</text>
+
+      <!-- External Zone -->
+      <rect x="980" y="20" width="105" height="720" rx="6" fill="#f3e5f5" stroke="#8e24aa" stroke-width="1.5" stroke-dasharray="6,3"/>
+      <text x="1032" y="42" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="#6a1b9a" letter-spacing="1">EXT. SVC</text>
+
+      <!-- ══ CISCO DEVICE: INTERNET CLOUD ══ -->
+      <!-- Internet Cloud shape -->
+      <ellipse cx="120" cy="110" rx="60" ry="30" fill="#fff9c4" stroke="#f9a825" stroke-width="2"/>
+      <ellipse cx="90"  cy="100" rx="28" ry="22" fill="#fff9c4" stroke="#f9a825" stroke-width="2"/>
+      <ellipse cx="148" cy="100" rx="28" ry="22" fill="#fff9c4" stroke="#f9a825" stroke-width="2"/>
+      <ellipse cx="120" cy="88"  rx="32" ry="22" fill="#fff9c4" stroke="#f9a825" stroke-width="2"/>
+      <text x="120" y="117" text-anchor="middle" font-family="'Barlow Condensed'" font-size="12" font-weight="700" fill="#e65100">INTERNET</text>
+      <text x="120" y="130" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#f57f17">Public Network</text>
+
+      <!-- ══ MOBILE CLIENTS ══ -->
+      <!-- Android/iOS phones: Cisco mobile icon style -->
+      <!-- Phone icon group: Pembeli -->
+      <g transform="translate(50,200)">
+        <!-- phone body -->
+        <rect x="0" y="0" width="30" height="50" rx="4" fill="#1565c0" stroke="#0d47a1" stroke-width="1.5"/>
+        <rect x="3" y="5" width="24" height="34" rx="1" fill="#e3f2fd"/>
+        <rect x="11" y="42" width="8" height="4" rx="2" fill="#90caf9"/>
+        <text x="15" y="27" text-anchor="middle" font-size="10" fill="#1565c0">📱</text>
+        <text x="15" y="65" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="#1a237e">PEMBELI</text>
+        <text x="15" y="75" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Android/iOS</text>
+      </g>
+
+      <!-- Phone: Penjual BUMDes -->
+      <g transform="translate(105,200)">
+        <rect x="0" y="0" width="30" height="50" rx="4" fill="#2e7d32" stroke="#1b5e20" stroke-width="1.5"/>
+        <rect x="3" y="5" width="24" height="34" rx="1" fill="#e8f5e9"/>
+        <rect x="11" y="42" width="8" height="4" rx="2" fill="#a5d6a7"/>
+        <text x="15" y="27" text-anchor="middle" font-size="10" fill="#2e7d32">🏪</text>
+        <text x="15" y="65" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="#1b5e20">PENJUAL</text>
+        <text x="15" y="75" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">BUMDes</text>
+      </g>
+
+      <!-- Phone: Admin -->
+      <g transform="translate(50,320)">
+        <rect x="0" y="0" width="30" height="50" rx="4" fill="#6a1b9a" stroke="#4a148c" stroke-width="1.5"/>
+        <rect x="3" y="5" width="24" height="34" rx="1" fill="#f3e5f5"/>
+        <rect x="11" y="42" width="8" height="4" rx="2" fill="#ce93d8"/>
+        <text x="15" y="27" text-anchor="middle" font-size="10" fill="#6a1b9a">🔑</text>
+        <text x="15" y="65" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="#4a148c">ADMIN</text>
+        <text x="15" y="75" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Platform</text>
+      </g>
+
+      <!-- Phone: Guest -->
+      <g transform="translate(105,320)">
+        <rect x="0" y="0" width="30" height="50" rx="4" fill="#90a4ae" stroke="#607d8b" stroke-width="1.5"/>
+        <rect x="3" y="5" width="24" height="34" rx="1" fill="#eceff1"/>
+        <rect x="11" y="42" width="8" height="4" rx="2" fill="#b0bec5"/>
+        <text x="15" y="27" text-anchor="middle" font-size="10" fill="#607d8b">👤</text>
+        <text x="15" y="65" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="#546e7a">GUEST</text>
+        <text x="15" y="75" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Read-only</text>
+      </g>
+
+      <!-- ══ CISCO FIREWALL (ASA style) ══ -->
+      <!-- Firewall: rectangle with diagonal lines = Cisco ASA -->
+      <g transform="translate(258,180)">
+        <!-- ASA firewall icon -->
+        <rect x="0" y="0" width="70" height="50" rx="3" fill="#37474f" stroke="#263238" stroke-width="2"/>
+        <line x1="0" y1="0" x2="70" y2="50" stroke="#ef5350" stroke-width="2" opacity="0.6"/>
+        <line x1="70" y1="0" x2="0" y2="50" stroke="#ef5350" stroke-width="2" opacity="0.6"/>
+        <rect x="8" y="8" width="54" height="34" rx="2" fill="none" stroke="#ef5350" stroke-width="1" stroke-dasharray="3,2"/>
+        <text x="35" y="65" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#c62828">FIREWALL</text>
+        <text x="35" y="75" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">ASA 5505</text>
+        <text x="35" y="85" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#90a4ae">Port :80/:443</text>
+      </g>
+
+      <!-- ══ CISCO ROUTER (Nginx) ══ -->
+      <!-- Cisco router icon: circle with lines -->
+      <g transform="translate(268,370)">
+        <circle cx="25" cy="25" r="25" fill="#1a237e" stroke="#0d1b5e" stroke-width="2"/>
+        <!-- Router arrows inside circle -->
+        <line x1="8" y1="25" x2="42" y2="25" stroke="white" stroke-width="1.5"/>
+        <line x1="8" y1="18" x2="42" y2="18" stroke="white" stroke-width="1.5"/>
+        <line x1="8" y1="32" x2="42" y2="32" stroke="white" stroke-width="1.5"/>
+        <polygon points="42,18 37,14 37,22" fill="white"/>
+        <polygon points="8,25 13,21 13,29" fill="white"/>
+        <polygon points="42,32 37,28 37,36" fill="white"/>
+        <text x="25" y="65" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#1a237e">NGINX</text>
+        <text x="25" y="75" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">Reverse Proxy</text>
+        <text x="25" y="85" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#90a4ae">TLS Termination</text>
+      </g>
+
+      <!-- ══ LOAD BALANCER (Cisco style) ══ -->
+      <g transform="translate(258,530)">
+        <rect x="0" y="0" width="70" height="40" rx="20" fill="#0277bd" stroke="#01579b" stroke-width="2"/>
+        <line x1="10" y1="20" x2="60" y2="20" stroke="white" stroke-width="2"/>
+        <circle cx="15" cy="12" r="4" fill="#4fc3f7"/>
+        <circle cx="35" cy="20" r="4" fill="#4fc3f7"/>
+        <circle cx="55" cy="12" r="4" fill="#4fc3f7"/>
+        <circle cx="55" cy="28" r="4" fill="#4fc3f7"/>
+        <text x="35" y="55" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="#0277bd">LOAD BALANCER</text>
+        <text x="35" y="65" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">API Gateway</text>
+      </g>
+
+      <!-- ══ APP SERVERS (Laravel) ══ -->
+      <!-- Server icon: Cisco server style -->
+      <!-- Auth Server -->
+      <g transform="translate(470,130)">
+        <rect x="0" y="0" width="60" height="44" rx="3" fill="#283593" stroke="#1a237e" stroke-width="1.5"/>
+        <rect x="4" y="6"  width="52" height="6" rx="1" fill="#5c6bc0"/>
+        <rect x="4" y="16" width="52" height="6" rx="1" fill="#5c6bc0"/>
+        <rect x="4" y="26" width="52" height="6" rx="1" fill="#5c6bc0"/>
+        <circle cx="54" cy="9"  r="3" fill="#69f0ae"/>
+        <circle cx="54" cy="19" r="3" fill="#69f0ae"/>
+        <circle cx="54" cy="29" r="3" fill="#ffd740"/>
+        <text x="30" y="60" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#1a237e">AUTH-SRV</text>
+        <text x="30" y="70" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Laravel/JWT</text>
+      </g>
+
+      <!-- Marketplace Server -->
+      <g transform="translate(560,130)">
+        <rect x="0" y="0" width="60" height="44" rx="3" fill="#283593" stroke="#1a237e" stroke-width="1.5"/>
+        <rect x="4" y="6"  width="52" height="6" rx="1" fill="#5c6bc0"/>
+        <rect x="4" y="16" width="52" height="6" rx="1" fill="#5c6bc0"/>
+        <rect x="4" y="26" width="52" height="6" rx="1" fill="#5c6bc0"/>
+        <circle cx="54" cy="9"  r="3" fill="#69f0ae"/>
+        <circle cx="54" cy="19" r="3" fill="#69f0ae"/>
+        <circle cx="54" cy="29" r="3" fill="#69f0ae"/>
+        <text x="30" y="60" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#1a237e">MARKET-SRV</text>
+        <text x="30" y="70" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Products/Stores</text>
+      </g>
+
+      <!-- Order Server -->
+      <g transform="translate(470,270)">
+        <rect x="0" y="0" width="60" height="44" rx="3" fill="#283593" stroke="#1a237e" stroke-width="1.5"/>
+        <rect x="4" y="6"  width="52" height="6" rx="1" fill="#5c6bc0"/>
+        <rect x="4" y="16" width="52" height="6" rx="1" fill="#5c6bc0"/>
+        <rect x="4" y="26" width="52" height="6" rx="1" fill="#5c6bc0"/>
+        <circle cx="54" cy="9"  r="3" fill="#69f0ae"/>
+        <circle cx="54" cy="19" r="3" fill="#ffd740"/>
+        <circle cx="54" cy="29" r="3" fill="#69f0ae"/>
+        <text x="30" y="60" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#1a237e">ORDER-SRV</text>
+        <text x="30" y="70" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Orders/Cart</text>
+      </g>
+
+      <!-- Payment Server -->
+      <g transform="translate(560,270)">
+        <rect x="0" y="0" width="60" height="44" rx="3" fill="#283593" stroke="#1a237e" stroke-width="1.5"/>
+        <rect x="4" y="6"  width="52" height="6" rx="1" fill="#5c6bc0"/>
+        <rect x="4" y="16" width="52" height="6" rx="1" fill="#5c6bc0"/>
+        <rect x="4" y="26" width="52" height="6" rx="1" fill="#5c6bc0"/>
+        <circle cx="54" cy="9"  r="3" fill="#69f0ae"/>
+        <circle cx="54" cy="19" r="3" fill="#69f0ae"/>
+        <circle cx="54" cy="29" r="3" fill="#ffd740"/>
+        <text x="30" y="60" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#1a237e">PAYMENT-SRV</text>
+        <text x="30" y="70" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Transfer/Upload</text>
+      </g>
+
+      <!-- Report Server -->
+      <g transform="translate(515,410)">
+        <rect x="0" y="0" width="60" height="44" rx="3" fill="#283593" stroke="#1a237e" stroke-width="1.5"/>
+        <rect x="4" y="6"  width="52" height="6" rx="1" fill="#5c6bc0"/>
+        <rect x="4" y="16" width="52" height="6" rx="1" fill="#5c6bc0"/>
+        <rect x="4" y="26" width="52" height="6" rx="1" fill="#5c6bc0"/>
+        <circle cx="54" cy="9"  r="3" fill="#69f0ae"/>
+        <circle cx="54" cy="19" r="3" fill="#69f0ae"/>
+        <circle cx="54" cy="29" r="3" fill="#69f0ae"/>
+        <text x="30" y="60" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#1a237e">REPORT-SRV</text>
+        <text x="30" y="70" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Analytics/Log</text>
+      </g>
+
+      <!-- PHP-FPM Worker -->
+      <g transform="translate(490,560)">
+        <rect x="0" y="0" width="80" height="36" rx="3" fill="#004d40" stroke="#00251a" stroke-width="1.5"/>
+        <rect x="6" y="6" width="16" height="24" rx="1" fill="#1de9b6" opacity="0.5"/>
+        <rect x="26" y="10" width="16" height="20" rx="1" fill="#1de9b6" opacity="0.6"/>
+        <rect x="46" y="8" width="16" height="22" rx="1" fill="#1de9b6" opacity="0.7"/>
+        <rect x="60" y="6" width="14" height="24" rx="1" fill="#1de9b6" opacity="0.4"/>
+        <text x="40" y="52" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="#004d40">PHP-FPM WORKERS</text>
+        <text x="40" y="62" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">PHP 8.2 · Port 9000</text>
+      </g>
+
+      <!-- ══ DATABASE SERVER ══ -->
+      <!-- Cisco database cylinder icon -->
+      <g transform="translate(775,200)">
+        <!-- Cylinder top -->
+        <ellipse cx="35" cy="14" rx="35" ry="10" fill="#1b5e20" stroke="#0a3d0a" stroke-width="1.5"/>
+        <!-- Cylinder body -->
+        <rect x="0" y="14" width="70" height="55" fill="#2e7d32" stroke="#1b5e20" stroke-width="1.5"/>
+        <!-- Cylinder bottom -->
+        <ellipse cx="35" cy="69" rx="35" ry="10" fill="#1b5e20" stroke="#0a3d0a" stroke-width="1.5"/>
+        <!-- Cylinder highlight lines -->
+        <ellipse cx="35" cy="28" rx="35" ry="8" fill="none" stroke="#4caf50" stroke-width="1" opacity="0.6"/>
+        <ellipse cx="35" cy="42" rx="35" ry="8" fill="none" stroke="#4caf50" stroke-width="1" opacity="0.6"/>
+        <ellipse cx="35" cy="56" rx="35" ry="8" fill="none" stroke="#4caf50" stroke-width="1" opacity="0.6"/>
+        <text x="35" y="45" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="white">MySQL 8.0</text>
+        <text x="35" y="85" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#2e7d32">DB-PRIMARY</text>
+        <text x="35" y="95" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Docker Container</text>
+        <text x="35" y="105" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#90a4ae">:3306 (internal)</text>
+      </g>
+
+      <!-- DB Backup -->
+      <g transform="translate(775,400)">
+        <ellipse cx="35" cy="14" rx="35" ry="10" fill="#37474f" stroke="#263238" stroke-width="1.5"/>
+        <rect x="0" y="14" width="70" height="40" fill="#455a64" stroke="#37474f" stroke-width="1.5"/>
+        <ellipse cx="35" cy="54" rx="35" ry="10" fill="#37474f" stroke="#263238" stroke-width="1.5"/>
+        <text x="35" y="38" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">BACKUP</text>
+        <text x="35" y="70" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="#546e7a">DB-BACKUP</text>
+        <text x="35" y="80" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#90a4ae">Daily cron mysqldump</text>
+      </g>
+
+      <!-- File Storage -->
+      <g transform="translate(775,560)">
+        <!-- NAS icon style -->
+        <rect x="0" y="0" width="70" height="60" rx="3" fill="#e65100" stroke="#bf360c" stroke-width="1.5"/>
+        <rect x="6" y="8"  width="58" height="10" rx="1" fill="#ff8f00"/>
+        <rect x="6" y="22" width="58" height="10" rx="1" fill="#ff8f00"/>
+        <rect x="6" y="36" width="58" height="10" rx="1" fill="#ff8f00"/>
+        <circle cx="62" cy="13" r="3" fill="#69f0ae"/>
+        <circle cx="62" cy="27" r="3" fill="#69f0ae"/>
+        <circle cx="62" cy="41" r="3" fill="#ffd740"/>
+        <text x="35" y="75" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#e65100">FILE STORAGE</text>
+        <text x="35" y="85" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Photos · Receipts</text>
+      </g>
+
+      <!-- ══ EXTERNAL SERVICES ══ -->
+      <!-- SMTP Cloud -->
+      <g transform="translate(985,150)">
+        <ellipse cx="50" cy="30" rx="45" ry="22" fill="#e1bee7" stroke="#8e24aa" stroke-width="1.5"/>
+        <ellipse cx="28" cy="22" rx="22" ry="17" fill="#e1bee7" stroke="#8e24aa" stroke-width="1.5"/>
+        <ellipse cx="68" cy="22" rx="22" ry="17" fill="#e1bee7" stroke="#8e24aa" stroke-width="1.5"/>
+        <ellipse cx="50" cy="14"  rx="24" ry="17" fill="#e1bee7" stroke="#8e24aa" stroke-width="1.5"/>
+        <text x="50" y="35" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="#4a148c">SMTP</text>
+        <text x="50" y="55" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="#6a1b9a">MAIL SERVER</text>
+        <text x="50" y="65" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#9c27b0">Gmail/Mailtrap</text>
+      </g>
+
+      <!-- FCM Cloud -->
+      <g transform="translate(985,380)">
+        <ellipse cx="50" cy="30" rx="45" ry="22" fill="#e1bee7" stroke="#8e24aa" stroke-width="1.5"/>
+        <ellipse cx="28" cy="22" rx="22" ry="17" fill="#e1bee7" stroke="#8e24aa" stroke-width="1.5"/>
+        <ellipse cx="68" cy="22" rx="22" ry="17" fill="#e1bee7" stroke="#8e24aa" stroke-width="1.5"/>
+        <ellipse cx="50" cy="14"  rx="24" ry="17" fill="#e1bee7" stroke="#8e24aa" stroke-width="1.5"/>
+        <text x="50" y="35" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="#4a148c">FCM</text>
+        <text x="50" y="55" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="#6a1b9a">PUSH NOTIF</text>
+        <text x="50" y="65" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#9c27b0">Firebase (optional)</text>
+      </g>
+
+      <!-- ══ CONNECTION LINES ══ -->
+      <!-- Clients → Firewall (HTTPS) -->
+      <line x1="80" y1="200" x2="258" y2="210" stroke="#1565c0" stroke-width="2" marker-end="url(#a1)"/>
+      <text x="168" y="198" font-family="'Courier Prime'" font-size="9" fill="#1565c0">HTTPS/TLS</text>
+
+      <line x1="140" y1="225" x2="258" y2="220" stroke="#1565c0" stroke-width="2" marker-end="url(#a1)"/>
+
+      <line x1="80" y1="320" x2="258" y2="230" stroke="#6a1b9a" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#a1)"/>
+      <line x1="140" y1="340" x2="258" y2="235" stroke="#90a4ae" stroke-width="1" stroke-dasharray="4,4" marker-end="url(#a1)"/>
+
+      <!-- Internet cloud → Firewall -->
+      <line x1="120" y1="140" x2="258" y2="195" stroke="#f57f17" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#a4)"/>
+
+      <!-- Firewall → Nginx Router -->
+      <line x1="293" y1="230" x2="293" y2="370" stroke="#e53935" stroke-width="2.5" marker-end="url(#a2)"/>
+      <text x="298" y="305" font-family="'Courier Prime'" font-size="9" fill="#c62828">Port 443</text>
+
+      <!-- Nginx → Load Balancer -->
+      <line x1="293" y1="420" x2="293" y2="530" stroke="#0277bd" stroke-width="2" marker-end="url(#a1)"/>
+      <text x="298" y="480" font-family="'Courier Prime'" font-size="9" fill="#0277bd">FastCGI</text>
+
+      <!-- Router/LB → App Servers -->
+      <line x1="330" y1="395" x2="470" y2="155" stroke="#1565c0" stroke-width="1.5" marker-end="url(#a1)"/>
+      <line x1="330" y1="395" x2="560" y2="155" stroke="#1565c0" stroke-width="1.5" marker-end="url(#a1)"/>
+      <line x1="330" y1="395" x2="470" y2="292" stroke="#1565c0" stroke-width="1.5" marker-end="url(#a1)"/>
+      <line x1="330" y1="395" x2="560" y2="292" stroke="#1565c0" stroke-width="1.5" marker-end="url(#a1)"/>
+      <line x1="330" y1="395" x2="515" y2="432" stroke="#1565c0" stroke-width="1.5" marker-end="url(#a1)"/>
+
+      <!-- App Servers internal connections -->
+      <line x1="530" y1="174" x2="530" y2="270" stroke="#3f51b5" stroke-width="1" stroke-dasharray="4,3"/>
+      <line x1="590" y1="174" x2="590" y2="270" stroke="#3f51b5" stroke-width="1" stroke-dasharray="4,3"/>
+      <line x1="530" y1="314" x2="545" y2="410" stroke="#3f51b5" stroke-width="1" stroke-dasharray="4,3"/>
+
+      <!-- PHP-FPM Worker bar -->
+      <line x1="500" y1="174" x2="530" y2="560" stroke="#004d40" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+      <line x1="590" y1="174" x2="570" y2="560" stroke="#004d40" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+
+      <!-- App Servers → MySQL DB -->
+      <line x1="640" y1="155" x2="775" y2="225" stroke="#2e7d32" stroke-width="2" marker-end="url(#a3)"/>
+      <line x1="640" y1="292" x2="775" y2="250" stroke="#2e7d32" stroke-width="2" marker-end="url(#a3)"/>
+      <line x1="640" y1="432" x2="775" y2="270" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#a3)"/>
+      <text x="714" y="218" font-family="'Courier Prime'" font-size="9" fill="#2e7d32">Eloquent ORM</text>
+
+      <!-- DB → Backup -->
+      <line x1="845" y1="280" x2="845" y2="400" stroke="#546e7a" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#a1)"/>
+      <text x="850" y="344" font-family="'Courier Prime'" font-size="9" fill="#546e7a">daily dump</text>
+
+      <!-- Payment Server → File Storage -->
+      <line x1="640" y1="315" x2="775" y2="590" stroke="#e65100" stroke-width="1.5" marker-end="url(#a1)"/>
+
+      <!-- Auth → SMTP -->
+      <line x1="740" y1="155" x2="985" y2="185" stroke="#6a1b9a" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#a5)"/>
+      <text x="870" y="165" font-family="'Courier Prime'" font-size="9" fill="#8e24aa">SMTP/TLS</text>
+
+      <!-- Order → FCM -->
+      <line x1="740" y1="295" x2="985" y2="410" stroke="#6a1b9a" stroke-width="1" stroke-dasharray="5,3" marker-end="url(#a5)"/>
+      <text x="870" y="380" font-family="'Courier Prime'" font-size="9" fill="#8e24aa">FCM API</text>
+
+      <!-- ══ IP / PORT LABELS ══ -->
+      <rect x="240" y="640" width="640" height="100" rx="4" fill="#eceff1" stroke="#cfd8dc" stroke-width="1"/>
+      <text x="260" y="658" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#1a237e" letter-spacing="1">ADDRESS TABLE</text>
+      <text x="260" y="674" font-family="'Courier Prime'" font-size="9" fill="#546e7a">FIREWALL    10.0.0.1    :80/:443    NGINX_PROXY</text>
+      <text x="260" y="687" font-family="'Courier Prime'" font-size="9" fill="#546e7a">APP-NET     10.0.1.0/24             BACKEND SERVERS</text>
+      <text x="260" y="700" font-family="'Courier Prime'" font-size="9" fill="#546e7a">PHP-FPM     10.0.1.10   :9000       LARAVEL WORKERS</text>
+      <text x="260" y="713" font-family="'Courier Prime'" font-size="9" fill="#2e7d32">DB-PRIMARY  10.0.2.10   :3306       MYSQL 8.0</text>
+      <text x="260" y="726" font-family="'Courier Prime'" font-size="9" fill="#546e7a">STORAGE     10.0.2.20               LOCAL DISK</text>
+      <text x="560" y="674" font-family="'Courier Prime'" font-size="9" fill="#6a1b9a">SMTP-OUT    smtp.gmail.com  :587     STARTTLS</text>
+      <text x="560" y="687" font-family="'Courier Prime'" font-size="9" fill="#6a1b9a">FCM-OUT     fcm.googleapis.com      PUSH NOTIF</text>
+      <text x="560" y="700" font-family="'Courier Prime'" font-size="9" fill="#e65100">DOCKER-NET  bumdes-bridge           INTERNAL</text>
+      <text x="560" y="713" font-family="'Courier Prime'" font-size="9" fill="#546e7a">VOLUMES     mysql_data / storage    PERSISTENT</text>
+      <text x="560" y="726" font-family="'Courier Prime'" font-size="9" fill="#546e7a">HOST-OS     Ubuntu 22.04 LTS        PRODUCTION</text>
+
+    </svg>
+
+    <div class="legend">
+      <div class="leg"><div class="leg-line" style="background:#1565c0;height:2px;"></div> HTTPS/TLS (Client→Server)</div>
+      <div class="leg"><div class="leg-line" style="background:#e53935;height:2.5px;"></div> Firewall Policy</div>
+      <div class="leg"><div class="leg-line" style="background:#2e7d32;height:2px;"></div> DB Connection (Eloquent)</div>
+      <div class="leg"><div class="leg-dash"></div> Internal/Optional</div>
+      <div class="leg"><div class="leg-line" style="background:#6a1b9a;height:1.5px;background:repeating-linear-gradient(90deg,#8e24aa 0,#8e24aa 5px,transparent 5px,transparent 10px);width:24px;height:2px;"></div> External API</div>
+    </div>
+  </div>
+
+  <div class="notes-row">
+    <div class="note-card">
+      <div class="note-title">🔒 Security Policies</div>
+      <div class="note-item">Firewall: DENY all inbound except :80/:443</div>
+      <div class="note-item">MySQL :3306 accessible internal only</div>
+      <div class="note-item">JWT token expire 24h · bcrypt pw hash</div>
+      <div class="note-item">Rate limit: 5 failed login / 5 min</div>
+    </div>
+    <div class="note-card">
+      <div class="note-title">🐳 Docker Containers</div>
+      <div class="note-item">nginx · php (php8.2-fpm) · mysql</div>
+      <div class="note-item">Network: bumdes-bridge (internal)</div>
+      <div class="note-item">Volumes: mysql_data, storage</div>
+      <div class="note-item">Host: Ubuntu 22.04 · 2CPU · 4GB RAM</div>
+    </div>
+    <div class="note-card">
+      <div class="note-title">📡 Protocols</div>
+      <div class="note-item">Client ↔ Server: HTTPS / TLS 1.2+</div>
+      <div class="note-item">Auth: JWT Bearer Token (RFC 7519)</div>
+      <div class="note-item">API: RESTful HTTP/1.1 (JSON)</div>
+      <div class="note-item">Mail: SMTP/STARTTLS :587</div>
+    </div>
+    <div class="note-card">
+      <div class="note-title">📊 SLA Targets</div>
+      <div class="note-item">API Response: &lt; 2s (95th pct)</div>
+      <div class="note-item">Uptime: 99% / month</div>
+      <div class="note-item">Concurrent users: 100</div>
+      <div class="note-item">Upload ≤5MB: &lt; 10s</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════
+     TAB 2 — APPLICATION ARCH
+════════════════════════════ -->
+<div class="panel" id="panel-app">
+  <div class="diagram-box">
+    <div class="diagram-toolbar">
+      <div class="toolbar-dot" style="background:#ef5350"></div>
+      <div class="toolbar-dot" style="background:#ffa726"></div>
+      <div class="toolbar-dot" style="background:#66bb6a"></div>
+      <span class="toolbar-title">bumdes-jabar / application-architecture.xml</span>
+      <span class="toolbar-tag">MVC + API LAYER</span>
+    </div>
+    <svg viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;background:#fff;display:block;">
+      <defs>
+        <marker id="ba1" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0,0 8,3 0,6" fill="#1565c0"/></marker>
+        <marker id="ba2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0,0 8,3 0,6" fill="#2e7d32"/></marker>
+        <marker id="ba3" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0,0 8,3 0,6" fill="#e65100"/></marker>
+      </defs>
+      <rect width="1100" height="620" fill="url(#grid)"/>
+
+      <!-- Flutter Layer -->
+      <rect x="30" y="30" width="250" height="560" rx="5" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="6,3"/>
+      <text x="155" y="52" text-anchor="middle" font-family="'Barlow Condensed'" font-size="12" font-weight="700" fill="#1565c0" letter-spacing="2">FLUTTER CLIENT</text>
+
+      <!-- Screens -->
+      <rect x="45" y="65" width="220" height="34" rx="3" fill="#1565c0"/>
+      <text x="155" y="88" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="600" fill="white">Beranda / Pencarian</text>
+
+      <rect x="45" y="105" width="220" height="34" rx="3" fill="#1976d2"/>
+      <text x="155" y="128" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="600" fill="white">Produk Detail</text>
+
+      <rect x="45" y="145" width="220" height="34" rx="3" fill="#1976d2"/>
+      <text x="155" y="168" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="600" fill="white">Keranjang / Checkout</text>
+
+      <rect x="45" y="185" width="220" height="34" rx="3" fill="#1976d2"/>
+      <text x="155" y="208" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="600" fill="white">Upload Bukti Bayar</text>
+
+      <rect x="45" y="225" width="220" height="34" rx="3" fill="#1976d2"/>
+      <text x="155" y="248" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="600" fill="white">Dasbor Penjual</text>
+
+      <rect x="45" y="265" width="220" height="34" rx="3" fill="#1976d2"/>
+      <text x="155" y="288" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="600" fill="white">Profil / Toko BUMDes</text>
+
+      <rect x="45" y="305" width="220" height="34" rx="3" fill="#1976d2"/>
+      <text x="155" y="328" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="600" fill="white">Riwayat Transaksi</text>
+
+      <rect x="45" y="345" width="220" height="34" rx="3" fill="#1976d2"/>
+      <text x="155" y="368" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="600" fill="white">Admin Panel</text>
+
+      <text x="155" y="415" text-anchor="middle" font-family="'Courier Prime'" font-size="10" font-weight="700" fill="#1565c0">Material Design 3</text>
+      <text x="155" y="430" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">Bottom Nav · 4 tabs max</text>
+      <text x="155" y="445" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">Font min 14sp · Btn 48dp</text>
+      <text x="155" y="460" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">JWT stored: secure_storage</text>
+      <text x="155" y="475" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">HTTP: dio / http package</text>
+
+      <!-- API Gateway -->
+      <rect x="340" y="30" width="170" height="560" rx="5" fill="#fce4ec" stroke="#e91e63" stroke-width="1.5" stroke-dasharray="6,3"/>
+      <text x="425" y="52" text-anchor="middle" font-family="'Barlow Condensed'" font-size="12" font-weight="700" fill="#c2185b" letter-spacing="2">API GATEWAY</text>
+
+      <rect x="356" y="65"  width="138" height="28" rx="3" fill="#e91e63"/>
+      <text x="425" y="84" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">POST /auth/register</text>
+      <rect x="356" y="100" width="138" height="28" rx="3" fill="#e91e63"/>
+      <text x="425" y="119" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">POST /auth/login</text>
+      <rect x="356" y="135" width="138" height="28" rx="3" fill="#ad1457"/>
+      <text x="425" y="154" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">GET /products</text>
+      <rect x="356" y="170" width="138" height="28" rx="3" fill="#ad1457"/>
+      <text x="425" y="189" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">POST/PATCH /products</text>
+      <rect x="356" y="205" width="138" height="28" rx="3" fill="#880e4f"/>
+      <text x="425" y="224" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">GET/POST /cart</text>
+      <rect x="356" y="240" width="138" height="28" rx="3" fill="#880e4f"/>
+      <text x="425" y="259" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">POST /orders</text>
+      <rect x="356" y="275" width="138" height="28" rx="3" fill="#880e4f"/>
+      <text x="425" y="294" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">PATCH /orders/{id}</text>
+      <rect x="356" y="310" width="138" height="28" rx="3" fill="#4a148c"/>
+      <text x="425" y="329" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">POST /payments</text>
+      <rect x="356" y="345" width="138" height="28" rx="3" fill="#4a148c"/>
+      <text x="425" y="364" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">PATCH /payments/{id}</text>
+      <rect x="356" y="380" width="138" height="28" rx="3" fill="#311b92"/>
+      <text x="425" y="399" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">GET /reports</text>
+      <rect x="356" y="415" width="138" height="28" rx="3" fill="#311b92"/>
+      <text x="425" y="434" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">POST /reviews</text>
+
+      <text x="425" y="475" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#c2185b">routes/api.php</text>
+      <text x="425" y="489" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">Bearer JWT required</text>
+      <text x="425" y="503" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">Response: JSON</text>
+
+      <!-- Laravel MVC -->
+      <rect x="570" y="30" width="220" height="560" rx="5" fill="#e8eaf6" stroke="#3f51b5" stroke-width="1.5" stroke-dasharray="6,3"/>
+      <text x="680" y="52" text-anchor="middle" font-family="'Barlow Condensed'" font-size="12" font-weight="700" fill="#1a237e" letter-spacing="2">LARAVEL MVC</text>
+
+      <!-- Controllers -->
+      <rect x="582" y="65" width="196" height="22" rx="2" fill="#1a237e"/>
+      <text x="680" y="81" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">CONTROLLERS</text>
+      <rect x="582" y="90" width="94" height="18" rx="2" fill="#3f51b5"/><text x="629" y="103" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="white">AuthController</text>
+      <rect x="682" y="90" width="96" height="18" rx="2" fill="#3f51b5"/><text x="730" y="103" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="white">ProductController</text>
+      <rect x="582" y="112" width="94" height="18" rx="2" fill="#3f51b5"/><text x="629" y="125" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="white">OrderController</text>
+      <rect x="682" y="112" width="96" height="18" rx="2" fill="#3f51b5"/><text x="730" y="125" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="white">PaymentController</text>
+      <rect x="582" y="134" width="94" height="18" rx="2" fill="#3f51b5"/><text x="629" y="147" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="white">StoreController</text>
+      <rect x="682" y="134" width="96" height="18" rx="2" fill="#3f51b5"/><text x="730" y="147" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="white">ReportController</text>
+
+      <!-- Models -->
+      <rect x="582" y="165" width="196" height="22" rx="2" fill="#1b5e20"/>
+      <text x="680" y="181" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">ELOQUENT MODELS</text>
+      <rect x="582" y="190" width="60" height="18" rx="2" fill="#2e7d32"/><text x="612" y="203" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="white">User</text>
+      <rect x="648" y="190" width="60" height="18" rx="2" fill="#2e7d32"/><text x="678" y="203" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="white">Store</text>
+      <rect x="714" y="190" width="64" height="18" rx="2" fill="#2e7d32"/><text x="746" y="203" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="white">Product</text>
+      <rect x="582" y="212" width="60" height="18" rx="2" fill="#388e3c"/><text x="612" y="225" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="white">Order</text>
+      <rect x="648" y="212" width="60" height="18" rx="2" fill="#388e3c"/><text x="678" y="225" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="white">Payment</text>
+      <rect x="714" y="212" width="64" height="18" rx="2" fill="#388e3c"/><text x="746" y="225" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="white">Review</text>
+
+      <!-- Middleware -->
+      <rect x="582" y="244" width="196" height="22" rx="2" fill="#e65100"/>
+      <text x="680" y="260" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">MIDDLEWARE</text>
+      <text x="680" y="279" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#e65100">auth:sanctum  |  throttle:5,5</text>
+      <text x="680" y="292" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">role:admin  |  role:seller</text>
+
+      <!-- Services -->
+      <rect x="582" y="305" width="196" height="22" rx="2" fill="#4a148c"/>
+      <text x="680" y="321" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">SERVICES / EVENTS</text>
+      <text x="680" y="340" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#ce93d8">MailService → SMTP</text>
+      <text x="680" y="353" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">NotificationService → FCM</text>
+      <text x="680" y="366" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">FileService → Storage</text>
+
+      <!-- Migrations -->
+      <rect x="582" y="385" width="196" height="22" rx="2" fill="#37474f"/>
+      <text x="680" y="401" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">MIGRATIONS</text>
+      <text x="680" y="420" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#90a4ae">database/migrations/</text>
+      <text x="680" y="433" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">create_users_table.php ...</text>
+
+      <!-- MySQL -->
+      <rect x="850" y="30" width="220" height="560" rx="5" fill="#e8f5e9" stroke="#43a047" stroke-width="1.5" stroke-dasharray="6,3"/>
+      <text x="960" y="52" text-anchor="middle" font-family="'Barlow Condensed'" font-size="12" font-weight="700" fill="#2e7d32" letter-spacing="2">DATABASE</text>
+
+      <!-- Tables list -->
+      <rect x="862" y="65" width="196" height="22" rx="2" fill="#1b5e20"/><text x="960" y="81" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">MySQL 8.0 · UTF-8</text>
+      <rect x="862" y="92" width="196" height="20" rx="2" fill="#2e7d32"/><text x="960" y="106" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="white">users</text>
+      <rect x="862" y="116" width="196" height="20" rx="2" fill="#388e3c"/><text x="960" y="130" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="white">stores</text>
+      <rect x="862" y="140" width="196" height="20" rx="2" fill="#43a047"/><text x="960" y="154" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="white">products</text>
+      <rect x="862" y="164" width="196" height="20" rx="2" fill="#4caf50"/><text x="960" y="178" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="white">orders</text>
+      <rect x="862" y="188" width="196" height="20" rx="2" fill="#66bb6a"/><text x="960" y="202" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#1b5e20">order_items</text>
+      <rect x="862" y="212" width="196" height="20" rx="2" fill="#81c784"/><text x="960" y="226" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#1b5e20">payments</text>
+      <rect x="862" y="236" width="196" height="20" rx="2" fill="#a5d6a7"/><text x="960" y="250" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#1b5e20">reviews</text>
+      <rect x="862" y="260" width="196" height="20" rx="2" fill="#c8e6c9"/><text x="960" y="274" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#1b5e20">carts</text>
+
+      <text x="960" y="310" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">Relasi:</text>
+      <text x="960" y="324" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">users 1→1 stores</text>
+      <text x="960" y="338" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">stores 1→N products</text>
+      <text x="960" y="352" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">users 1→N orders</text>
+      <text x="960" y="366" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">orders 1→N order_items</text>
+      <text x="960" y="380" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">orders 1→1 payments</text>
+      <text x="960" y="394" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">orders 1→N reviews</text>
+
+      <!-- Connections between layers -->
+      <line x1="265" y1="200" x2="340" y2="200" stroke="#1565c0" stroke-width="2" marker-end="url(#ba1)"/>
+      <text x="302" y="195" font-family="'Courier Prime'" font-size="8" fill="#1565c0" text-anchor="middle">HTTP</text>
+
+      <line x1="494" y1="250" x2="570" y2="250" stroke="#1565c0" stroke-width="2" marker-end="url(#ba1)"/>
+      <text x="532" y="245" font-family="'Courier Prime'" font-size="8" fill="#1565c0" text-anchor="middle">dispatch</text>
+
+      <line x1="778" y1="250" x2="850" y2="250" stroke="#2e7d32" stroke-width="2" marker-end="url(#ba2)"/>
+      <text x="814" y="245" font-family="'Courier Prime'" font-size="8" fill="#2e7d32" text-anchor="middle">PDO</text>
+
+    </svg>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="width:10px;height:10px;border-radius:2px;background:#1565c0;"></div> Flutter Client Screens</div>
+      <div class="leg"><div class="leg-dot" style="width:10px;height:10px;border-radius:2px;background:#c2185b;"></div> REST API Endpoints</div>
+      <div class="leg"><div class="leg-dot" style="width:10px;height:10px;border-radius:2px;background:#1a237e;"></div> Laravel MVC Layer</div>
+      <div class="leg"><div class="leg-dot" style="width:10px;height:10px;border-radius:2px;background:#2e7d32;"></div> MySQL Database</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════
+     TAB 3 — DEPLOYMENT
+════════════════════════════ -->
+<div class="panel" id="panel-deploy">
+  <div class="diagram-box">
+    <div class="diagram-toolbar">
+      <div class="toolbar-dot" style="background:#ef5350"></div>
+      <div class="toolbar-dot" style="background:#ffa726"></div>
+      <div class="toolbar-dot" style="background:#66bb6a"></div>
+      <span class="toolbar-title">bumdes-jabar / docker-compose.yml — deployment-topology</span>
+    </div>
+    <svg viewBox="0 0 1000 520" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;background:#fff;display:block;">
+      <defs>
+        <marker id="da" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0,0 8,3 0,6" fill="#0277bd"/></marker>
+      </defs>
+      <rect width="1000" height="520" fill="url(#grid)"/>
+
+      <!-- Mobile Clients -->
+      <rect x="20" y="30" width="150" height="460" rx="5" fill="#e3f2fd" stroke="#42a5f5" stroke-width="1.5" stroke-dasharray="5,3"/>
+      <text x="95" y="52" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#1565c0" letter-spacing="1">CLIENT DEVICES</text>
+
+      <!-- Android -->
+      <rect x="35" y="68" width="120" height="90" rx="4" fill="#fff" stroke="#1565c0" stroke-width="1"/>
+      <rect x="55" y="78" width="80" height="55" rx="2" fill="#e3f2fd"/>
+      <rect x="45" y="138" width="26" height="8" rx="4" fill="#90a4ae"/>
+      <rect x="109" y="138" width="26" height="8" rx="4" fill="#90a4ae"/>
+      <text x="95" y="113" text-anchor="middle" font-size="16">🤖</text>
+      <text x="95" y="170" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#1565c0">Android</text>
+      <text x="95" y="182" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">API Level 26+</text>
+      <text x="95" y="193" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">RAM: 2GB min</text>
+
+      <!-- iOS -->
+      <rect x="35" y="215" width="120" height="90" rx="4" fill="#fff" stroke="#1565c0" stroke-width="1"/>
+      <rect x="55" y="225" width="80" height="55" rx="12" fill="#e3f2fd"/>
+      <rect x="73" y="223" width="44" height="6" rx="3" fill="#90a4ae"/>
+      <text x="95" y="260" text-anchor="middle" font-size="16">🍎</text>
+      <text x="95" y="318" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#1565c0">iOS</text>
+      <text x="95" y="330" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">iOS 13+</text>
+      <text x="95" y="341" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">App Store dist.</text>
+
+      <!-- Flutter badge -->
+      <rect x="42" y="375" width="106" height="24" rx="3" fill="#1565c0"/>
+      <text x="95" y="391" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">Flutter 3.x · Dart</text>
+      <text x="95" y="415" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">1 codebase</text>
+      <text x="95" y="427" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Android + iOS</text>
+
+      <!-- Arrow: Client → Server -->
+      <line x1="170" y1="250" x2="220" y2="250" stroke="#0277bd" stroke-width="2" marker-end="url(#da)"/>
+      <text x="195" y="243" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#0277bd">HTTPS</text>
+
+      <!-- Ubuntu Server Box -->
+      <rect x="220" y="20" width="660" height="480" rx="6" fill="#fff8e1" stroke="#f9a825" stroke-width="2"/>
+      <text x="550" y="42" text-anchor="middle" font-family="'Barlow Condensed'" font-size="12" font-weight="700" fill="#e65100" letter-spacing="2">UBUNTU SERVER 22.04 LTS · CPU: 2 CORE · RAM: 4GB · SSD: 50GB</text>
+
+      <!-- Docker Compose boundary -->
+      <rect x="235" y="55" width="630" height="430" rx="5" fill="rgba(2,119,189,0.04)" stroke="#0277bd" stroke-width="1.5" stroke-dasharray="8,4"/>
+      <text x="550" y="73" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="600" fill="#0277bd" letter-spacing="2">docker-compose.yml — bumdes-network (bridge)</text>
+
+      <!-- Container: Nginx -->
+      <rect x="255" y="90" width="175" height="200" rx="5" fill="#fff" stroke="#e53935" stroke-width="2"/>
+      <rect x="255" y="90" width="175" height="32" rx="5" fill="#e53935"/>
+      <rect x="255" y="108" width="175" height="14" rx="0" fill="#e53935"/>
+      <text x="342" y="110" text-anchor="middle" font-family="'Barlow Condensed'" font-size="12" font-weight="700" fill="white">🐳 nginx</text>
+      <text x="342" y="143" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="600" fill="#b71c1c">Nginx 1.24</text>
+      <text x="342" y="158" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Reverse Proxy</text>
+      <text x="342" y="172" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">SSL Termination</text>
+      <text x="342" y="186" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Static file serving</text>
+      <rect x="268" y="200" width="148" height="18" rx="2" fill="#ffebee"/>
+      <text x="342" y="213" text-anchor="middle" font-family="'Courier Prime'" font-size="9" font-weight="700" fill="#c62828">PORT: 80 / 443</text>
+      <text x="342" y="235" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">image: nginx:1.24-alpine</text>
+      <text x="342" y="248" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">volumes: ./nginx.conf</text>
+      <text x="342" y="261" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">depends_on: php</text>
+      <text x="342" y="277" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#e53935">restart: always</text>
+
+      <!-- Container: PHP-FPM -->
+      <rect x="460" y="90" width="175" height="200" rx="5" fill="#fff" stroke="#1a237e" stroke-width="2"/>
+      <rect x="460" y="90" width="175" height="32" rx="5" fill="#1a237e"/>
+      <rect x="460" y="108" width="175" height="14" rx="0" fill="#1a237e"/>
+      <text x="547" y="110" text-anchor="middle" font-family="'Barlow Condensed'" font-size="12" font-weight="700" fill="white">🐳 php</text>
+      <text x="547" y="143" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="600" fill="#1a237e">PHP 8.2-FPM</text>
+      <text x="547" y="158" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Laravel 11 App</text>
+      <text x="547" y="172" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Business Logic</text>
+      <text x="547" y="186" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">REST API · Migrations</text>
+      <rect x="473" y="200" width="148" height="18" rx="2" fill="#e8eaf6"/>
+      <text x="547" y="213" text-anchor="middle" font-family="'Courier Prime'" font-size="9" font-weight="700" fill="#1a237e">PORT: 9000 (internal)</text>
+      <text x="547" y="235" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">image: php:8.2-fpm</text>
+      <text x="547" y="248" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">volumes: ./app, storage</text>
+      <text x="547" y="261" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">env_file: .env</text>
+      <text x="547" y="277" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#1a237e">restart: always</text>
+
+      <!-- Container: MySQL -->
+      <rect x="665" y="90" width="175" height="200" rx="5" fill="#fff" stroke="#2e7d32" stroke-width="2"/>
+      <rect x="665" y="90" width="175" height="32" rx="5" fill="#2e7d32"/>
+      <rect x="665" y="108" width="175" height="14" rx="0" fill="#2e7d32"/>
+      <text x="752" y="110" text-anchor="middle" font-family="'Barlow Condensed'" font-size="12" font-weight="700" fill="white">🐳 mysql</text>
+      <text x="752" y="143" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="600" fill="#1b5e20">MySQL 8.0</text>
+      <text x="752" y="158" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Relational DB</text>
+      <text x="752" y="172" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">charset: utf8mb4</text>
+      <text x="752" y="186" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Persistent volume</text>
+      <rect x="678" y="200" width="148" height="18" rx="2" fill="#e8f5e9"/>
+      <text x="752" y="213" text-anchor="middle" font-family="'Courier Prime'" font-size="9" font-weight="700" fill="#2e7d32">PORT: 3306 (internal)</text>
+      <text x="752" y="235" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">image: mysql:8.0</text>
+      <text x="752" y="248" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">volumes: mysql_data</text>
+      <text x="752" y="261" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">MYSQL_ROOT_PASS: .env</text>
+      <text x="752" y="277" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#2e7d32">restart: always</text>
+
+      <!-- Arrows between containers -->
+      <line x1="430" y1="185" x2="460" y2="185" stroke="#1a237e" stroke-width="2" marker-end="url(#da)"/>
+      <text x="445" y="178" font-family="'Courier Prime'" font-size="8" fill="#1a237e" text-anchor="middle">FastCGI</text>
+      <line x1="635" y1="185" x2="665" y2="185" stroke="#2e7d32" stroke-width="2" marker-end="url(#da)"/>
+      <text x="650" y="178" font-family="'Courier Prime'" font-size="8" fill="#2e7d32" text-anchor="middle">PDO</text>
+
+      <!-- Volumes section -->
+      <rect x="255" y="315" width="580" height="110" rx="4" fill="#fafafa" stroke="#90a4ae" stroke-width="1"/>
+      <text x="545" y="334" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#546e7a" letter-spacing="2">VOLUMES &amp; CONFIG</text>
+      <rect x="268" y="345" width="170" height="18" rx="2" fill="#eceff1"/><text x="353" y="358" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">mysql_data → /var/lib/mysql</text>
+      <rect x="268" y="368" width="170" height="18" rx="2" fill="#eceff1"/><text x="353" y="381" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">storage → /app/storage/app</text>
+      <rect x="268" y="391" width="170" height="18" rx="2" fill="#eceff1"/><text x="353" y="404" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">.env → APP_KEY, DB_*, MAIL_*</text>
+      <rect x="455" y="345" width="170" height="18" rx="2" fill="#eceff1"/><text x="540" y="358" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">JWT_SECRET=xxxxxx</text>
+      <rect x="455" y="368" width="170" height="18" rx="2" fill="#eceff1"/><text x="540" y="381" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">MAIL_HOST=smtp.gmail.com</text>
+      <rect x="455" y="391" width="170" height="18" rx="2" fill="#eceff1"/><text x="540" y="404" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#546e7a">DB_PASSWORD=****** </text>
+      <rect x="642" y="345" width="170" height="18" rx="2" fill="#fff3e0"/><text x="727" y="358" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#e65100">backup.sh (cron daily)</text>
+      <rect x="642" y="368" width="170" height="18" rx="2" fill="#fff3e0"/><text x="727" y="381" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#e65100">mysqldump → /backups/</text>
+      <rect x="642" y="391" width="170" height="18" rx="2" fill="#e8f5e9"/><text x="727" y="404" text-anchor="middle" font-family="'Courier Prime'" font-size="9" fill="#2e7d32">health_check: mysqladmin</text>
+
+      <!-- Perf targets -->
+      <rect x="255" y="440" width="580" height="50" rx="4" fill="#e8eaf6" stroke="#3f51b5" stroke-width="1"/>
+      <text x="280" y="459" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="#1a237e">SLA:</text>
+      <text x="340" y="459" font-family="'Courier Prime'" font-size="9" fill="#546e7a">API &lt;2s · Page &lt;3s (4G) · 100 concurrent users · 99% uptime/mo · Upload 5MB &lt;10s</text>
+      <text x="280" y="477" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="#1a237e">TEST:</text>
+      <text x="340" y="477" font-family="'Courier Prime'" font-size="9" fill="#546e7a">PHPUnit · Feature tests · 80% code coverage · PSR-12 standard</text>
+
+    </svg>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="width:10px;height:10px;border-radius:2px;background:#e53935;"></div> nginx container</div>
+      <div class="leg"><div class="leg-dot" style="width:10px;height:10px;border-radius:2px;background:#1a237e;"></div> php container</div>
+      <div class="leg"><div class="leg-dot" style="width:10px;height:10px;border-radius:2px;background:#2e7d32;"></div> mysql container</div>
+      <div class="leg"><div class="leg-dash"></div> docker-compose boundary</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════
+     TAB 4 — SECURITY ZONES
+════════════════════════════ -->
+<div class="panel" id="panel-sec">
+  <div class="diagram-box">
+    <div class="diagram-toolbar">
+      <div class="toolbar-dot" style="background:#ef5350"></div>
+      <div class="toolbar-dot" style="background:#ffa726"></div>
+      <div class="toolbar-dot" style="background:#66bb6a"></div>
+      <span class="toolbar-title">bumdes-jabar / security-zones.xml — defense-in-depth</span>
+    </div>
+    <svg viewBox="0 0 1000 540" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;background:#fff;display:block;">
+      <rect width="1000" height="540" fill="url(#grid)"/>
+
+      <!-- Concentric security zones -->
+      <rect x="20" y="20" width="960" height="500" rx="8" fill="#fff8e1" stroke="#f9a825" stroke-width="2"/>
+      <text x="500" y="43" text-anchor="middle" font-family="'Barlow Condensed'" font-size="12" font-weight="700" fill="#e65100" letter-spacing="3">ZONE 1 — PUBLIC / UNTRUSTED</text>
+
+      <rect x="60" y="60" width="880" height="420" rx="8" fill="#fce4ec" stroke="#e91e63" stroke-width="2" stroke-dasharray="8,4"/>
+      <text x="500" y="80" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#c2185b" letter-spacing="2">ZONE 2 — DMZ (FIREWALL + NGINX TLS)</text>
+
+      <rect x="100" y="98" width="800" height="340" rx="8" fill="#e8eaf6" stroke="#3f51b5" stroke-width="2" stroke-dasharray="6,3"/>
+      <text x="500" y="118" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#1a237e" letter-spacing="2">ZONE 3 — APP TIER (AUTHENTICATED)</text>
+
+      <rect x="140" y="136" width="720" height="260" rx="8" fill="#e8f5e9" stroke="#43a047" stroke-width="2" stroke-dasharray="5,3"/>
+      <text x="500" y="156" text-anchor="middle" font-family="'Barlow Condensed'" font-size="11" font-weight="700" fill="#2e7d32" letter-spacing="2">ZONE 4 — DATA ZONE (INTERNAL ONLY)</text>
+
+      <!-- Security controls per zone -->
+      <!-- Zone 1 controls -->
+      <rect x="35" y="48" width="120" height="15" rx="2" fill="#e65100"/><text x="95" y="59" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="white">Min. 3G connection</text>
+      <rect x="165" y="48" width="120" height="15" rx="2" fill="#e65100"/><text x="225" y="59" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="white">HTTPS enforced</text>
+
+      <!-- Zone 2: Firewall rules -->
+      <rect x="110" y="168" width="240" height="130" rx="4" fill="#fff" stroke="#e91e63" stroke-width="1.5"/>
+      <rect x="110" y="168" width="240" height="22" rx="4" fill="#c2185b"/>
+      <rect x="110" y="182" width="240" height="8" rx="0" fill="#c2185b"/>
+      <text x="230" y="183" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">🔥 FIREWALL RULES</text>
+      <text x="230" y="208" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">PERMIT tcp any :443 (HTTPS)</text>
+      <text x="230" y="222" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">PERMIT tcp any :80 (redirect)</text>
+      <text x="230" y="236" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#c62828">DENY tcp any :3306</text>
+      <text x="230" y="250" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#c62828">DENY tcp any :9000</text>
+      <text x="230" y="264" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#c62828">DENY all else</text>
+      <text x="230" y="284" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">rate_limit: 100r/s per IP</text>
+
+      <!-- Zone 2: TLS config -->
+      <rect x="370" y="168" width="240" height="130" rx="4" fill="#fff" stroke="#e91e63" stroke-width="1.5"/>
+      <rect x="370" y="168" width="240" height="22" rx="4" fill="#ad1457"/>
+      <rect x="370" y="182" width="240" height="8" rx="0" fill="#ad1457"/>
+      <text x="490" y="183" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">🔒 TLS CONFIGURATION</text>
+      <text x="490" y="208" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">ssl_protocols TLSv1.2 TLSv1.3</text>
+      <text x="490" y="222" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">ssl_ciphers HIGH:!aNULL:!MD5</text>
+      <text x="490" y="236" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">add_header HSTS max-age=31536000</text>
+      <text x="490" y="250" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">ssl_certificate /etc/ssl/cert.pem</text>
+      <text x="490" y="264" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">ssl_certificate_key /etc/ssl/key</text>
+      <text x="490" y="278" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">auto_renew: certbot</text>
+
+      <!-- Zone 3: Auth controls -->
+      <rect x="155" y="318" width="200" height="130" rx="4" fill="#fff" stroke="#3f51b5" stroke-width="1.5"/>
+      <rect x="155" y="318" width="200" height="22" rx="4" fill="#1a237e"/>
+      <rect x="155" y="332" width="200" height="8" rx="0" fill="#1a237e"/>
+      <text x="255" y="333" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">🔐 AUTH CONTROLS</text>
+      <text x="255" y="358" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">JWT Bearer Token (24h)</text>
+      <text x="255" y="372" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">bcrypt hash (cost=10)</text>
+      <text x="255" y="386" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">throttle:5,5 (5x/5min)</text>
+      <text x="255" y="400" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">email_verified_at required</text>
+      <text x="255" y="414" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">role: buyer|seller|admin</text>
+      <text x="255" y="428" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#c62828">NO OTP · NO plain-text pw</text>
+
+      <!-- Zone 3: File controls -->
+      <rect x="370" y="318" width="200" height="130" rx="4" fill="#fff" stroke="#3f51b5" stroke-width="1.5"/>
+      <rect x="370" y="318" width="200" height="22" rx="4" fill="#0d47a1"/>
+      <rect x="370" y="332" width="200" height="8" rx="0" fill="#0d47a1"/>
+      <text x="470" y="333" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">📁 FILE SECURITY</text>
+      <text x="470" y="358" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">mimes: jpg,jpeg,png only</text>
+      <text x="470" y="372" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">max:5120 (5MB per file)</text>
+      <text x="470" y="386" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">filename: SHA256 hash</text>
+      <text x="470" y="400" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">path: storage/private/</text>
+      <text x="470" y="414" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">serve: signed URL only</text>
+      <text x="470" y="428" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#c62828">NOT in public webroot</text>
+
+      <!-- Zone 4: DB controls -->
+      <rect x="590" y="168" width="210" height="280" rx="4" fill="#fff" stroke="#43a047" stroke-width="1.5"/>
+      <rect x="590" y="168" width="210" height="22" rx="4" fill="#1b5e20"/>
+      <rect x="590" y="182" width="210" height="8" rx="0" fill="#1b5e20"/>
+      <text x="695" y="183" text-anchor="middle" font-family="'Barlow Condensed'" font-size="10" font-weight="700" fill="white">🗄️ DATABASE SECURITY</text>
+      <text x="695" y="208" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#c62828">bind-address: 127.0.0.1</text>
+      <text x="695" y="222" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#c62828">NO external :3306 access</text>
+      <text x="695" y="236" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Eloquent ORM → no raw SQL</text>
+      <text x="695" y="250" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">prepared statements</text>
+      <text x="695" y="264" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">DB_PASSWORD: strong .env</text>
+      <text x="695" y="278" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">Atomic transactions</text>
+      <text x="695" y="292" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">soft_deletes: sensitive data</text>
+      <text x="695" y="306" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#2e7d32">cron: daily mysqldump backup</text>
+      <text x="695" y="320" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#2e7d32">unique constraints @ DB level</text>
+      <text x="695" y="334" text-anchor="middle" font-family="'Courier Prime'" font-size="8" fill="#546e7a">charset: utf8mb4</text>
+      <rect x="603" y="348" width="184" height="22" rx="2" fill="#1b5e20"/>
+      <text x="695" y="363" text-anchor="middle" font-family="'Courier Prime'" font-size="9" font-weight="700" fill="white">PP 71/2019 · WCAG 2.1 AA</text>
+      <rect x="603" y="376" width="184" height="22" rx="2" fill="#2e7d32"/>
+      <text x="695" y="391" text-anchor="middle" font-family="'Courier Prime'" font-size="9" font-weight="700" fill="white">PSR-12 · 80% Test Coverage</text>
+      <rect x="603" y="404" width="184" height="22" rx="2" fill="#388e3c"/>
+      <text x="695" y="419" text-anchor="middle" font-family="'Courier Prime'" font-size="9" font-weight="700" fill="white">PHPUnit · Feature Tests</text>
+
+    </svg>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="width:10px;height:10px;border-radius:2px;background:#f9a825;"></div> Zone 1: Public</div>
+      <div class="leg"><div class="leg-dot" style="width:10px;height:10px;border-radius:2px;background:#e91e63;"></div> Zone 2: DMZ</div>
+      <div class="leg"><div class="leg-dot" style="width:10px;height:10px;border-radius:2px;background:#3f51b5;"></div> Zone 3: App (Auth Required)</div>
+      <div class="leg"><div class="leg-dot" style="width:10px;height:10px;border-radius:2px;background:#43a047;"></div> Zone 4: Data (Internal Only)</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /canvas -->
+
+<script>
+function sw(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => { p.classList.remove('active'); p.style.display='none'; });
+  event.currentTarget.classList.add('active');
+  const p = document.getElementById('panel-'+name);
+  p.classList.add('active'); p.style.display='block';
+}
+document.querySelectorAll('.panel').forEach(p => { if(!p.classList.contains('active')) p.style.display='none'; });
+</script>
+</body>
+</html>
