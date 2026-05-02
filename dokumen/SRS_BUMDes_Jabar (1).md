@@ -267,6 +267,8 @@ Sistem terdiri dari:
 - Perancangan Arsitektur Sistem
   <img width="649" height="400" alt="Halaman dashboard admin" src="https://github.com/user-attachments/assets/d15b8f6e-2b29-419b-856f-a3ff5b74fa65" />
 - Rancangan Arsitektur teknologi
+- <img width="1920" height="1080" alt="Screenshot 2026-05-01 201701" src="https://github.com/user-attachments/assets/5af60b02-6410-42cc-9dea-9aa596e6b65c" />
+
 - ui ux
   <img width="649" height="913" alt="ui user" src="https://github.com/user-attachments/assets/8b7aeed2-980a-48bb-9bd1-fdb1c11b114c" />
 
