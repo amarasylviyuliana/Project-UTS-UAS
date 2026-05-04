@@ -259,6 +259,8 @@ Sistem terdiri dari:
 
 # Lampiran B - Model
 - Use Case
+  <img width="1600" height="540" alt="IMG-20260422-WA0047(1) 1" src="https://github.com/user-attachments/assets/859905e9-5e32-4f7c-ac2c-beb17652150c" />
+
 - Activity Diagram
   <img width="654" height="862" alt="activity diagram" src="https://github.com/user-attachments/assets/f65aac3a-c4d1-47f8-8105-a1414fdb3c85" />
 
