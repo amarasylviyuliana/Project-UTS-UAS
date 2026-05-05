@@ -9,7 +9,7 @@ Marketplace Produk & Jasa Antar BUMDes di Jawa Barat
 1. Abdillah Syafiq Gaos  
 2. Aril Zulfikar  
 3. Amara Sylvi Yuliana  
-4. Hilman  
+4. Hilmanda  
 5. Mochammad Adhi R  
 6. Sheva Heizatul I  
 7. Yunita Nur ‘Aini  
