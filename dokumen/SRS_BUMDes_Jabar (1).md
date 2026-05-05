@@ -267,6 +267,7 @@ Sistem terdiri dari:
 - Perancangan Database
   <img width="400" height="500" alt="ERDDiagram1" src="https://github.com/user-attachments/assets/f1f961db-c91e-4952-9c12-599af1c6842e" />
 - Perancangan Arsitektur Sistem
+<img width="1348" height="1167" alt="DIagram_Sistem_BUMDes" src="https://github.com/user-attachments/assets/a53b7a0b-26ce-45ef-9f3d-7fac53632ce4" />
   
 - Rancangan Arsitektur teknologi
 - <img width="1920" height="1080" alt="Screenshot 2026-05-01 201701" src="https://github.com/user-attachments/assets/5af60b02-6410-42cc-9dea-9aa596e6b65c" />
