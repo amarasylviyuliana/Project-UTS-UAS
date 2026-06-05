@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
@@ -17,6 +18,35 @@ class ProductController extends Controller
     {
         $categories = Category::all();
         return response()->json($categories);
+    }
+
+    /**
+     * Get all products (public list)
+     * REQ-20
+     */
+    public function index(): JsonResponse
+    {
+        $products = Product::where('is_active', true)
+            ->with('store', 'category')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'store_name' => $product->store?->store_name ?? 'Unknown Store',
+                    'location' => $product->store?->village ?? '',
+                    'category' => $product->category?->name ?? '',
+                    'price' => $product->price,
+                    'stock' => $product->stock,
+                    'description' => $product->description,
+                    'image_url' => $product->photo_url,
+                    'is_service' => $product->type === 'jasa',
+                    'is_active' => $product->is_active,
+                ];
+            });
+
+        return response()->json($products);
     }
 
     /**
@@ -170,9 +200,24 @@ class ProductController extends Controller
             'photo_url' => $photoUrl,
         ]);
 
+        // Load relationships for response
+        $product->load(['store', 'category']);
+
         return response()->json([
             'message' => 'Produk berhasil ditambahkan',
-            'data' => $product,
+            'data' => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'store_name' => $product->store?->store_name ?? 'Unknown Store',
+                'location' => $product->store?->village ?? '',
+                'category' => $product->category?->name ?? '',
+                'price' => $product->price,
+                'stock' => $product->stock,
+                'description' => $product->description,
+                'image_url' => $product->photo_url,
+                'is_service' => $product->type === 'jasa',
+                'is_active' => $product->is_active,
+            ],
         ], 201);
     }
 
@@ -192,7 +237,18 @@ class ProductController extends Controller
 
         $product = Product::find($id);
 
-        if (!$product || $product->store->user_id !== $user->id) {
+        $storeOwnerId = $product && $product->store ? $product->store->user_id : null;
+        Log::debug('Product update permission check', [
+            'user_id' => $user->id,
+            'user_role' => $user->role,
+            'product_id' => $id,
+            'product_exists' => $product !== null,
+            'product_store_id' => $product?->store?->id,
+            'product_store_owner_id' => $storeOwnerId,
+            'request_payload' => $request->all(),
+        ]);
+
+        if (!$product || $storeOwnerId !== $user->id) {
             return response()->json([
                 'message' => 'Produk tidak ditemukan atau anda tidak punya akses',
             ], 404);
@@ -217,9 +273,24 @@ class ProductController extends Controller
 
         $product->update($validated);
 
+        // Load relationships for response
+        $product->load(['store', 'category']);
+
         return response()->json([
             'message' => 'Produk berhasil diperbarui',
-            'data' => $product,
+            'data' => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'store_name' => $product->store?->store_name ?? 'Unknown Store',
+                'location' => $product->store?->village ?? '',
+                'category' => $product->category?->name ?? '',
+                'price' => $product->price,
+                'stock' => $product->stock,
+                'description' => $product->description,
+                'image_url' => $product->photo_url,
+                'is_service' => $product->type === 'jasa',
+                'is_active' => $product->is_active,
+            ],
         ]);
     }
 

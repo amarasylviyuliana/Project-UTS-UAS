@@ -63,6 +63,11 @@ class OrderController extends Controller
             $productIds = $orderItemsPayload->pluck('product_id')->unique()->toArray();
             $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
 
+            \Log::debug('Checkout product lookup', [
+                'product_ids' => $productIds,
+                'found_ids' => $products->keys()->all(),
+            ]);
+
             $items = $orderItemsPayload->map(function ($item) use ($products) {
                 $product = $products->get($item['product_id']);
                 return (object) [

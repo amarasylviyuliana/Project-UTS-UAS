@@ -49,6 +49,8 @@ Route::get('/debug/products', function () {
         'data' => Product::select('id', 'name', 'price', 'is_active', 'stock')->get(),
     ]);
 });
+// Public products list endpoint
+Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/featured', [ProductController::class, 'getFeatured']);
 Route::get('/stores/popular', [ProductController::class, 'getPopularStores']);
 Route::get('/products/search', [ProductController::class, 'search']);
@@ -106,6 +108,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Payment routes
     Route::get('/payments/{orderId}', [PaymentController::class, 'show']);
     Route::post('/payments/{orderId}/upload-proof', [PaymentController::class, 'uploadProof']);
+    Route::post('/payments/{orderId}/submit', [PaymentController::class, 'submitPayment']);
     Route::get('/payments/{orderId}/proof', [PaymentController::class, 'getProof']);
     Route::post('/payments/{orderId}/confirm', [PaymentController::class, 'confirmPayment']);
     Route::post('/payments/{orderId}/reject', [PaymentController::class, 'rejectPayment']);

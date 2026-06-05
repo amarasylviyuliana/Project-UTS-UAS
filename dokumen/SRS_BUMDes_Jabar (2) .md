@@ -2,7 +2,7 @@
 ## BUMDes Jabar  
 Marketplace Produk & Jasa Antar BUMDes di Jawa Barat
 
-**Versi Dokumen:** 1.0 (Approved)  
+**Versi Dokumen:** 2.0 (Approved)  
 **Status:** Draft  
 **Disusun oleh:** Kelompok 5 - Tim Pengembang BUMDes Jabar  
 
@@ -82,11 +82,11 @@ Sistem terdiri dari:
 ## 2.2 Fungsi Produk
 1. Registrasi & Login  
 2. Manajemen Profil  
-3. Kelola Produk  
+3. Kelola Produk & Jasa  
 4. Pencarian  
-5. Keranjang  
-6. Pembayaran  
-7. Laporan  
+5. Keranjang & Pemesanan  
+6. Pembayaran dengan Payment Gateway  
+7. Laporan & Riwayat Transaksi  
 
 ## 2.3 Kelas Pengguna
 
@@ -105,8 +105,8 @@ Sistem terdiri dari:
 
 ## 2.5 Batasan
 - Tanpa OTP  
-- Tanpa payment gateway  
-- Transfer manual  
+- Pembayaran menggunakan payment gateway pihak ketiga  
+- Tidak ada upload bukti transfer manual  
 - Fokus Jawa Barat  
 
 ---
@@ -201,11 +201,11 @@ Sistem terdiri dari:
 
 | Kode | Deskripsi | Prioritas |
 |------|----------|----------|
-| REQ-26 | Info rekening | Tinggi |
-| REQ-27 | Upload bukti | Tinggi |
-| REQ-28 | Simpan bukti | Tinggi |
-| REQ-29 | Verifikasi | Tinggi |
-| REQ-30 | Penolakan | Sedang |
+| REQ-26 | Integrasi payment gateway pihak ketiga | Tinggi |
+| REQ-27 | Buat order payment token / redirect URL | Tinggi |
+| REQ-28 | Terima callback/status success atau failure | Tinggi |
+| REQ-29 | Update status pembayaran secara otomatis | Tinggi |
+| REQ-30 | Kelola retry / penolakan transaksi | Sedang |
 
 ---
 

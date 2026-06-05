@@ -104,6 +104,45 @@ class PaymentController extends Controller
      * Get payment proof (for seller to verify)
      * REQ-29
      */
+    public function submitPayment(Request $request, $orderId): JsonResponse
+    {
+        $order = Order::with('payment', 'store')->find($orderId);
+
+        if (!$order || $order->buyer_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Pesanan tidak ditemukan atau anda tidak punya akses',
+            ], 404);
+        }
+
+        if ($order->status !== 'Menunggu Pembayaran') {
+            return response()->json([
+                'message' => 'Status pesanan harus "Menunggu Pembayaran" untuk menyelesaikan pembayaran QRIS',
+            ], 422);
+        }
+
+        $payment = $order->payment;
+        if (!$payment) {
+            $payment = Payment::create([
+                'order_id' => $order->id,
+                'status' => 'Pending',
+            ]);
+        } else {
+            $payment->status = 'Pending';
+            $payment->save();
+        }
+
+        $order->status = 'Menunggu Konfirmasi';
+        $order->save();
+
+        return response()->json([
+            'message' => 'Pembayaran QRIS berhasil dikirim ke penjual. Silakan tunggu konfirmasi.',
+            'data' => [
+                'order' => $order,
+                'payment' => $payment,
+            ],
+        ], 200);
+    }
+
     public function getProof(Request $request, $orderId): JsonResponse
     {
         $order = Order::find($orderId);
