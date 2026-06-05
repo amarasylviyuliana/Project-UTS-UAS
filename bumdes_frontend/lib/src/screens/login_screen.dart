@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
+import 'admin_dashboard_screen.dart';
+import 'store_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   static const routeName = '/login';
@@ -32,8 +34,17 @@ class _LoginScreenState extends State<LoginScreen> {
       _passwordController.text.trim(),
     );
     if (success) {
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+      if (!mounted) {
+        return;
+      }
+      // Route berdasarkan role
+      String route = HomeScreen.routeName;
+      if (auth.user?.role == 'admin') {
+        route = AdminDashboardScreen.routeName;
+      } else if (auth.user?.role == 'seller') {
+        route = StoreDashboardScreen.routeName;
+      }
+      Navigator.pushReplacementNamed(context, route);
     }
   }
 
@@ -63,9 +74,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(labelText: 'Email'),
                     validator: (value) {
-                      if (value == null || value.isEmpty)
+                      if (value == null || value.isEmpty) {
                         return 'Email wajib diisi';
-                      if (!value.contains('@')) return 'Masukkan email valid';
+                      }
+                      if (!value.contains('@')) {
+                        return 'Masukkan email valid';
+                      }
                       return null;
                     },
                   ),
@@ -75,10 +89,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     obscureText: true,
                     decoration: const InputDecoration(labelText: 'Password'),
                     validator: (value) {
-                      if (value == null || value.isEmpty)
+                      if (value == null || value.isEmpty) {
                         return 'Password wajib diisi';
-                      if (value.length < 8)
+                      }
+                      if (value.length < 8) {
                         return 'Password minimal 8 karakter';
+                      }
                       return null;
                     },
                   ),

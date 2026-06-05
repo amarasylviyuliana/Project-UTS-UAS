@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +20,7 @@ class CheckoutController extends Controller
             'recipient_phone' => 'required|string|max:32',
             'recipient_address' => 'required|string|max:1024',
             'order_items' => 'required|array|min:1',
-            'order_items.*.product_id' => 'required|integer|min:1',
+            'order_items.*.product_id' => 'required|integer|min:1|exists:products,id',
             'order_items.*.quantity' => 'required|integer|min:1',
             'order_items.*.unit_price' => 'required|numeric|min:0',
         ]);

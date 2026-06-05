@@ -27,6 +27,8 @@ class AuthService {
         return 'Pembeli';
       case 'seller':
         return 'Penjual';
+      case 'admin':
+        return 'Admin';
       default:
         return role;
     }
@@ -70,7 +72,7 @@ class AuthService {
 
   Future<Map<String, dynamic>> fetchProfile(String token) async {
     final api = ApiService(token: token);
-    return api.get('/user');
+    return api.get('/auth/me');
   }
 
   Future<Map<String, dynamic>> updateProfile(
@@ -78,6 +80,6 @@ class AuthService {
     Map<String, dynamic> body,
   ) async {
     final api = ApiService(token: token);
-    return api.put('/user', body);
+    return api.put('/profile', body);
   }
 }

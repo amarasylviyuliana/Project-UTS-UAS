@@ -67,7 +67,7 @@ class OrderDetailScreen extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: _getStatusColor(order.status).withOpacity(0.2),
+                              color: _getStatusColor(order.status).withAlpha((0.2 * 255).round()),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: _getStatusColor(order.status)),
                             ),
@@ -98,26 +98,29 @@ class OrderDetailScreen extends StatelessWidget {
                 elevation: 1,
                 child: Padding(
                   padding: const EdgeInsets.all(12.0),
-                  child: order.products.isEmpty
+                  child: order.items.isEmpty
                       ? const Text('Tidak ada produk dalam pesanan ini')
                       : Column(
-                          children: order.products
+                          children: order.items
                               .map(
-                                (product) => Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                (item) => Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 10.0),
                                   child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Image.network(
-                                        product.imageUrl,
-                                        width: 60,
-                                        height: 60,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Container(
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.network(
+                                          item.product.imageUrl,
                                           width: 60,
                                           height: 60,
-                                          color: Colors.grey[200],
-                                          child: const Icon(Icons.image_not_supported),
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => Container(
+                                            width: 60,
+                                            height: 60,
+                                            color: Colors.grey[200],
+                                            child: const Icon(Icons.image_not_supported),
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(width: 12),
@@ -126,16 +129,17 @@ class OrderDetailScreen extends StatelessWidget {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              product.name,
+                                              item.product.name,
                                               style: const TextStyle(fontWeight: FontWeight.w600),
                                             ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'Rp ${product.price.toStringAsFixed(0)}',
-                                              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-                                            ),
+                                            const SizedBox(height: 6),
+                                            Text('Rp ${item.unitPrice.toStringAsFixed(0)} x ${item.quantity}', style: const TextStyle(color: Colors.black54)),
                                           ],
                                         ),
+                                      ),
+                                      Text(
+                                        'Rp ${item.totalPrice.toStringAsFixed(0)}',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
                                       ),
                                     ],
                                   ),
@@ -228,7 +232,7 @@ class OrderDetailScreen extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Upload Bukti Pembayaran', style: TextStyle(fontSize: 16)),
+                    child: const Text('Bayar Sekarang', style: TextStyle(fontSize: 16)),
                   ),
                 ),
 

@@ -77,9 +77,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(labelText: 'Email'),
                     validator: (value) {
-                      if (value == null || value.isEmpty)
+                      if (value == null || value.isEmpty) {
                         return 'Email wajib diisi';
-                      if (!value.contains('@')) return 'Email tidak valid';
+                      }
+                      if (!value.contains('@')) {
+                        return 'Email tidak valid';
+                      }
                       return null;
                     },
                   ),
@@ -89,10 +92,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     obscureText: true,
                     decoration: const InputDecoration(labelText: 'Password'),
                     validator: (value) {
-                      if (value == null || value.isEmpty)
+                      if (value == null || value.isEmpty) {
                         return 'Password wajib diisi';
-                      if (value.length < 8)
+                      }
+                      if (value.length < 8) {
                         return 'Password minimal 8 karakter';
+                      }
                       return null;
                     },
                   ),
@@ -104,8 +109,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       labelText: 'Konfirmasi Password',
                     ),
                     validator: (value) {
-                      if (value != _passwordController.text)
+                      if (value != _passwordController.text) {
                         return 'Password tidak sama';
+                      }
                       return null;
                     },
                   ),
@@ -122,9 +128,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         value: 'seller',
                         child: Text('Penjual BUMDes'),
                       ),
+                      DropdownMenuItem(
+                        value: 'admin',
+                        child: Text('Admin Platform'),
+                      ),
                     ],
                     onChanged: (value) {
-                      if (value != null) setState(() => _selectedRole = value);
+                      if (value != null) {
+                        setState(() => _selectedRole = value);
+                      }
                     },
                   ),
                   const SizedBox(height: 24),

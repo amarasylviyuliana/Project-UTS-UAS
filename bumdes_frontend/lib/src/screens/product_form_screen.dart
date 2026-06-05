@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/product_provider.dart';
+import '../providers/auth_provider.dart';
+import '../services/profile_service.dart';
+import 'store_form_screen.dart';
 
 class ProductFormScreen extends StatefulWidget {
   static const routeName = '/product-form';
@@ -59,27 +62,91 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     super.dispose();
   }
 
-  void _saveProduct() {
+  void _saveProduct() async {
     if (!_formKey.currentState!.validate()) return;
     final provider = Provider.of<ProductProvider>(context, listen: false);
-    final newProduct = ProductModel(
-      id: _product?.id ?? DateTime.now().millisecondsSinceEpoch,
-      name: _nameController.text.trim(),
-      storeName: 'BUMDes Mitra',
-      location: 'Jawa Barat',
-      category: _category,
-      price: double.tryParse(_priceController.text.trim()) ?? 0,
-      stock: int.tryParse(_stockController.text.trim()) ?? 0,
-      description: _descriptionController.text.trim(),
-      imageUrl: _imageUrl,
-      isService: _type == 'service',
-    );
-    if (_product == null) {
-      provider.addProduct(newProduct);
-    } else {
-      provider.updateProduct(newProduct);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    
+    if (!auth.isAuthenticated || auth.token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Silakan login terlebih dahulu')),
+      );
+      return;
     }
-    Navigator.pop(context);
+
+    // Ensure seller has a store before creating/updating products
+    try {
+      final profileService = ProfileService();
+      final store = await profileService.getStore(auth.token!);
+      if (store == null || store['id'] == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Anda perlu mendaftarkan toko terlebih dahulu')));
+        Navigator.pushNamed(context, StoreFormScreen.routeName);
+        return;
+      }
+    } catch (e) {
+      // on error (including 404), prompt to create store
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Anda perlu mendaftarkan toko terlebih dahulu')));
+      Navigator.pushNamed(context, StoreFormScreen.routeName);
+      return;
+    }
+
+    final price = double.tryParse(_priceController.text.trim()) ?? 0;
+    final stock = int.tryParse(_stockController.text.trim()) ?? 0;
+    final categoryId = _getCategoryId(_category);
+    final type = _type == 'service' ? 'jasa' : 'produk';
+
+    try {
+      if (_product == null) {
+        await provider.createProductOnServer(
+          auth.token!,
+          _nameController.text.trim(),
+          categoryId,
+          type,
+          price,
+          stock,
+          _descriptionController.text.trim(),
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Produk berhasil ditambahkan')),
+          );
+          Navigator.pop(context);
+        }
+      } else {
+        await provider.updateProductOnServer(
+          auth.token!,
+          _product!.id,
+          _nameController.text.trim(),
+          categoryId,
+          type,
+          price,
+          stock,
+          _descriptionController.text.trim(),
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Produk berhasil diperbarui')),
+          );
+          Navigator.pop(context);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menyimpan produk: $e')),
+        );
+      }
+    }
+  }
+
+  int _getCategoryId(String categoryName) {
+    const categoryMap = {
+      'Pertanian & Perkebunan': 1,
+      'Kerajinan Tangan': 2,
+      'Kuliner Desa': 3,
+      'Jasa Lokal': 4,
+    };
+    return categoryMap[categoryName] ?? 1;
   }
 
   @override

@@ -17,7 +17,14 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     final rawRole = (json['role'] as String? ?? 'buyer').toLowerCase();
-    final normalizedRole = rawRole.contains('penjual') || rawRole.contains('seller') ? 'seller' : rawRole.contains('pembeli') || rawRole.contains('buyer') ? 'buyer' : rawRole;
+    final normalizedRole =
+        rawRole.contains('penjual') || rawRole.contains('seller')
+        ? 'seller'
+        : rawRole.contains('pembeli') || rawRole.contains('buyer')
+        ? 'buyer'
+        : rawRole.contains('admin')
+        ? 'admin'
+        : rawRole;
     return UserModel(
       id: json['id'] as int?,
       name: json['name'] as String? ?? '',

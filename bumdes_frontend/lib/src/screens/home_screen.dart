@@ -6,6 +6,9 @@ import '../providers/auth_provider.dart';
 import 'cart_screen.dart';
 import 'order_history_screen.dart';
 import 'profile_screen.dart';
+import 'store_dashboard_screen.dart';
+import 'login_screen.dart';
+import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
@@ -20,6 +23,41 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context);
+
+    // Role check - hanya pembeli yang boleh akses home
+    if (auth.user?.role != 'buyer' && auth.isAuthenticated) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF6F6F6),
+        appBar: AppBar(title: const Text('Akses Tidak Diizinkan')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Halaman ini hanya untuk pembeli.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () async {
+                    await auth.logout();
+                    if (mounted) {
+                      Navigator.pushReplacementNamed(context, LoginScreen.routeName);
+                    }
+                  },
+                  child: const Text('Keluar'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final pages = <Widget>[
       const HomeTab(),
       const SearchTab(),
@@ -37,44 +75,41 @@ class _HomeScreenState extends State<HomeScreen> {
       Icons.person_outline,
     ];
 
-    return Consumer<AuthProvider>(
-      builder: (context, auth, child) {
-        return Scaffold(
-          backgroundColor: const Color(0xFFF1F5F1),
-          appBar: AppBar(
-            backgroundColor: Colors.white,
-            elevation: 0,
-            title: Row(
-              children: [
-                const Text('DE.UP', style: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold)),
-                const Spacer(),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(
-                    menuLabels.length,
-                    (index) {
-                      final isSelected = _selectedIndex == index;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                        child: IconButton(
-                          onPressed: () => setState(() => _selectedIndex = index),
-                          icon: Icon(
-                            menuIcons[index],
-                            color: isSelected ? Colors.black87 : Colors.grey[600],
-                          ),
-                          tooltip: menuLabels[index],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+    return Scaffold(
+      backgroundColor: const Color(0xFFF1F5F1),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Row(
+          children: [
+            const Text('DE.UP', style: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold)),
+            const Spacer(),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(
+                menuLabels.length,
+                (index) {
+                  final isSelected = _selectedIndex == index;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: IconButton(
+                      onPressed: () => setState(() => _selectedIndex = index),
+                      icon: Icon(
+                        menuIcons[index],
+                        color: isSelected ? Colors.black87 : Colors.grey[600],
+                      ),
+                      tooltip: menuLabels[index],
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-          body: pages[_selectedIndex],
-        );
-      },
+          ],
+        ),
+      ),
+      body: pages[_selectedIndex],
     );
+
   }
 }
 
@@ -207,7 +242,7 @@ class HomeTab extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.06), blurRadius: 20, offset: const Offset(0, 8)),
         ],
       ),
       child: const Center(
@@ -223,7 +258,7 @@ class HomeTab extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 6)),
+          BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.04), blurRadius: 12, offset: const Offset(0, 6)),
         ],
       ),
       child: Row(
@@ -335,7 +370,7 @@ class FeatureTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Color.fromRGBO(0, 0, 0, 0.05),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -380,7 +415,7 @@ class ProductCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Color.fromRGBO(0, 0, 0, 0.05),
               blurRadius: 14,
               offset: const Offset(0, 8),
             ),

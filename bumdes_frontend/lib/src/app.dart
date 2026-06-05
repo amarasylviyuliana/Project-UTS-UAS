@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/product_provider.dart';
+import 'screens/admin_dashboard_screen.dart';
 import 'screens/cart_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
@@ -14,6 +15,8 @@ import 'screens/product_form_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/store_dashboard_screen.dart';
+import 'screens/store_form_screen.dart';
+import 'screens/seller_orders_screen.dart';
 import 'screens/splash_screen.dart';
 
 class BumdesApp extends StatelessWidget {
@@ -48,7 +51,10 @@ class BumdesApp extends StatelessWidget {
           OrderHistoryScreen.routeName: (_) => const OrderHistoryScreen(),
           ProfileScreen.routeName: (_) => const ProfileScreen(),
           StoreDashboardScreen.routeName: (_) => const StoreDashboardScreen(),
+          AdminDashboardScreen.routeName: (_) => const AdminDashboardScreen(),
           ProductFormScreen.routeName: (_) => const ProductFormScreen(),
+          StoreFormScreen.routeName: (_) => const StoreFormScreen(),
+          SellerOrdersScreen.routeName: (_) => const SellerOrdersScreen(),
         },
         onGenerateRoute: (settings) {
           if (settings.name == ProductDetailScreen.routeName) {

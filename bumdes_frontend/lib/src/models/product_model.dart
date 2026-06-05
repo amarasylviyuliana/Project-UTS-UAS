@@ -9,6 +9,7 @@ class ProductModel {
   final String description;
   final String imageUrl;
   final bool isService;
+  final bool isSample;
 
   ProductModel({
     required this.id,
@@ -21,6 +22,7 @@ class ProductModel {
     required this.description,
     required this.imageUrl,
     this.isService = false,
+    this.isSample = false,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class ProductModel {
       description: json['description'] as String? ?? '',
       imageUrl: json['image_url'] as String? ?? json['imageUrl'] as String? ?? '',
       isService: json['is_service'] as bool? ?? json['isService'] as bool? ?? false,
+      isSample: false,
     );
   }
 
@@ -64,6 +67,7 @@ class ProductModel {
       stock: 0,
       description: '',
       imageUrl: '',
+      isSample: false,
     );
   }
 }

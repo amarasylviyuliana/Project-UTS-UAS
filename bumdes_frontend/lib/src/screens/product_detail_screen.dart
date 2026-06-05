@@ -116,7 +116,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10)),
+          BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.05), blurRadius: 20, offset: const Offset(0, 10)),
         ],
       ),
       child: Column(

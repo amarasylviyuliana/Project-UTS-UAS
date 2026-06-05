@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/order_service.dart';
+import '../models/order_model.dart';
 import 'order_history_screen.dart';
+import 'payment_screen.dart';
 
 class CartScreen extends StatefulWidget {
   static const routeName = '/cart';
@@ -48,7 +50,10 @@ class _CartScreenState extends State<CartScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(flex: 7, child: _buildOrderForm(cart, auth, orderService)),
+                  Expanded(
+                    flex: 7,
+                    child: _buildOrderForm(cart, auth, orderService),
+                  ),
                   const SizedBox(width: 24),
                   Expanded(flex: 5, child: _buildOrderSummary(cart)),
                 ],
@@ -67,7 +72,11 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildOrderForm(CartProvider cart, AuthProvider auth, OrderService orderService) {
+  Widget _buildOrderForm(
+    CartProvider cart,
+    AuthProvider auth,
+    OrderService orderService,
+  ) {
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -76,7 +85,10 @@ class _CartScreenState extends State<CartScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Checkout Sekarang', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            const Text(
+              'Checkout Sekarang',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
             Form(
               key: _formKey,
@@ -84,22 +96,34 @@ class _CartScreenState extends State<CartScreen> {
                 children: [
                   TextFormField(
                     controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'Nama Penerima'),
-                    validator: (value) => value == null || value.isEmpty ? 'Nama penerima wajib diisi' : null,
+                    decoration: const InputDecoration(
+                      labelText: 'Nama Penerima',
+                    ),
+                    validator: (value) => value == null || value.isEmpty
+                        ? 'Nama penerima wajib diisi'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(labelText: 'No. HP Penerima'),
-                    validator: (value) => value == null || value.isEmpty ? 'Nomor HP wajib diisi' : null,
+                    decoration: const InputDecoration(
+                      labelText: 'No. HP Penerima',
+                    ),
+                    validator: (value) => value == null || value.isEmpty
+                        ? 'Nomor HP wajib diisi'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _addressController,
-                    decoration: const InputDecoration(labelText: 'Alamat Pengiriman'),
+                    decoration: const InputDecoration(
+                      labelText: 'Alamat Pengiriman',
+                    ),
                     maxLines: 4,
-                    validator: (value) => value == null || value.isEmpty ? 'Alamat wajib diisi' : null,
+                    validator: (value) => value == null || value.isEmpty
+                        ? 'Alamat wajib diisi'
+                        : null,
                   ),
                 ],
               ),
@@ -108,15 +132,25 @@ class _CartScreenState extends State<CartScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isSubmitting ? null : () => _placeOrder(context, cart, auth, orderService),
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 18)),
+                onPressed: _isSubmitting
+                    ? null
+                    : () => _placeOrder(context, cart, auth, orderService),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                ),
                 child: _isSubmitting
                     ? const SizedBox(
                         height: 24,
                         width: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
-                    : const Text('Checkout Sekarang', style: TextStyle(fontSize: 16)),
+                    : const Text(
+                        'Checkout Sekarang',
+                        style: TextStyle(fontSize: 16),
+                      ),
               ),
             ),
           ],
@@ -125,7 +159,12 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Future<void> _placeOrder(BuildContext context, CartProvider cart, AuthProvider auth, OrderService orderService) async {
+  Future<void> _placeOrder(
+    BuildContext context,
+    CartProvider cart,
+    AuthProvider auth,
+    OrderService orderService,
+  ) async {
     if (!auth.isAuthenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Silakan login terlebih dahulu')),
@@ -136,16 +175,28 @@ class _CartScreenState extends State<CartScreen> {
 
     if (!_formKey.currentState!.validate()) return;
 
+    if (cart.items.any((item) => item.product.id <= 0)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Produk di keranjang tidak valid. Silakan muat ulang aplikasi dan coba lagi.',
+          ),
+          duration: Duration(seconds: 5),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isSubmitting = true;
     });
 
     final currentContext = context;
     try {
-      print('DEBUG: Starting checkout...');
-      print('DEBUG: Token: ${auth.token}');
-      print('DEBUG: Items count: ${cart.items.length}');
-      print('DEBUG: Total: ${cart.total}');
+      debugPrint('DEBUG: Starting checkout...');
+      debugPrint('DEBUG: Token: ${auth.token}');
+      debugPrint('DEBUG: Items count: ${cart.items.length}');
+      debugPrint('DEBUG: Total: ${cart.total}');
 
       final response = await orderService.createOrder(
         auth.token!,
@@ -156,37 +207,51 @@ class _CartScreenState extends State<CartScreen> {
         _addressController.text.trim(),
       );
 
-      print('DEBUG: Checkout response: $response');
+      debugPrint('DEBUG: Checkout response: $response');
 
+      final orderData = _extractOrderData(response);
+      final createdOrder = orderData != null
+          ? OrderModel.fromJson(orderData)
+          : null;
       cart.clear();
 
       if (!mounted) return;
-      await showDialog(
-        context: currentContext,
-        builder: (context) => AlertDialog(
-          title: const Text('Pesanan Diterima'),
-          content: Text(response['message'] ?? 'Pesanan Anda sedang diproses.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pushReplacementNamed(context, OrderHistoryScreen.routeName);
-              },
-              child: const Text('Lihat Riwayat Pesanan'),
+      if (createdOrder != null) {
+        Navigator.pushReplacementNamed(
+          context,
+          PaymentScreen.routeName,
+          arguments: {'order': createdOrder},
+        );
+      } else {
+        await showDialog(
+          context: currentContext,
+          builder: (context) => AlertDialog(
+            title: const Text('Pesanan Diterima'),
+            content: Text(
+              response['message'] ?? 'Pesanan Anda sedang diproses.',
             ),
-          ],
-        ),
-      );
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(
+                    context,
+                    OrderHistoryScreen.routeName,
+                  );
+                },
+                child: const Text('Lihat Riwayat Pesanan'),
+              ),
+            ],
+          ),
+        );
+      }
     } catch (e, stackTrace) {
-      print('DEBUG: Checkout error: $e');
-      print('DEBUG: Stack trace: $stackTrace');
+      debugPrint('DEBUG: Checkout error: $e');
+      debugPrint('DEBUG: Stack trace: $stackTrace');
       final msg = e is Exception ? e.toString() : 'Gagal membuat pesanan: $e';
       if (!mounted) return;
       ScaffoldMessenger.of(currentContext).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          duration: const Duration(seconds: 5),
-        ),
+        SnackBar(content: Text(msg), duration: const Duration(seconds: 5)),
       );
     } finally {
       if (mounted) {
@@ -197,19 +262,45 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
+  Map<String, dynamic>? _extractOrderData(Map<String, dynamic> response) {
+    if (response['order'] is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(
+        response['order'] as Map<String, dynamic>,
+      );
+    }
+    if (response['data'] is Map<String, dynamic>) {
+      final data = response['data'] as Map<String, dynamic>;
+      if (data['order'] is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(data['order'] as Map<String, dynamic>);
+      }
+      if (data['id'] != null) {
+        return Map<String, dynamic>.from(data);
+      }
+    }
+    if (response['id'] != null) {
+      return Map<String, dynamic>.from(response);
+    }
+    return null;
+  }
+
   Widget _buildOrderSummary(CartProvider cart) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Card(
           elevation: 3,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Ringkasan Pesanan', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Ringkasan Pesanan',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 16),
                 ...cart.items.map(
                   (item) => Padding(
@@ -226,12 +317,15 @@ class _CartScreenState extends State<CartScreen> {
                                 width: 80,
                                 height: 80,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stack) => Container(
-                                  width: 80,
-                                  height: 80,
-                                  color: Colors.grey[200],
-                                  child: const Icon(Icons.image_not_supported),
-                                ),
+                                errorBuilder: (context, error, stack) =>
+                                    Container(
+                                      width: 80,
+                                      height: 80,
+                                      color: Colors.grey[200],
+                                      child: const Icon(
+                                        Icons.image_not_supported,
+                                      ),
+                                    ),
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -239,36 +333,72 @@ class _CartScreenState extends State<CartScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(item.product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  Text(
+                                    item.product.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                   const SizedBox(height: 6),
                                   Row(
                                     children: [
                                       IconButton(
-                                        icon: const Icon(Icons.remove_circle_outline, size: 20),
+                                        icon: const Icon(
+                                          Icons.remove_circle_outline,
+                                          size: 20,
+                                        ),
                                         onPressed: item.quantity > 1
-                                            ? () => cart.updateQuantity(item.product, item.quantity - 1)
-                                            : () => cart.removeItem(item.product),
+                                            ? () => cart.updateQuantity(
+                                                item.product,
+                                                item.quantity - 1,
+                                              )
+                                            : () =>
+                                                  cart.removeItem(item.product),
                                         color: Colors.grey[700],
                                       ),
-                                      Text('${item.quantity}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                      Text(
+                                        '${item.quantity}',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
                                       IconButton(
-                                        icon: const Icon(Icons.add_circle_outline, size: 20),
-                                        onPressed: item.quantity < item.product.stock
-                                            ? () => cart.updateQuantity(item.product, item.quantity + 1)
+                                        icon: const Icon(
+                                          Icons.add_circle_outline,
+                                          size: 20,
+                                        ),
+                                        onPressed:
+                                            item.quantity < item.product.stock
+                                            ? () => cart.updateQuantity(
+                                                item.product,
+                                                item.quantity + 1,
+                                              )
                                             : null,
                                         color: Colors.grey[700],
                                       ),
                                       const SizedBox(width: 8),
                                       TextButton(
-                                        onPressed: () => cart.removeItem(item.product),
-                                        child: const Text('Hapus', style: TextStyle(color: Colors.redAccent)),
+                                        onPressed: () =>
+                                            cart.removeItem(item.product),
+                                        child: const Text(
+                                          'Hapus',
+                                          style: TextStyle(
+                                            color: Colors.redAccent,
+                                          ),
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ],
                               ),
                             ),
-                            Text('Rp ${item.totalPrice.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Text(
+                              'Rp ${item.totalPrice.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                         const Divider(),
@@ -280,8 +410,21 @@ class _CartScreenState extends State<CartScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Total Pembayaran', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    Text('Rp ${cart.total.toStringAsFixed(0)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
+                    const Text(
+                      'Total Pembayaran',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Rp ${cart.total.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
                   ],
                 ),
               ],
