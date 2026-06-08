@@ -527,6 +527,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               if (Provider.of<AuthProvider>(context).user?.role == 'seller')
                 Column(
                   children: [
+                    // Status: Menunggu Konfirmasi → Dikonfirmasi
                     if (order.status.toLowerCase() == 'menunggu konfirmasi')
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12.0),
@@ -559,7 +560,34 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           ),
                         ),
                       ),
-                    if (order.status.toLowerCase() == 'dikonfirmasi' || order.status.toLowerCase() == 'diproses')
+
+                    // Status: Dikonfirmasi → Diproses (Optional intermediate step)
+                    if (order.status.toLowerCase() == 'dikonfirmasi')
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: _isPerformingAction
+                                ? null
+                                : () => _updateOrderStatus('Diproses'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                            ),
+                            child: const Text(
+                              'Pesanan Sedang Disiapkan',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // Status: Dikonfirmasi OR Diproses → Dikirim
+                    if (order.status.toLowerCase() == 'dikonfirmasi' ||
+                        order.status.toLowerCase() == 'diproses')
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12.0),
                         child: SizedBox(
@@ -591,28 +619,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           ),
                         ),
                       ),
-                    if (order.status.toLowerCase() == 'dikonfirmasi' && order.status.toLowerCase() != 'diproses')
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12.0),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: _isPerformingAction
-                                ? null
-                                : () => _updateOrderStatus('Diproses'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                            ),
-                            child: const Text(
-                              'Pesanan Sedang Disiapkan',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                          ),
-                        ),
-                      ),
+
+                    // Status: Dikirim → Selesai (Optional - usually buyer confirms)
                     if (order.status.toLowerCase() == 'dikirim')
                       SizedBox(
                         width: double.infinity,

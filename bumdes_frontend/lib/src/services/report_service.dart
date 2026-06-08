@@ -21,7 +21,7 @@ class ReportService {
       }
 
       if (params.isNotEmpty) {
-        url += '?' + params.entries.map((e) => '${e.key}=${e.value}').join('&');
+        url += '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
       }
 
       final apiService = ApiService(token: token);

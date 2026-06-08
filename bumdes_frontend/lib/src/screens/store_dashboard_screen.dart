@@ -918,7 +918,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: Colors.green.withOpacity(0.1),
+                                      color: Colors.green.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     child: const Icon(

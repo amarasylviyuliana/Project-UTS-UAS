@@ -477,7 +477,7 @@ class _FinancialReportDetailScreenState
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _report!.transactions.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final transaction = _report!.transactions[index];
 
@@ -576,7 +576,7 @@ class _FinancialReportDetailScreenState
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: products.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final entry = products.entries.toList()[index];
               final productName = entry.key;
@@ -725,7 +725,7 @@ class _FinancialReportDetailScreenState
                 ),
               ),
             );
-          }).toList(),
+          }),
           const SizedBox(height: 24),
           const Text(
             'Penjualan Bulanan',
@@ -782,7 +782,7 @@ class _FinancialReportDetailScreenState
                   ),
                 ),
               );
-            }).toList(),
+            }),
           const SizedBox(height: 24),
         ],
       ),
