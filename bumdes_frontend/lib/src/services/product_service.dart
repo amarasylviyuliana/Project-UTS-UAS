@@ -85,6 +85,10 @@ class ProductService {
       if (response['data'] is List) {
         return response['data'] as List<dynamic>;
       }
+      if (response['data'] is Map<String, dynamic> &&
+          response['data']['data'] is List) {
+        return response['data']['data'] as List<dynamic>;
+      }
       if (response['products'] is List) {
         return response['products'] as List<dynamic>;
       }

@@ -39,6 +39,8 @@ dependencies:
   flutter_secure_storage: ^8.0.0
   image_picker: ^0.8.7+4
   qr_flutter: ^4.0.0
+  webview_flutter: ^4.0.7
+  url_launcher: ^6.1.8
 
 dev_dependencies:
   flutter_test:

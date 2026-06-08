@@ -6,8 +6,6 @@ import '../providers/auth_provider.dart';
 import 'cart_screen.dart';
 import 'order_history_screen.dart';
 import 'profile_screen.dart';
-import 'store_dashboard_screen.dart';
-import 'login_screen.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -45,9 +43,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     await auth.logout();
-                    if (mounted) {
+                    if (!mounted) return;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
                       Navigator.pushReplacementNamed(context, LoginScreen.routeName);
-                    }
+                    });
                   },
                   child: const Text('Keluar'),
                 ),

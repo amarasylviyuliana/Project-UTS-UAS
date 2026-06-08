@@ -22,7 +22,6 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   late TextEditingController _descriptionController;
   late String _type;
   late String _category;
-  late String _imageUrl;
   ProductModel? _product;
 
   @override
@@ -30,7 +29,6 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     super.initState();
     _type = 'product';
     _category = 'Kuliner Desa';
-    _imageUrl = 'https://picsum.photos/seed/new/400/300';
     _nameController = TextEditingController();
     _priceController = TextEditingController();
     _stockController = TextEditingController();
@@ -49,7 +47,6 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       _descriptionController.text = _product!.description;
       _type = _product!.isService ? 'service' : 'product';
       _category = _product!.category;
-      _imageUrl = _product!.imageUrl;
     }
   }
 
@@ -78,7 +75,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     try {
       final profileService = ProfileService();
       final store = await profileService.getStore(auth.token!);
-      if (store == null || store['id'] == null) {
+      if (!mounted) return;
+      if (store['id'] == null) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Anda perlu mendaftarkan toko terlebih dahulu')));
         Navigator.pushNamed(context, StoreFormScreen.routeName);
         return;

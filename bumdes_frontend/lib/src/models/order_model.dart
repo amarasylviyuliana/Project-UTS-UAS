@@ -40,6 +40,7 @@ class OrderModel {
     final rawItems =
         (json['items'] as List<dynamic>?) ??
         (json['order_items'] as List<dynamic>?) ??
+        (json['orderItems'] as List<dynamic>?) ??
         (json['products'] as List<dynamic>?) ??
         [];
 
@@ -101,25 +102,36 @@ class OrderModel {
   }
 
   static double _parseDouble(dynamic value) {
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String)
+    if (value is double) {
+      return value;
+    }
+    if (value is int) {
+      return value.toDouble();
+    }
+    if (value is String) {
       return double.tryParse(value.replaceAll(',', '.')) ?? 0;
-    if (value is num) return value.toDouble();
+    }
+    if (value is num) {
+      return value.toDouble();
+    }
     return 0;
   }
 
   static String? _parseSellerName(Map<String, dynamic> json) {
     if (json['store'] is Map<String, dynamic>) {
-      return json['store']['store_name'] as String?;
+      final storeJson = json['store'] as Map<String, dynamic>;
+      return storeJson['store_name'] as String? ??
+          storeJson['name'] as String? ??
+          storeJson['storeName'] as String?;
     }
-    return json['store_name'] as String?;
+    return json['store_name'] as String? ?? json['storeName'] as String?;
   }
 
   static String? _parsePaymentStatus(Map<String, dynamic> json) {
     if (json['payment'] is Map<String, dynamic>) {
       return json['payment']['status'] as String?;
     }
-    return json['payment_status'] as String?;
+    return json['payment_status'] as String? ??
+        json['paymentStatus'] as String?;
   }
 }

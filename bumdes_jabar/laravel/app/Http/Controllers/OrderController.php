@@ -7,6 +7,7 @@ use App\Models\OrderItem;
 use App\Models\Cart;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Services\XenditService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -162,7 +163,8 @@ class OrderController extends Controller
                 'status' => 'Menunggu Pembayaran',
                 'recipient_name' => $validated['recipient_name'],
                 'delivery_address' => $deliveryAddress,
-            'recipient_phone' => $validated['recipient_phone'] ?? null,
+                'recipient_phone' => $validated['recipient_phone'] ?? null,
+                'notes' => $validated['notes'] ?? null,
                 'total_price' => $total,
             ]);
 
@@ -191,27 +193,63 @@ class OrderController extends Controller
                 'status' => 'Pending',
             ]);
 
-            return $order->load('orderItems', 'store', 'payment');
+            return $order->load('orderItems.product', 'store', 'payment');
         });
+
+        $orderData = $result->toArray();
+        $orderData['payment_status'] = 'Pending';
 
         return response()->json([
             'message' => 'Pesanan berhasil dibuat',
-            'data' => $result,
+            'order' => $orderData,
+            'data' => $orderData,
             'code' => 'ORDER_CREATED',
         ], 201);
     }
+
 
     /**
      * Get order details with payment info
      */
     public function show($id): JsonResponse
     {
-        $order = Order::with(['orderItems', 'store', 'payment', 'buyer'])->find($id);
+        $order = Order::with(['orderItems.product', 'store', 'payment', 'buyer'])->find($id);
 
         if (!$order) {
             return response()->json([
                 'message' => 'Pesanan tidak ditemukan',
             ], 404);
+        }
+
+        if ($order->payment && $order->payment->invoice_id) {
+            try {
+                $service = new XenditService();
+                $invoice = $service->getInvoice($order->payment->invoice_id);
+                $status = strtoupper($invoice['status'] ?? '');
+
+                if ($status !== '') {
+                    $payment = $order->payment;
+                    $payment->payment_status = $status;
+                    $payment->paid_at = $status === 'PAID' ? now() : null;
+                    $payment->status = $status === 'PAID' ? 'Confirmed' : ($status === 'EXPIRED' || $status === 'FAILED' ? 'Pending' : 'Pending');
+                    $payment->save();
+
+                    if ($status === 'PAID') {
+                        $order->status = 'Dikonfirmasi';
+                    } else {
+                        $order->status = 'Menunggu Pembayaran';
+                    }
+                    $order->save();
+                    $order->refresh();
+                    $order->load(['orderItems.product', 'store', 'payment', 'buyer']);
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Gagal memperbarui status order dari Xendit', [
+                    'order_id' => $order->id,
+                    'invoice_id' => $order->payment->invoice_id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         return response()->json([
@@ -255,7 +293,8 @@ class OrderController extends Controller
         if (!$store) {
             return response()->json([
                 'message' => 'Toko tidak ditemukan',
-            ], 404);
+                'data' => [],
+            ], 200);
         }
 
         $orders = $store->orders()

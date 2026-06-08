@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'home_screen.dart';
-import 'login_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   static const routeName = '/admin-dashboard';
@@ -374,7 +373,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: _users.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
+        separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (context, index) {
           final user = _users[index];
           return Padding(
@@ -474,7 +473,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: _stores.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
+        separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (context, index) {
           final store = _stores[index];
           return Padding(

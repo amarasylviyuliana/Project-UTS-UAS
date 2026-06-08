@@ -14,6 +14,11 @@ class Payment extends Model
         'order_id',
         'proof_image_url',
         'status',
+        'invoice_id',
+        'invoice_url',
+        'payment_method',
+        'payment_status',
+        'paid_at',
         'rejection_reason',
         'confirmed_at',
         'rejected_at',
@@ -22,6 +27,7 @@ class Payment extends Model
     protected $casts = [
         'confirmed_at' => 'datetime',
         'rejected_at' => 'datetime',
+        'paid_at' => 'datetime',
     ];
 
     // Relationships

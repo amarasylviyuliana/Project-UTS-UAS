@@ -7,8 +7,9 @@ import '../providers/auth_provider.dart';
 
 class SellerOrdersScreen extends StatefulWidget {
   static const routeName = '/seller-orders';
-  final String? statusFilter;
-  const SellerOrdersScreen({super.key, this.statusFilter});
+  final List<String>? statusFilters;
+  final String? screenTitle;
+  const SellerOrdersScreen({super.key, this.statusFilters, this.screenTitle});
 
   @override
   State<SellerOrdersScreen> createState() => _SellerOrdersScreenState();
@@ -41,9 +42,12 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = widget.statusFilter == null ? _orders : _orders.where((o) => o.status == widget.statusFilter).toList();
+    final filtered = widget.statusFilters == null 
+      ? _orders 
+      : _orders.where((o) => widget.statusFilters!.contains(o.status)).toList();
+    
     return Scaffold(
-      appBar: AppBar(title: Text(widget.statusFilter == null ? 'Pesanan Masuk' : widget.statusFilter!)),
+      appBar: AppBar(title: Text(widget.screenTitle ?? 'Pesanan Masuk')),
       body: _loading ? const Center(child: CircularProgressIndicator()) : RefreshIndicator(
         onRefresh: _load,
         child: ListView.builder(

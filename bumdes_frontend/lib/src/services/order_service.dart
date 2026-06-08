@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+ import 'package:flutter/foundation.dart';
 import 'api_service.dart';
 import '../models/cart_item_model.dart';
 import '../models/order_model.dart';
@@ -52,10 +52,56 @@ class OrderService {
     return response;
   }
 
-  Future<Map<String, dynamic>> submitPayment(String token, int orderId) async {
+  Future<Map<String, dynamic>> createInvoice(
+    String token,
+    String orderId,
+    double amount,
+    String customerName,
+    String paymentMethod,
+  ) async {
     final api = ApiService(token: token);
-    final response = await api.post('/payments/$orderId/submit', {});
+    final payload = {
+      'order_id': orderId,
+      'amount': amount,
+      'customer_name': customerName,
+      'payment_method': paymentMethod,
+    };
+    final response = await api.post('/payments/create', payload);
     return response;
+  }
+
+  Future<Map<String, dynamic>> submitPayment(
+    String token,
+    int orderId, {
+    String? status,
+  }) async {
+    final api = ApiService(token: token);
+    final payload = <String, dynamic>{};
+    if (status != null) {
+      payload['status'] = status;
+    }
+    final response = await api.post('/payments/$orderId/submit', payload);
+    return response;
+  }
+
+  Future<Map<String, dynamic>> updateOrderStatus(
+    String token,
+    int orderId,
+    String status,
+  ) async {
+    final api = ApiService(token: token);
+    final payload = {'status': status};
+    return await api.put('/orders/$orderId/status', payload);
+  }
+
+  Future<Map<String, dynamic>> confirmReceipt(String token, int orderId) async {
+    final api = ApiService(token: token);
+    return await api.put('/orders/$orderId/confirm-receipt', {});
+  }
+
+  Future<Map<String, dynamic>> cancelOrder(String token, int orderId) async {
+    final api = ApiService(token: token);
+    return await api.put('/orders/$orderId/cancel', {});
   }
 
   Map<String, dynamic>? _extractOrderFromResponse(
@@ -84,10 +130,10 @@ class OrderService {
     return null;
   }
 
-  Future<List<OrderModel>> fetchOrders(String token) async {
+  Future<List<OrderModel>> fetchOrders(String token, {int page = 1}) async {
     final api = ApiService(token: token);
     try {
-      final response = await api.getRaw('/orders');
+      final response = await api.getRaw('/orders/buyer/history?page=$page');
       final rawOrders = _extractOrderList(response);
 
       return rawOrders
@@ -96,6 +142,13 @@ class OrderService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  Future<OrderModel> getOrder(String token, int orderId) async {
+    final api = ApiService(token: token);
+    final response = await api.get('/orders/$orderId');
+    final orderData = response['data'] as Map<String, dynamic>;
+    return OrderModel.fromJson(Map<String, dynamic>.from(orderData));
   }
 
   Future<List<OrderModel>> getSellerOrders(String token) async {

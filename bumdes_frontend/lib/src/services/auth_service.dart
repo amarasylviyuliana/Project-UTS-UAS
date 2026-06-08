@@ -82,4 +82,18 @@ class AuthService {
     final api = ApiService(token: token);
     return api.put('/profile', body);
   }
+
+  Future<Map<String, dynamic>> updatePassword(
+    String token,
+    String currentPassword,
+    String password,
+    String passwordConfirmation,
+  ) async {
+    final api = ApiService(token: token);
+    return api.put('/profile/password', {
+      'current_password': currentPassword,
+      'password': password,
+      'password_confirmation': passwordConfirmation,
+    });
+  }
 }

@@ -6,7 +6,7 @@ import '../providers/auth_provider.dart';
 import '../services/order_service.dart';
 import '../models/order_model.dart';
 import 'order_history_screen.dart';
-import 'payment_screen.dart';
+import 'payment_gateway_screen.dart';
 
 class CartScreen extends StatefulWidget {
   static const routeName = '/cart';
@@ -38,36 +38,42 @@ class _CartScreenState extends State<CartScreen> {
     final orderService = OrderService();
 
     if (cart.items.isEmpty) {
-      return const Center(child: Text('Keranjang Anda kosong'));
+      return Scaffold(
+        appBar: AppBar(title: const Text('Pembayaran Pesanan')),
+        body: const Center(child: Text('Keranjang Anda kosong')),
+      );
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth > 900) {
-            return SingleChildScrollView(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 7,
-                    child: _buildOrderForm(cart, auth, orderService),
-                  ),
-                  const SizedBox(width: 24),
-                  Expanded(flex: 5, child: _buildOrderSummary(cart)),
-                ],
-              ),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Pembayaran Pesanan'), elevation: 0),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth > 900) {
+              return SingleChildScrollView(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 7,
+                      child: _buildOrderForm(cart, auth, orderService),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(flex: 5, child: _buildOrderSummary(cart)),
+                  ],
+                ),
+              );
+            }
+            return ListView(
+              children: [
+                _buildOrderSummary(cart),
+                const SizedBox(height: 24),
+                _buildOrderForm(cart, auth, orderService),
+              ],
             );
-          }
-          return ListView(
-            children: [
-              _buildOrderForm(cart, auth, orderService),
-              const SizedBox(height: 24),
-              _buildOrderSummary(cart),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }
@@ -217,10 +223,11 @@ class _CartScreenState extends State<CartScreen> {
 
       if (!mounted) return;
       if (createdOrder != null) {
-        Navigator.pushReplacementNamed(
+        await Navigator.pushReplacement(
           context,
-          PaymentScreen.routeName,
-          arguments: {'order': createdOrder},
+          MaterialPageRoute(
+            builder: (_) => PaymentGatewayScreen(order: createdOrder),
+          ),
         );
       } else {
         await showDialog(
@@ -288,7 +295,7 @@ class _CartScreenState extends State<CartScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Card(
-          elevation: 3,
+          elevation: 4,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
@@ -299,133 +306,113 @@ class _CartScreenState extends State<CartScreen> {
               children: [
                 const Text(
                   'Ringkasan Pesanan',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                const Text(
+                  'Periksa kembali detail pesanan Anda sebelum lanjut ke pembayaran.',
+                  style: TextStyle(color: Colors.black54, height: 1.5),
+                ),
+                const SizedBox(height: 20),
                 ...cart.items.map(
                   (item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: Column(
+                    padding: const EdgeInsets.only(bottom: 18.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: Image.network(
-                                item.product.imageUrl,
-                                width: 80,
-                                height: 80,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stack) =>
-                                    Container(
-                                      width: 80,
-                                      height: 80,
-                                      color: Colors.grey[200],
-                                      child: const Icon(
-                                        Icons.image_not_supported,
-                                      ),
-                                    ),
-                              ),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.network(
+                            item.product.imageUrl,
+                            width: 72,
+                            height: 72,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stack) => Container(
+                              width: 72,
+                              height: 72,
+                              color: Colors.grey[200],
+                              child: const Icon(Icons.image_not_supported),
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.product.name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.remove_circle_outline,
-                                          size: 20,
-                                        ),
-                                        onPressed: item.quantity > 1
-                                            ? () => cart.updateQuantity(
-                                                item.product,
-                                                item.quantity - 1,
-                                              )
-                                            : () =>
-                                                  cart.removeItem(item.product),
-                                        color: Colors.grey[700],
-                                      ),
-                                      Text(
-                                        '${item.quantity}',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.add_circle_outline,
-                                          size: 20,
-                                        ),
-                                        onPressed:
-                                            item.quantity < item.product.stock
-                                            ? () => cart.updateQuantity(
-                                                item.product,
-                                                item.quantity + 1,
-                                              )
-                                            : null,
-                                        color: Colors.grey[700],
-                                      ),
-                                      const SizedBox(width: 8),
-                                      TextButton(
-                                        onPressed: () =>
-                                            cart.removeItem(item.product),
-                                        child: const Text(
-                                          'Hapus',
-                                          style: TextStyle(
-                                            color: Colors.redAccent,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Text(
-                              'Rp ${item.totalPrice.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                        const Divider(),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.product.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Qty ${item.quantity} • Rp ${item.product.price.toStringAsFixed(0)}',
+                                style: const TextStyle(color: Colors.black54),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          'Rp ${item.totalPrice.toStringAsFixed(0)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ],
                     ),
                   ),
                 ),
-                const Divider(),
+                const Divider(height: 24, thickness: 1.2),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Subtotal',
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                    Text(
+                      'Rp ${cart.total.toStringAsFixed(0)}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: const [
+                    Text(
+                      'Ongkos Kirim',
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                    Text('Rp 0', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ],
+                ),
+                const SizedBox(height: 18),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
                       'Total Pembayaran',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
                       'Rp ${cart.total.toStringAsFixed(0)}',
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.green,
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Pesanan Anda akan dilanjutkan ke gateway pembayaran profesional Xendit setelah checkout.',
+                  style: TextStyle(color: Colors.black54),
                 ),
               ],
             ),

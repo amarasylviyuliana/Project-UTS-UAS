@@ -44,15 +44,23 @@ class ProfileScreen extends StatelessWidget {
                     },
                   ),
                 const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Keluar'),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  onPressed: () {
-                    auth.logout();
-                    Navigator.pushReplacementNamed(context, '/login');
-                  },
-                ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Edit Profil'),
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/edit-profile');
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.logout),
+                    label: const Text('Keluar'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    onPressed: () {
+                      auth.logout();
+                      Navigator.pushReplacementNamed(context, '/login');
+                    },
+                  ),
               ],
             ),
     );

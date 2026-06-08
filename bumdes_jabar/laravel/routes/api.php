@@ -8,6 +8,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\MidtransController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ReportController;
 use App\Models\Product;
@@ -58,6 +59,12 @@ Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::get('/stores/{store_id}/products', [ProductController::class, 'getByStore']);
 Route::get('/products/{productId}/reviews', [ReviewController::class, 'getProductReviews']);
 
+// Midtrans notification webhook (public endpoint)
+Route::post('/midtrans/notification', [MidtransController::class, 'notification']);
+
+// Xendit webhook endpoint (public endpoint)
+Route::post('/payments/webhook', [PaymentController::class, 'webhook']);
+
 // Protected routes (authentication required)
 Route::middleware('auth:sanctum')->group(function () {
     // Auth routes
@@ -107,6 +114,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Payment routes
     Route::get('/payments/{orderId}', [PaymentController::class, 'show']);
+    Route::post('/payments/create', [PaymentController::class, 'createInvoice']);
     Route::post('/payments/{orderId}/upload-proof', [PaymentController::class, 'uploadProof']);
     Route::post('/payments/{orderId}/submit', [PaymentController::class, 'submitPayment']);
     Route::get('/payments/{orderId}/proof', [PaymentController::class, 'getProof']);
