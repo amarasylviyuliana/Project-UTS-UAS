@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../models/product_model.dart';
 import '../models/order_model.dart';
 import '../models/financial_report_model.dart';
@@ -9,6 +8,7 @@ import '../providers/product_provider.dart';
 import '../services/order_service.dart';
 import '../services/product_service.dart';
 import '../services/report_service.dart';
+import '../utils/format_helper.dart';
 import 'home_screen.dart';
 import 'product_form_screen.dart';
 import 'edit_profile_screen.dart';
@@ -1006,11 +1006,6 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     }
 
     final report = _financialReport!;
-    final currencyFormatter = NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    );
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -1023,13 +1018,13 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Periode: ${DateFormat('dd MMM - dd MMM yyyy', 'id_ID').format(report.startDate)} - ${report.endDate.difference(report.startDate).inDays} hari',
+            'Periode: ${FormatHelper.formatDateRange(report.startDate, report.endDate)} - ${report.endDate.difference(report.startDate).inDays} hari',
             style: const TextStyle(color: Colors.black54, fontSize: 12),
           ),
           const SizedBox(height: 20),
           _buildClickableReportCard(
             'Pendapatan',
-            currencyFormatter.format(report.totalRevenue),
+            FormatHelper.formatCurrency(report.totalRevenue),
             Colors.green,
             Icons.trending_up,
             () => _navigateToDetailReport(),
@@ -1037,7 +1032,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           const SizedBox(height: 12),
           _buildClickableReportCard(
             'Pengeluaran',
-            currencyFormatter.format(report.totalExpense),
+            FormatHelper.formatCurrency(report.totalExpense),
             Colors.red,
             Icons.trending_down,
             () => _navigateToDetailReport(),
@@ -1045,7 +1040,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           const SizedBox(height: 12),
           _buildClickableReportCard(
             'Laba Bersih',
-            currencyFormatter.format(report.netProfit),
+            FormatHelper.formatCurrency(report.netProfit),
             const Color(0xFF2A7F41),
             Icons.attach_money,
             () => _navigateToDetailReport(),
@@ -1282,11 +1277,6 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     return Column(
       children: monthlySales.take(6).map((month) {
         final percentage = maxSales > 0 ? (month.sales / maxSales) : 0.0;
-        final formatter = NumberFormat.currency(
-          locale: 'id_ID',
-          symbol: 'Rp ',
-          decimalDigits: 0,
-        );
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
@@ -1302,7 +1292,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   Text(
-                    formatter.format(month.sales),
+                    FormatHelper.formatCurrency(month.sales),
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -1630,9 +1620,13 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           case 'Menunggu Konfirmasi':
             filters = ['Menunggu Pembayaran', 'Menunggu Konfirmasi'];
             break;
-          case 'Dalam Pengiriman':
-            filters = ['Dikonfirmasi', 'Diproses', 'Dikirim'];
-            screenTitle = 'Dalam Pengiriman';
+          case 'Sedang Diproses':
+            filters = ['Dikonfirmasi', 'Diproses'];
+            screenTitle = 'Sedang Diproses';
+            break;
+          case 'Sedang Dikirim':
+            filters = ['Dikirim'];
+            screenTitle = 'Sedang Dikirim';
             break;
           case 'Selesai':
             filters = ['Selesai'];

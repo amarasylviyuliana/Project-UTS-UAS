@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../models/financial_report_model.dart';
 import '../models/order_model.dart';
 import '../providers/auth_provider.dart';
 import '../services/report_service.dart';
 import '../services/order_service.dart';
+import '../utils/format_helper.dart';
 
 class FinancialReportDetailScreen extends StatefulWidget {
   static const routeName = '/financial-report-detail';
@@ -119,7 +119,6 @@ class _FinancialReportDetailScreenState
   }
 
   Widget _buildDateRangeCard() {
-    final formatter = DateFormat('dd MMM yyyy', 'id_ID');
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -148,7 +147,7 @@ class _FinancialReportDetailScreenState
               children: [
                 Expanded(
                   child: Text(
-                    '${formatter.format(_startDate)} - ${formatter.format(_endDate)}',
+                    FormatHelper.formatDateRange(_startDate, _endDate),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -218,12 +217,6 @@ class _FinancialReportDetailScreenState
   Widget _buildOverviewTab() {
     if (_report == null) return const SizedBox.shrink();
 
-    final currencyFormatter = NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    );
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
@@ -235,7 +228,7 @@ class _FinancialReportDetailScreenState
               Expanded(
                 child: _buildMetricCard(
                   'Pendapatan',
-                  currencyFormatter.format(_report!.totalRevenue),
+                  FormatHelper.formatCurrency(_report!.totalRevenue),
                   Colors.green,
                   Icons.trending_up,
                 ),
@@ -244,7 +237,7 @@ class _FinancialReportDetailScreenState
               Expanded(
                 child: _buildMetricCard(
                   'Pengeluaran',
-                  currencyFormatter.format(_report!.totalExpense),
+                  FormatHelper.formatCurrency(_report!.totalExpense),
                   Colors.red,
                   Icons.trending_down,
                 ),
@@ -257,7 +250,7 @@ class _FinancialReportDetailScreenState
               Expanded(
                 child: _buildMetricCard(
                   'Laba Bersih',
-                  currencyFormatter.format(_report!.netProfit),
+                  FormatHelper.formatCurrency(_report!.netProfit),
                   const Color(0xFF2A7F41),
                   Icons.attach_money,
                 ),
@@ -303,7 +296,7 @@ class _FinancialReportDetailScreenState
           if (_report!.totalOrders > 0)
             _buildOrderMetricCard(
               'Rata-rata Transaksi',
-              currencyFormatter.format(_report!.totalRevenue / _report!.totalOrders),
+              FormatHelper.formatCurrency(_report!.totalRevenue / _report!.totalOrders),
               Colors.orange,
             ),
           const SizedBox(height: 24),
@@ -410,12 +403,6 @@ class _FinancialReportDetailScreenState
   Widget _buildSummarySection() {
     if (_report == null) return const SizedBox.shrink();
 
-    final formatter = NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    );
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -437,13 +424,13 @@ class _FinancialReportDetailScreenState
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          _buildSummaryRow('Pendapatan Total', formatter.format(_report!.totalRevenue)),
+          _buildSummaryRow('Pendapatan Total', FormatHelper.formatCurrency(_report!.totalRevenue)),
           const SizedBox(height: 12),
-          _buildSummaryRow('Biaya Operasional', formatter.format(_report!.totalExpense)),
+          _buildSummaryRow('Biaya Operasional', FormatHelper.formatCurrency(_report!.totalExpense)),
           const Divider(height: 20),
           _buildSummaryRow(
             'Laba Bersih',
-            formatter.format(_report!.netProfit),
+            FormatHelper.formatCurrency(_report!.netProfit),
             isBold: true,
           ),
         ],
@@ -493,12 +480,6 @@ class _FinancialReportDetailScreenState
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final transaction = _report!.transactions[index];
-              final formatter = NumberFormat.currency(
-                locale: 'id_ID',
-                symbol: 'Rp ',
-                decimalDigits: 0,
-              );
-              final dateFormatter = DateFormat('dd MMM yyyy', 'id_ID');
 
               return Container(
                 padding: const EdgeInsets.all(16),
@@ -546,7 +527,7 @@ class _FinancialReportDetailScreenState
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            dateFormatter.format(transaction.date),
+                            FormatHelper.formatDate(transaction.date),
                             style: const TextStyle(
                               fontSize: 12,
                               color: Colors.black54,
@@ -556,7 +537,7 @@ class _FinancialReportDetailScreenState
                       ),
                     ),
                     Text(
-                      formatter.format(transaction.amount),
+                      FormatHelper.formatCurrency(transaction.amount),
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
@@ -586,12 +567,6 @@ class _FinancialReportDetailScreenState
         child: Center(child: Text('Belum ada data produk terjual')),
       );
     }
-
-    final formatter = NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -650,7 +625,7 @@ class _FinancialReportDetailScreenState
                           ),
                         ),
                         Text(
-                          formatter.format(total),
+                          FormatHelper.formatCurrency(total),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -761,12 +736,6 @@ class _FinancialReportDetailScreenState
             const Text('Belum ada data penjualan bulanan')
           else
             ...monthlySales.map((monthData) {
-              final formatter = NumberFormat.currency(
-                locale: 'id_ID',
-                symbol: 'Rp ',
-                decimalDigits: 0,
-              );
-
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Container(
@@ -803,7 +772,7 @@ class _FinancialReportDetailScreenState
                         ],
                       ),
                       Text(
-                        formatter.format(monthData.sales),
+                        FormatHelper.formatCurrency(monthData.sales),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF2A7F41),
