@@ -23,6 +23,7 @@ import 'screens/security_screen.dart';
 import 'screens/help_screen.dart';
 import 'screens/about_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/financial_report_detail_screen.dart';
 
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
@@ -68,6 +69,7 @@ class BumdesApp extends StatelessWidget {
           ProductFormScreen.routeName: (_) => const ProductFormScreen(),
           StoreFormScreen.routeName: (_) => const StoreFormScreen(),
           SellerOrdersScreen.routeName: (_) => const SellerOrdersScreen(),
+          FinancialReportDetailScreen.routeName: (_) => const FinancialReportDetailScreen(),
         },
         onGenerateRoute: (settings) {
           if (settings.name == ProductDetailScreen.routeName) {

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../models/product_model.dart';
 import '../models/order_model.dart';
+import '../models/financial_report_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/product_provider.dart';
 import '../services/order_service.dart';
 import '../services/product_service.dart';
+import '../services/report_service.dart';
 import 'home_screen.dart';
 import 'product_form_screen.dart';
 import 'edit_profile_screen.dart';
@@ -14,6 +17,7 @@ import 'security_screen.dart';
 import 'help_screen.dart';
 import 'about_screen.dart';
 import 'seller_orders_screen.dart';
+import 'financial_report_detail_screen.dart';
 
 class StoreDashboardScreen extends StatefulWidget {
   static const routeName = '/store-dashboard';
@@ -34,6 +38,9 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   bool _loadingProducts = false;
   List<OrderModel> _sellerOrders = [];
   bool _loadingOrders = false;
+  FinancialReportModel? _financialReport;
+  bool _loadingReport = false;
+  final ReportService _reportService = ReportService();
 
   @override
   void initState() {
@@ -86,11 +93,72 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           _sellerOrders = orders;
           _loadingOrders = false;
         });
+        // Load financial report after orders are loaded
+        _loadFinancialReport();
       }
     } catch (e) {
       debugPrint('Error loading seller orders: $e');
       if (mounted) {
         setState(() => _loadingOrders = false);
+      }
+    }
+  }
+
+  Future<void> _loadFinancialReport() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (!auth.isAuthenticated || auth.token == null) return;
+
+    setState(() => _loadingReport = true);
+    try {
+      // Calculate report from orders
+      if (_sellerOrders.isNotEmpty) {
+        final now = DateTime.now();
+        final lastMonth = DateTime(now.year, now.month - 1, now.day);
+        final report = _reportService.calculateFromOrders(
+          _sellerOrders,
+          startDate: lastMonth,
+          endDate: now,
+        );
+        if (mounted) {
+          setState(() {
+            _financialReport = report;
+            _loadingReport = false;
+          });
+        }
+      } else {
+        // Try to load from API
+        try {
+          final report = await _reportService.getStoreReport(token: auth.token!);
+          if (mounted) {
+            setState(() {
+              _financialReport = report;
+              _loadingReport = false;
+            });
+          }
+        } catch (e) {
+          // Fallback: create empty report
+          if (mounted) {
+            setState(() {
+              _financialReport = FinancialReportModel(
+                totalRevenue: 0,
+                totalExpense: 0,
+                netProfit: 0,
+                totalOrders: 0,
+                completedOrders: 0,
+                transactions: [],
+                period: 'Custom',
+                startDate: DateTime.now().subtract(const Duration(days: 30)),
+                endDate: DateTime.now(),
+              );
+              _loadingReport = false;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading financial report: $e');
+      if (mounted) {
+        setState(() => _loadingReport = false);
       }
     }
   }
@@ -929,6 +997,21 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   }
 
   Widget _buildReportsTab() {
+    if (_loadingReport) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_financialReport == null) {
+      return const Center(child: Text('Data laporan tidak tersedia'));
+    }
+
+    final report = _financialReport!;
+    final currencyFormatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
@@ -936,23 +1019,77 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
         children: [
           const Text(
             'Laporan Keuangan',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 16),
-          _buildReportCard('Pendapatan', 'Rp 68.350.000', Colors.green),
+          const SizedBox(height: 4),
+          Text(
+            'Periode: ${DateFormat('dd MMM - dd MMM yyyy', 'id_ID').format(report.startDate)} - ${report.endDate.difference(report.startDate).inDays} hari',
+            style: const TextStyle(color: Colors.black54, fontSize: 12),
+          ),
+          const SizedBox(height: 20),
+          _buildClickableReportCard(
+            'Pendapatan',
+            currencyFormatter.format(report.totalRevenue),
+            Colors.green,
+            Icons.trending_up,
+            () => _navigateToDetailReport(),
+          ),
           const SizedBox(height: 12),
-          _buildReportCard('Pengeluaran', 'Rp 32.600.000', Colors.red),
+          _buildClickableReportCard(
+            'Pengeluaran',
+            currencyFormatter.format(report.totalExpense),
+            Colors.red,
+            Icons.trending_down,
+            () => _navigateToDetailReport(),
+          ),
           const SizedBox(height: 12),
-          _buildReportCard('Laba Bersih', 'Rp 35.750.000', Colors.indigo),
+          _buildClickableReportCard(
+            'Laba Bersih',
+            currencyFormatter.format(report.netProfit),
+            const Color(0xFF2A7F41),
+            Icons.attach_money,
+            () => _navigateToDetailReport(),
+          ),
           const SizedBox(height: 24),
           const Text(
-            'Grafik Pendapatan',
+            'Ringkasan Metrik',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricBox(
+                  'Total Pesanan',
+                  '${report.totalOrders}',
+                  Colors.purple,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildMetricBox(
+                  'Pesanan Selesai',
+                  '${report.completedOrders}',
+                  Colors.green,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildMetricBox(
+            'Margin Laba',
+            '${report.profitMargin.toStringAsFixed(1)}%',
+            Colors.blue,
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Grafik Penjualan Bulanan',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
           Container(
-            height: 180,
             width: double.infinity,
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
@@ -964,16 +1101,231 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                 ),
               ],
             ),
-            child: Center(
-              child: Text(
-                'Grafik mini',
-                style: TextStyle(color: Colors.grey[500]),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Tren Penjualan',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                _buildMonthlySalesChart(),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2A7F41),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Lihat Laporan Lengkap',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Akses analisis detail, transaksi, dan wawasan keuangan lengkap',
+                  style: TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF2A7F41),
+                    ),
+                    onPressed: _navigateToDetailReport,
+                    child: const Text('Buka Laporan Lengkap'),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+
+  void _navigateToDetailReport() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const FinancialReportDetailScreen(),
+      ),
+    );
+  }
+
+  Widget _buildClickableReportCard(
+    String title,
+    String amount,
+    Color color,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color.fromRGBO(0, 0, 0, 0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: color.withAlpha((0.14 * 255).round()),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    amount,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetricBox(String label, String value, Color color) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(0, 0, 0, 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: Colors.black54, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthlySalesChart() {
+    final monthlySales = _reportService.getMonthlySalesData(_sellerOrders);
+
+    if (monthlySales.isEmpty) {
+      return const Text('Belum ada data penjualan bulanan');
+    }
+
+    // Get max value for scaling
+    final maxSales = monthlySales.fold(0.0, (prev, current) => 
+        current.sales > prev ? current.sales : prev);
+
+    return Column(
+      children: monthlySales.take(6).map((month) {
+        final percentage = maxSales > 0 ? (month.sales / maxSales) : 0.0;
+        final formatter = NumberFormat.currency(
+          locale: 'id_ID',
+          symbol: 'Rp ',
+          decimalDigits: 0,
+        );
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(month.month, style: const TextStyle(fontSize: 12)),
+                  Text(
+                    '${month.orders} order',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  Text(
+                    formatter.format(month.sales),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: percentage,
+                  minHeight: 8,
+                  backgroundColor: Colors.grey.withAlpha(50),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    Color(0xFF2A7F41),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -1340,61 +1692,6 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
             Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[500]),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildReportCard(String title, String amount, Color color) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color.fromRGBO(0, 0, 0, 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: color.withAlpha((0.14 * 255).round()),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(Icons.trending_up, color: color, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  amount,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-        ],
       ),
     );
   }
