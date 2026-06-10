@@ -59,21 +59,30 @@ routes/
 config/
 ├── database.php
 └── filesystems.php
+
+docker/
+├── nginx/
+│   └── default.conf
+└── php/
+    └── Dockerfile
+
+docker-compose.yml
 ```
 
 ## Installation
 
 ### Prerequisites
 - PHP 8.2+
-- MySQL 8.0+
 - Composer
+- MySQL 8.0+ (untuk setup lokal)
+- Docker Desktop + Docker Compose (opsional, untuk deployment container)
 - Git
 
-### Setup Instructions
+### Opsi 1: Jalankan Secara Lokal (Laragon / XAMPP)
 
-1. **Navigate to project directory**
+1. **Masuk ke direktori backend**
    ```bash
-   cd c:\laragon\www\bumdes_jabar\laravel
+   cd c:\laragon\www\Project-UTS-UAS\bumdes_jabar\laravel
    ```
 
 2. **Install dependencies**
@@ -127,6 +136,33 @@ config/
     ```
 
 Server akan berjalan di `http://localhost:8000`
+
+### Opsi 2: Jalankan dengan Docker Compose
+
+1. **Masuk ke direktori backend**
+   ```bash
+   cd c:\laragon\www\Project-UTS-UAS\bumdes_jabar\laravel
+   ```
+
+2. **Build dan jalankan container**
+   ```bash
+   docker compose up --build
+   ```
+
+3. **Akses layanan**
+   - Backend API: http://localhost:8000
+   - phpMyAdmin: http://localhost:8080
+   - Database MySQL: localhost:3306
+
+4. **Untuk menghentikan container**
+   ```bash
+   docker compose down
+   ```
+
+5. **Untuk membersihkan volume database**
+   ```bash
+   docker compose down -v
+   ```
 
 ## API Usage
 
@@ -232,6 +268,8 @@ php artisan serve                # Start development server
 php artisan tinker               # Laravel REPL
 php artisan cache:clear          # Clear application cache
 php artisan route:list           # List all routes
+docker compose up --build         # Run backend via Docker Compose
+docker compose down               # Stop Docker Compose services
 ```
 
 ### Testing
@@ -391,9 +429,9 @@ Untuk dukungan dan pertanyaan, hubungi tim pengembang atau buka issue di reposit
 
 ---
 
-**Last Updated**: May 13, 2025  
-**Version**: 1.0  
-**Status**: In Development
+**Last Updated**: June 10, 2026  
+**Version**: 1.1  
+**Status**: In Development / Docker-ready
 
 ## Laravel Sponsors
 
