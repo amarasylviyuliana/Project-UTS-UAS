@@ -11,6 +11,7 @@ use App\Services\XenditService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class OrderController extends Controller
@@ -25,7 +26,7 @@ class OrderController extends Controller
         $user = $request->user();
 
         // Log incoming checkout attempts (helpful to see missing token or empty carts)
-        \Log::debug('Checkout attempt', [
+        Log::debug('Checkout attempt', [
             'auth_header' => $request->header('Authorization'),
             'user_id' => $user?->id ?? null,
             'body' => $request->all(),
@@ -64,7 +65,7 @@ class OrderController extends Controller
             $productIds = $orderItemsPayload->pluck('product_id')->unique()->toArray();
             $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
 
-            \Log::debug('Checkout product lookup', [
+            Log::debug('Checkout product lookup', [
                 'product_ids' => $productIds,
                 'found_ids' => $products->keys()->all(),
             ]);
@@ -244,7 +245,7 @@ class OrderController extends Controller
                     $order->load(['orderItems.product', 'store', 'payment', 'buyer']);
                 }
             } catch (\Throwable $e) {
-                \Log::warning('Gagal memperbarui status order dari Xendit', [
+                Log::warning('Gagal memperbarui status order dari Xendit', [
                     'order_id' => $order->id,
                     'invoice_id' => $order->payment->invoice_id,
                     'error' => $e->getMessage(),
@@ -283,7 +284,7 @@ class OrderController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'Penjual') {
+        if (! $user->isSeller()) {
             return response()->json([
                 'message' => 'Hanya penjual yang dapat melihat pesanan masuk',
             ], 403);
@@ -316,7 +317,7 @@ class OrderController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'Penjual') {
+        if (! $user->isSeller()) {
             return response()->json([
                 'message' => 'Hanya penjual yang dapat mengubah status pesanan',
             ], 403);
