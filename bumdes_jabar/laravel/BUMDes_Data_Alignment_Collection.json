@@ -1,0 +1,611 @@
+{
+  "info": {
+    "_postman_id": "data-alignment-apis",
+    "name": "BUMDes Data Alignment APIs",
+    "description": "API Collection untuk testing Data Alignment - User, Seller, Admin",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{admin_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Admin Management",
+      "item": [
+        {
+          "name": "Get All Admins",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/admins",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "admins"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Admin Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/admins/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "admins",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create New Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": 3,\n  \"department\": \"Content Moderation\",\n  \"job_title\": \"Moderator\",\n  \"phone_internal\": \"1234\",\n  \"is_super_admin\": false,\n  \"permissions\": [\"approve_products\", \"verify_sellers\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/admins",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "admins"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Admin",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"department\": \"Store Management\",\n  \"job_title\": \"Store Reviewer\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/admins/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "admins",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/dashboard/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "dashboard",
+                "stats"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Seller Verification",
+      "item": [
+        {
+          "name": "Get Pending Verifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/verifications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "verifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Verification Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/verifications/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "verifications",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify Seller (Approve)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Terverifikasi\",\n  \"notes\": \"Dokumen identitas sudah diverifikasi dengan baik\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/verifications/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "verifications",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject Seller Verification",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Ditolak\",\n  \"rejection_reason\": \"Dokumen identitas tidak valid atau expired\",\n  \"notes\": \"Mohon upload ulang dokumen yang valid\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/verifications/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "verifications",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Request Revision Seller",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Direvisi\",\n  \"notes\": \"Mohon isi data yang masih kosong di form identitas\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/verifications/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "verifications",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Seller Verification History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/seller/2/verification-history",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "seller",
+                "2",
+                "verification-history"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Store Approvals",
+      "item": [
+        {
+          "name": "Get Pending Store Approvals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/store-approvals",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "store-approvals"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Store Approval Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/store-approvals/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "store-approvals",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Store",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Disetujui\",\n  \"notes\": \"Toko sudah memenuhi semua persyaratan dan siap berjualan\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/store-approvals/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "store-approvals",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject Store",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Ditolak\",\n  \"rejected_reason\": \"Alamat toko tidak sesuai dengan persyaratan lokasi BUMDes\",\n  \"notes\": \"Silakan mendaftar dengan lokasi toko yang sesuai peraturan\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/store-approvals/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "store-approvals",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Request Store Revision",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Perlu Revisi\",\n  \"notes\": \"Mohon lengkapi data nomor rekening bank dan nama pemilik\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/store-approvals/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "store-approvals",
+                "1"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Product Approvals",
+      "item": [
+        {
+          "name": "Get Pending Product Approvals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/product-approvals",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "product-approvals"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Product Approval Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/product-approvals/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "product-approvals",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Disetujui\",\n  \"notes\": \"Produk sesuai standar kualitas dan dapat dipajang di marketplace\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/product-approvals/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "product-approvals",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Ditolak\",\n  \"rejected_reason\": \"Foto produk tidak jelas atau belum memenuhi standar\",\n  \"notes\": \"Silakan upload foto dengan resolusi lebih tinggi dan pencahayaan yang baik\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/product-approvals/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "product-approvals",
+                "1"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Statistics & Monitoring",
+      "item": [
+        {
+          "name": "Get Approval Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/approvals/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "approvals",
+                "stats"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/audit-logs?page=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "admin_id",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "action",
+                  "value": "verify_seller",
+                  "disabled": true
+                },
+                {
+                  "key": "model_type",
+                  "value": "Product",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Admin Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/admin/audit-logs/admin/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "audit-logs",
+                "admin",
+                "1"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "YOUR_ADMIN_TOKEN_HERE",
+      "type": "string"
+    }
+  ]
+}
