@@ -53,6 +53,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     // Role check - hanya admin yang boleh akses
     if (auth.user?.role != 'admin') {
@@ -87,15 +88,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(auth),
-            Expanded(child: _buildTabContent()),
-          ],
-        ),
-      ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+      body: isMobile
+          ? SafeArea(
+              child: Column(
+                children: [
+                  _buildHeader(auth),
+                  Expanded(child: _buildTabContent()),
+                ],
+              ),
+            )
+          : SafeArea(
+              child: Row(
+                children: [
+                  _buildSidebar(),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        _buildHeaderDesktop(auth),
+                        Expanded(child: _buildTabContent()),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+      bottomNavigationBar: isMobile ? _buildBottomNavigationBar() : null,
     );
   }
 
@@ -152,16 +169,190 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildHeaderDesktop(AuthProvider auth) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0))),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Dashboard Admin',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                auth.user?.name ?? 'Administrator',
+                style: const TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+            ],
+          ),
+          IconButton(
+            onPressed: _handleLogout,
+            icon: const Icon(Icons.logout, color: Colors.red, size: 28),
+            tooltip: 'Keluar',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebar() {
+    return Container(
+      width: 220,
+      decoration: const BoxDecoration(
+        color: Color(0xFF2A3F4B),
+        boxShadow: [
+          BoxShadow(
+            color: Color.fromRGBO(0, 0, 0, 0.1),
+            blurRadius: 8,
+            offset: Offset(2, 0),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(color: Color(0xFF2A7F41)),
+            child: const Column(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Colors.white,
+                  child: Icon(
+                    Icons.admin_panel_settings,
+                    size: 24,
+                    color: Color(0xFF2A7F41),
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'BUMDES ADMIN',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                _buildSidebarMenuItem(
+                  icon: Icons.dashboard_outlined,
+                  label: 'DASHBOARD',
+                  index: 0,
+                ),
+                _buildSidebarMenuItem(
+                  icon: Icons.shopping_cart_outlined,
+                  label: 'PRODUK',
+                  index: 1,
+                ),
+                _buildSidebarMenuItem(
+                  icon: Icons.store_outlined,
+                  label: 'BUMDES',
+                  index: 2,
+                ),
+                _buildSidebarMenuItem(
+                  icon: Icons.receipt_outlined,
+                  label: 'PESANAN',
+                  index: 3,
+                ),
+                _buildSidebarMenuItem(
+                  icon: Icons.attach_money_outlined,
+                  label: 'KEUANGAN',
+                  index: 4,
+                ),
+                _buildSidebarMenuItem(
+                  icon: Icons.people_outline,
+                  label: 'PENGGUNA',
+                  index: 5,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebarMenuItem({
+    required IconData icon,
+    required String label,
+    required int index,
+  }) {
+    final isSelected = _selectedIndex == index;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => setState(() => _selectedIndex = index),
+        hoverColor: Colors.white10,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? Colors.white.withAlpha((0.1 * 255).round())
+                : Colors.transparent,
+            border: isSelected
+                ? const Border(
+                    right: BorderSide(color: Color(0xFF4CAF50), width: 4),
+                  )
+                : null,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? Colors.white : Colors.white70,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.white70,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 12,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTabContent() {
     switch (_selectedIndex) {
+      case 0:
+        return _buildDashboardTab();
       case 1:
-        return _buildUsersTab();
+        return _buildProductsTab();
       case 2:
         return _buildStoresTab();
       case 3:
-        return _buildReportsTab();
+        return _buildOrdersTab();
       case 4:
-        return _buildConfigTab();
+        return _buildReportsTab();
+      case 5:
+        return _buildUsersTab();
       default:
         return _buildDashboardTab();
     }
@@ -169,7 +360,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildDashboardTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -329,9 +520,379 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildProductsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Manajemen Produk',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.add),
+                label: const Text('Tambah Produk'),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Fitur tambah produk')),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildProductTable(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductTable() {
+    final products = [
+      {
+        'nama': 'Teh Hijau',
+        'bumdes': 'Ciwidey',
+        'status': 'Aktif',
+        'harga': 'Rp 25.000',
+      },
+      {
+        'nama': 'Kopi Arabica',
+        'bumdes': 'Garut',
+        'status': 'Aktif',
+        'harga': 'Rp 45.000',
+      },
+      {
+        'nama': 'Beras Premium',
+        'bumdes': 'Ciwidey',
+        'status': 'Aktif',
+        'harga': 'Rp 50.000',
+      },
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(0, 0, 0, 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0))),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'Produk',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    'BUMDes',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    'Status',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    'Harga',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    'Aksi',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ...products.asMap().entries.map((entry) {
+            int index = entry.key;
+            var product = entry.value;
+            return Column(
+              children: [
+                if (index > 0) const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Expanded(flex: 2, child: Text(product['nama']!)),
+                      Expanded(child: Text(product['bumdes']!)),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withAlpha((0.2 * 255).round()),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            product['status']!,
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Text(product['harga']!)),
+                      Expanded(
+                        child: PopupMenuButton(
+                          onSelected: (value) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Aksi: $value')),
+                            );
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(value: 'edit', child: Text('Edit')),
+                            PopupMenuItem(value: 'view', child: Text('Lihat')),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Hapus'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrdersTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Daftar Pesanan',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.filter_list, size: 18),
+                    SizedBox(width: 8),
+                    Text('Filter'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildOrderTable(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderTable() {
+    final orders = [
+      {
+        'id': 'ORD-001',
+        'pembeli': 'Ahmad Rizki',
+        'total': 'Rp 75.000',
+        'status': 'Terkirim',
+      },
+      {
+        'id': 'ORD-002',
+        'pembeli': 'Siti Nurhaliza',
+        'total': 'Rp 120.000',
+        'status': 'Diproses',
+      },
+      {
+        'id': 'ORD-003',
+        'pembeli': 'Budi Santoso',
+        'total': 'Rp 95.000',
+        'status': 'Menunggu Pembayaran',
+      },
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(0, 0, 0, 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Color(0xFFE0E0E0))),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'ID Pesanan',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'Pembeli',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    'Total',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    'Status',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    'Aksi',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ...orders.asMap().entries.map((entry) {
+            int index = entry.key;
+            var order = entry.value;
+            Color statusColor = order['status'] == 'Terkirim'
+                ? Colors.green
+                : order['status'] == 'Diproses'
+                ? Colors.orange
+                : Colors.red;
+            return Column(
+              children: [
+                if (index > 0) const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(order['id']!)),
+                      Expanded(flex: 2, child: Text(order['pembeli']!)),
+                      Expanded(child: Text(order['total']!)),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: statusColor.withAlpha((0.2 * 255).round()),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            order['status']!,
+                            style: TextStyle(
+                              color: statusColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: PopupMenuButton(
+                          onSelected: (value) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Aksi: $value')),
+                            );
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(value: 'view', child: Text('Lihat')),
+                            PopupMenuItem(
+                              value: 'update',
+                              child: Text('Update Status'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
   Widget _buildUsersTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -431,7 +992,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildStoresTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -780,7 +1341,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildReportsTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

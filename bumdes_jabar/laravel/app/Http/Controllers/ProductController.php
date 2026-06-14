@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
@@ -74,9 +75,9 @@ class ProductController extends Controller
     public function getPopularStores(): JsonResponse
     {
         // Get stores with most orders
-        $stores = \DB::table('stores')
+        $stores = DB::table('stores')
             ->leftJoin('orders', 'stores.id', '=', 'orders.store_id')
-            ->select('stores.*', \DB::raw('count(orders.id) as order_count'))
+            ->select('stores.*', DB::raw('count(orders.id) as order_count'))
             ->where('stores.is_active', true)
             ->groupBy('stores.id')
             ->orderByDesc('order_count')
@@ -162,7 +163,7 @@ class ProductController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'Penjual') {
+        if (! $user->isSeller()) {
             return response()->json([
                 'message' => 'Hanya penjual yang dapat menambahkan produk',
             ], 403);
@@ -229,7 +230,7 @@ class ProductController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'Penjual') {
+        if (! $user->isSeller()) {
             return response()->json([
                 'message' => 'Hanya penjual yang dapat mengubah produk',
             ], 403);
@@ -302,7 +303,7 @@ class ProductController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'Penjual') {
+        if (! $user->isSeller()) {
             return response()->json([
                 'message' => 'Hanya penjual yang dapat menghapus produk',
             ], 403);

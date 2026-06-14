@@ -128,7 +128,9 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       } else {
         // Try to load from API
         try {
-          final report = await _reportService.getStoreReport(token: auth.token!);
+          final report = await _reportService.getStoreReport(
+            token: auth.token!,
+          );
           if (mounted) {
             setState(() {
               _financialReport = report;
@@ -471,6 +473,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                   '$waitingConfirmation transaksi menunggu konfirmasi.',
                   Icons.payment,
                   Colors.orange,
+                  onTap: () => _onMenuTap('Pesanan'),
                 ),
                 const SizedBox(height: 12),
                 _buildTaskCard(
@@ -478,6 +481,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                   'Periksa dan perbarui stok produk terlaris.',
                   Icons.shopping_bag,
                   Colors.green,
+                  onTap: () => _onMenuTap('Katalog'),
                 ),
                 const SizedBox(height: 12),
                 _buildTaskCard(
@@ -485,6 +489,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                   'Lihat detail pesanan masuk dan proses pengiriman.',
                   Icons.local_shipping,
                   Colors.blue,
+                  onTap: () => _onMenuTap('Pesanan'),
                 ),
               ],
             ),
@@ -661,9 +666,10 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     String title,
     String subtitle,
     IconData icon,
-    Color color,
-  ) {
-    return Container(
+    Color color, {
+    VoidCallback? onTap,
+  }) {
+    final card = Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -699,9 +705,21 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
               ],
             ),
           ),
+          if (onTap != null) ...[
+            const SizedBox(width: 12),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+          ],
         ],
       ),
     );
+
+    return onTap != null
+        ? InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(18),
+            child: card,
+          )
+        : card;
   }
 
   Widget _buildOrdersTab() {
@@ -918,7 +936,9 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: Colors.green.withValues(alpha: 0.1),
+                                      color: Colors.green.withValues(
+                                        alpha: 0.1,
+                                      ),
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     child: const Icon(
@@ -1156,9 +1176,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   void _navigateToDetailReport() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const FinancialReportDetailScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const FinancialReportDetailScreen()),
     );
   }
 
@@ -1271,8 +1289,10 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     }
 
     // Get max value for scaling
-    final maxSales = monthlySales.fold(0.0, (prev, current) => 
-        current.sales > prev ? current.sales : prev);
+    final maxSales = monthlySales.fold(
+      0.0,
+      (prev, current) => current.sales > prev ? current.sales : prev,
+    );
 
     return Column(
       children: monthlySales.take(6).map((month) {

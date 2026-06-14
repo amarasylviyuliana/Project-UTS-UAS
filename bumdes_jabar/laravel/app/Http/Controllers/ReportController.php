@@ -55,7 +55,7 @@ class ReportController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'Penjual') {
+        if (! $user->isSeller()) {
             return response()->json([
                 'message' => 'Hanya penjual yang dapat melihat laporan toko',
             ], 403);
@@ -123,7 +123,7 @@ class ReportController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'Admin') {
+        if (! $user->isAdmin()) {
             return response()->json([
                 'message' => 'Hanya admin yang dapat melihat laporan platform',
             ], 403);

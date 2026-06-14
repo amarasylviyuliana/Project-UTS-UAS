@@ -48,119 +48,176 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  @override
+  Widget _buildLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        color: Colors.white70,
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 1.2,
+      ),
+    );
+  }
+
+  Widget _buildUnderlineField({
+    required TextEditingController controller,
+    required String hintText,
+    bool obscureText = false,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      style: const TextStyle(color: Colors.white),
+      cursorColor: Colors.white,
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: const TextStyle(color: Colors.white54),
+        enabledBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.white70),
+        ),
+        focusedBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.white),
+        ),
+        border: const UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.white70),
+        ),
+      ),
+      validator: validator,
+    );
+  }
+
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Masuk ke BUMDes Jabar')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          children: [
-            const SizedBox(height: 12),
-            const Text(
-              'Selamat datang!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      backgroundColor: const Color(0xFF4B4B4B),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+          child: Container(
+            width: 420,
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B8B8B),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.25),
+                  blurRadius: 18,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+              border: Border.all(color: const Color(0xFF58A8FF), width: 6),
             ),
-            const SizedBox(height: 8),
-            const Text('Masuk menggunakan email dan password Anda.'),
-            const SizedBox(height: 24),
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Email wajib diisi';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Masukkan email valid';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Password'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Password wajib diisi';
-                      }
-                      if (value.length < 8) {
-                        return 'Password minimal 8 karakter';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: auth.isLoading ? null : _login,
-                      child: auth.isLoading
-                          ? const CircularProgressIndicator()
-                          : const Text('Masuk'),
-                    ),
-                  ),
-                  if (auth.errorMessage != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      auth.errorMessage!,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ],
-                  if (auth.infoMessage != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      auth.infoMessage!,
-                      style: const TextStyle(color: Colors.green),
-                    ),
-                  ],
-                  if (auth.errorMessage != null &&
-                      auth.errorMessage!.toLowerCase().contains(
-                        'belum dikonfirmasi',
-                      )) ...[
-                    const SizedBox(height: 12),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: auth.isLoading
-                            ? null
-                            : () async {
-                                final success = await auth.resendVerification(
-                                  _emailController.text.trim(),
-                                );
-                                if (success && mounted) {
-                                  setState(() {});
-                                }
-                              },
-                        child: const Text('Kirim ulang email verifikasi'),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Belum punya akun?'),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, RegisterScreen.routeName);
-                  },
-                  child: const Text('Daftar sekarang'),
+                const Text(
+                  'LOGIN',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: 2,
+                  ),
+                ),
+                const SizedBox(height: 30),
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildLabel('Email'),
+                      const SizedBox(height: 6),
+                      _buildUnderlineField(
+                        controller: _emailController,
+                        hintText: 'Email',
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Email wajib diisi';
+                          }
+                          if (!value.contains('@')) {
+                            return 'Masukkan email valid';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      _buildLabel('Password'),
+                      const SizedBox(height: 6),
+                      _buildUnderlineField(
+                        controller: _passwordController,
+                        hintText: 'Password',
+                        obscureText: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Password wajib diisi';
+                          }
+                          if (value.length < 8) {
+                            return 'Password minimal 8 karakter';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 36),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 8,
+                        ),
+                        onPressed: auth.isLoading ? null : _login,
+                        child: auth.isLoading
+                            ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.black,
+                                ),
+                              )
+                            : const Text(
+                                'LOGIN',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                      if (auth.errorMessage != null) ...[
+                        const SizedBox(height: 20),
+                        Text(
+                          auth.errorMessage!,
+                          style: const TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                GestureDetector(
+                  onTap: () =>
+                      Navigator.pushNamed(context, RegisterScreen.routeName),
+                  child: const Text(
+                    'Belum punya akun? Daftar sekarang',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

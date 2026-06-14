@@ -51,6 +51,40 @@ class User extends Authenticatable implements MustVerifyEmailContract
         'password' => 'hashed',
     ];
 
+    public function normalizeRole(): string
+    {
+        $role = strtolower($this->role ?? '');
+
+        if (str_contains($role, 'penjual') || str_contains($role, 'seller')) {
+            return 'penjual';
+        }
+
+        if (str_contains($role, 'pembeli') || str_contains($role, 'buyer')) {
+            return 'pembeli';
+        }
+
+        if (str_contains($role, 'admin')) {
+            return 'admin';
+        }
+
+        return $role;
+    }
+
+    public function isSeller(): bool
+    {
+        return $this->normalizeRole() === 'penjual';
+    }
+
+    public function isBuyer(): bool
+    {
+        return $this->normalizeRole() === 'pembeli';
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->normalizeRole() === 'admin';
+    }
+
     // Relationships
     public function store(): HasOne
     {

@@ -46,7 +46,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (!mounted) return;
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (!mounted) return;
-                      Navigator.pushReplacementNamed(context, LoginScreen.routeName);
+                      Navigator.pushReplacementNamed(
+                        context,
+                        LoginScreen.routeName,
+                      );
                     });
                   },
                   child: const Text('Keluar'),
@@ -66,7 +69,13 @@ class _HomeScreenState extends State<HomeScreen> {
       const ProfileScreen(),
     ];
 
-    final menuLabels = ['Beranda', 'Pencarian', 'Keranjang', 'Pesanan', 'Profil'];
+    final menuLabels = [
+      'Beranda',
+      'Pencarian',
+      'Keranjang',
+      'Pesanan',
+      'Profil',
+    ];
     final menuIcons = [
       Icons.home_outlined,
       Icons.search_outlined,
@@ -76,40 +85,43 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F1),
+      backgroundColor: const Color(0xFF0D47A1),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFF1565C0),
         elevation: 0,
         title: Row(
           children: [
-            const Text('DE.UP', style: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              'BUMDES Jabar',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const Spacer(),
             Row(
               mainAxisSize: MainAxisSize.min,
-              children: List.generate(
-                menuLabels.length,
-                (index) {
-                  final isSelected = _selectedIndex == index;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: IconButton(
-                      onPressed: () => setState(() => _selectedIndex = index),
-                      icon: Icon(
-                        menuIcons[index],
-                        color: isSelected ? Colors.black87 : Colors.grey[600],
-                      ),
-                      tooltip: menuLabels[index],
+              children: List.generate(menuLabels.length, (index) {
+                final isSelected = _selectedIndex == index;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: IconButton(
+                    onPressed: () => setState(() => _selectedIndex = index),
+                    icon: Icon(
+                      menuIcons[index],
+                      color: isSelected ? Colors.white : Colors.white70,
                     ),
-                  );
-                },
-              ),
+                    tooltip: menuLabels[index],
+                  ),
+                );
+              }),
             ),
           ],
         ),
       ),
       body: pages[_selectedIndex],
     );
-
   }
 }
 
@@ -125,7 +137,13 @@ class HomeTab extends StatelessWidget {
         children: [
           Container(
             width: double.infinity,
-            color: const Color(0xFFE6E8E7),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [const Color(0xFF1565C0), const Color(0xFF00D9FF)],
+              ),
+            ),
             padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -176,45 +194,34 @@ class HomeTab extends StatelessWidget {
               },
             ),
           ),
-          const SizedBox(height: 24),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: _buildSectionHeader('Kategori Populer'),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: const [
-                CategoryChip(label: 'Pertanian & Perkebunan'),
-                CategoryChip(label: 'Kerajinan Tangan'),
-                CategoryChip(label: 'Kuliner Desa'),
-                CategoryChip(label: 'Jasa Lokal'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: _buildSectionHeader('Toko BUMDes Terpopuler'),
-          ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              children: provider.featured.map((product) => SizedBox(width: 280, child: ProductCard(product: product))).toList(),
-            ),
-          ),
-          const SizedBox(height: 40),
           Container(
             width: double.infinity,
-            color: Colors.white,
+            height: 200,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [const Color(0xFF1565C0), const Color(0xFF00D9FF)],
+              ),
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color.fromARGB(213, 0, 149, 255),
+                  const Color.fromARGB(255, 0, 225, 255),
+                ],
+              ),
+            ),
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
-            child: const Text('Credit & logo logo', style: TextStyle(color: Colors.black54)),
+            child: const Text(
+              'Credit & logo logo',
+              style: TextStyle(color: Colors.black54),
+            ),
           ),
         ],
       ),
@@ -225,11 +232,18 @@ class HomeTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: const [
-        Text('DE.UP', style: TextStyle(fontSize: 42, fontWeight: FontWeight.bold)),
+        Text(
+          'Belanja Produk Unggulan Desa',
+          style: TextStyle(
+            fontSize: 42,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
         SizedBox(height: 16),
         Text(
           'Adalah aplikasi penyokong usaha pada tiap desa yang mana menjual dan memasarkan produk barang atau jasa unggulan di desanya.',
-          style: TextStyle(fontSize: 18, color: Colors.black87, height: 1.5),
+          style: TextStyle(fontSize: 18, color: Colors.white70, height: 1.5),
         ),
       ],
     );
@@ -242,11 +256,18 @@ class HomeTab extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
-          BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.06), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(
+            color: Color.fromRGBO(0, 0, 0, 0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: const Center(
-        child: Text('disini tar icon atau elemen desain', style: TextStyle(color: Colors.black45)),
+        child: Text(
+          'disini tar icon atau elemen desain',
+          style: TextStyle(color: Colors.black45),
+        ),
       ),
     );
   }
@@ -258,24 +279,38 @@ class HomeTab extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.04), blurRadius: 12, offset: const Offset(0, 6)),
+          BoxShadow(
+            color: Color.fromRGBO(0, 0, 0, 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
         ],
       ),
       child: Row(
         children: const [
-          Icon(Icons.search, color: Colors.grey),
+          Icon(Icons.search, color: Color(0xFF1565C0)),
           SizedBox(width: 12),
           Expanded(
-            child: Text('Cari produk, toko, desa', style: TextStyle(color: Colors.black45)),
+            child: Text(
+              'Cari produk, toko, desa',
+              style: TextStyle(color: Colors.black45),
+            ),
           ),
-          Icon(Icons.filter_list, color: Colors.grey),
+          Icon(Icons.filter_list, color: Color(0xFF1565C0)),
         ],
       ),
     );
   }
 
   Widget _buildSectionHeader(String title) {
-    return Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold));
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+    );
   }
 }
 
@@ -298,56 +333,88 @@ class _SearchTabState extends State<SearchTab> {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<ProductProvider>(context);
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: _searchController,
-            decoration: const InputDecoration(
-              labelText: 'Cari produk, toko, desa',
-              prefixIcon: Icon(Icons.search),
-            ),
-            onChanged: provider.search,
-          ),
-          const SizedBox(height: 16),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children:
-                  [
-                        'Semua',
-                        'Pertanian & Perkebunan',
-                        'Kerajinan Tangan',
-                        'Kuliner Desa',
-                        'Jasa Lokal',
-                      ]
-                      .map(
-                        (category) => Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: ChoiceChip(
-                            label: Text(category),
-                            selected: provider.selectedCategory == category,
-                            onSelected: (_) =>
-                                provider.filterByCategory(category),
-                          ),
-                        ),
-                      )
-                      .toList(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: provider.products.isEmpty
-                ? const Center(child: Text('Tidak ada produk yang cocok'))
-                : ListView.builder(
-                    itemCount: provider.products.length,
-                    itemBuilder: (context, index) =>
-                        ProductCard(product: provider.products[index]),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [const Color(0xFF0D47A1), const Color(0xFF1565C0)],
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _searchController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Cari produk, toko, desa',
+                labelStyle: const TextStyle(color: Colors.white70),
+                prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.white70),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Colors.white70,
+                    width: 0.5,
                   ),
-          ),
-        ],
+                ),
+              ),
+              onChanged: provider.search,
+            ),
+            const SizedBox(height: 16),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children:
+                    [
+                          'Semua',
+                          'Pertanian & Perkebunan',
+                          'Kerajinan Tangan',
+                          'Kuliner Desa',
+                          'Jasa Lokal',
+                        ]
+                        .map(
+                          (category) => Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: ChoiceChip(
+                              label: Text(
+                                category,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              backgroundColor: Colors.white10,
+                              selectedColor: Colors.white,
+                              selected: provider.selectedCategory == category,
+                              onSelected: (_) =>
+                                  provider.filterByCategory(category),
+                            ),
+                          ),
+                        )
+                        .toList(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: provider.products.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Tidak ada produk yang cocok',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: provider.products.length,
+                      itemBuilder: (context, index) =>
+                          ProductCard(product: provider.products[index]),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -358,7 +425,12 @@ class FeatureTile extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
-  const FeatureTile({required this.label, required this.icon, required this.onTap, super.key});
+  const FeatureTile({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -370,9 +442,9 @@ class FeatureTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Color.fromRGBO(0, 0, 0, 0.05),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+              color: Color.fromRGBO(0, 0, 0, 0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
@@ -382,11 +454,15 @@ class FeatureTile extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor: const Color(0xFFDCF1D7),
-              child: Icon(icon, color: const Color(0xFF2F7A23)),
+              backgroundColor: const Color(0xFF00D9FF).withOpacity(0.2),
+              child: Icon(icon, color: const Color(0xFF00D9FF)),
             ),
             const SizedBox(height: 12),
-            Text(label, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
           ],
         ),
       ),
@@ -400,7 +476,9 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stockLabel = product.stock == 0 ? 'Stok Habis' : 'Stok ${product.stock}';
+    final stockLabel = product.stock == 0
+        ? 'Stok Habis'
+        : 'Stok ${product.stock}';
     return GestureDetector(
       onTap: () => Navigator.pushNamed(
         context,
@@ -415,9 +493,9 @@ class ProductCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Color.fromRGBO(0, 0, 0, 0.05),
-              blurRadius: 14,
-              offset: const Offset(0, 8),
+              color: Color.fromRGBO(0, 0, 0, 0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -425,7 +503,9 @@ class ProductCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
               child: AspectRatio(
                 aspectRatio: 4 / 3,
                 child: Image.network(
@@ -443,15 +523,33 @@ class ProductCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(product.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(
+                    product.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 6),
-                  Text(product.storeName, style: const TextStyle(color: Colors.black54)),
+                  Text(
+                    product.storeName,
+                    style: const TextStyle(color: Colors.black54),
+                  ),
                   const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Rp ${product.price.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Text(stockLabel, style: TextStyle(color: product.stock == 0 ? Colors.red : Colors.green, fontWeight: FontWeight.w600)),
+                      Text(
+                        'Rp ${product.price.toStringAsFixed(0)}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        stockLabel,
+                        style: TextStyle(
+                          color: product.stock == 0 ? Colors.red : Colors.green,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ],
