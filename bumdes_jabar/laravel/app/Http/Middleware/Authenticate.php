@@ -12,9 +12,12 @@ class Authenticate extends Middleware
      */
     protected function redirectTo(Request $request): ?string
     {
-        if ($request->expectsJson() || $request->is('api/*')) {
+        // Untuk request API, jangan redirect ke route web.
+        // Frontend (Flutter web) mengirim XHR/fetch sehingga harus diperlakukan sebagai JSON.
+        if ($request->expectsJson() || $request->is('api/*') || $request->is('*/api/*')) {
             return null;
         }
+
 
         return route('login');
     }

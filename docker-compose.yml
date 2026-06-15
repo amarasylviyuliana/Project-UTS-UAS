@@ -1,18 +1,39 @@
 services:
   backend:
-    build: ./backend-laravel
+    build: ./bumdes_jabar/laravel
+    container_name: bumdes-backend
     ports:
       - "8000:8000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: projectdb
+      DB_USERNAME: root
+      DB_PASSWORD: root
+    depends_on:
+      - db
+    networks:
+      - bumdes-network
 
   frontend:
-    build: ./frontend
+    build: ./bumdes_frontend
+    container_name: bumdes-frontend
     ports:
       - "3000:3000"
+    networks:
+      - bumdes-network
 
   db:
     image: mysql:8.0
+    container_name: bumdes-db
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: projectdb
     ports:
       - "3306:3306"
+    networks:
+      - bumdes-network
+
+networks:
+  bumdes-network:
+    driver: bridge

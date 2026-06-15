@@ -117,21 +117,6 @@ class User extends Authenticatable implements MustVerifyEmailContract
     }
 
     // Helper methods
-    public function isAdmin(): bool
-    {
-        return $this->role === 'Admin' && $this->admin !== null;
-    }
-
-    public function isSeller(): bool
-    {
-        return $this->role === 'Penjual' && $this->store !== null;
-    }
-
-    public function isBuyer(): bool
-    {
-        return $this->role === 'Pembeli';
-    }
-
     public function isVerifiedSeller(): bool
     {
         if (!$this->isSeller()) return false;
