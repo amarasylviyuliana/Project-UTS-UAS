@@ -128,10 +128,41 @@ class OrderModel {
   }
 
   static String? _parsePaymentStatus(Map<String, dynamic> json) {
+    String? status;
+
     if (json['payment'] is Map<String, dynamic>) {
-      return json['payment']['status'] as String?;
+      // Backend kadang mengirim:
+      // - payment.status: Pending/Confirmed
+      // - payment.payment_status: PAID/PENDING
+      status = json['payment']['payment_status'] as String? ??
+          json['payment']['status'] as String?;
+    } else {
+      status = json['payment_status'] as String? ??
+          json['paymentStatus'] as String?;
     }
-    return json['payment_status'] as String? ??
-        json['paymentStatus'] as String?;
+
+    if (status == null) return null;
+
+    final normalized = status.toUpperCase();
+
+    // Normalisasi agar logika ReportService (yang berharap 'Lunas') konsisten.
+    if (normalized == 'PAID' || normalized == 'CONFIRMED') {
+      return 'Lunas';
+    }
+
+    // Pending / belum dibayar
+    if (normalized == 'PENDING' || normalized == 'PENDING_PAYMENT' ||
+        normalized == 'PENDING_UPLOAD' || normalized == 'PENDING_WAITING') {
+      return 'Belum Lunas';
+    }
+
+    // Untuk kasus lain, kembalikan apa adanya supaya UI tetap bisa menampilkan.
+    // Contoh: 'REJECTED', 'FAILED', dll.
+    if (normalized == 'REJECTED' || normalized == 'FAILED' || normalized == 'EXPIRED') {
+      return 'Ditolak';
+    }
+
+    return status;
   }
+
 }
