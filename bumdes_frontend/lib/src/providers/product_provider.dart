@@ -150,6 +150,7 @@ class ProductProvider extends ChangeNotifier {
     double price,
     int stock,
     String description,
+    String? imageUrl,
   ) async {
     final product = await _productService.createProduct(
       token,
@@ -159,6 +160,7 @@ class ProductProvider extends ChangeNotifier {
       price,
       stock,
       description,
+      imageUrl,
     );
     _products.add(product);
     filterByCategory(selectedCategory);
@@ -184,6 +186,7 @@ class ProductProvider extends ChangeNotifier {
     double price,
     int stock,
     String description,
+    String? imageUrl,
   ) async {
     final product = await _productService.updateProduct(
       token,
@@ -194,6 +197,7 @@ class ProductProvider extends ChangeNotifier {
       price,
       stock,
       description,
+      imageUrl,
     );
     final index = _products.indexWhere((item) => item.id == productId);
     if (index >= 0) {

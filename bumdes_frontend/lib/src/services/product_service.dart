@@ -15,7 +15,8 @@ class ProductService {
 
   Future<List<ProductModel>> fetchProductsByStore(String token) async {
     final profileService = ProfileService();
-    final store = await profileService.getStore(token);
+    final storeResponse = await profileService.getStore(token);
+    final store = storeResponse['data'] ?? storeResponse;
     final storeId = store['id'];
     final api = ApiService(token: token);
     final response = await api.getRaw('/stores/$storeId/products');
@@ -33,6 +34,7 @@ class ProductService {
     double price,
     int stock,
     String description,
+    String? imageUrl,
   ) async {
     final api = ApiService(token: token);
     final payload = {
@@ -43,6 +45,9 @@ class ProductService {
       'stock': stock,
       'description': description,
     };
+    if (imageUrl != null) {
+      payload['image_url'] = imageUrl;
+    }
     final response = await api.post('/products', payload);
     final productData = response['data'] ?? response;
     return ProductModel.fromJson(productData as Map<String, dynamic>);
@@ -57,6 +62,7 @@ class ProductService {
     double price,
     int stock,
     String description,
+    String? imageUrl,
   ) async {
     final api = ApiService(token: token);
     final payload = {
@@ -67,6 +73,9 @@ class ProductService {
       'stock': stock,
       'description': description,
     };
+    if (imageUrl != null) {
+      payload['image_url'] = imageUrl;
+    }
     final response = await api.put('/products/$productId', payload);
     final productData = response['data'] ?? response;
     return ProductModel.fromJson(productData as Map<String, dynamic>);
