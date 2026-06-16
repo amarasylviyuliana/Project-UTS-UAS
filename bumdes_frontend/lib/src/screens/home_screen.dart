@@ -46,7 +46,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (!mounted) return;
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (!mounted) return;
-                      Navigator.pushReplacementNamed(context, LoginScreen.routeName);
+                      Navigator.pushReplacementNamed(
+                        context,
+                        LoginScreen.routeName,
+                      );
                     });
                   },
                   child: const Text('Keluar'),
@@ -66,7 +69,13 @@ class _HomeScreenState extends State<HomeScreen> {
       const ProfileScreen(),
     ];
 
-    final menuLabels = ['Beranda', 'Pencarian', 'Keranjang', 'Pesanan', 'Profil'];
+    final menuLabels = [
+      'Beranda',
+      'Pencarian',
+      'Keranjang',
+      'Pesanan',
+      'Profil',
+    ];
     final menuIcons = [
       Icons.home_outlined,
       Icons.search_outlined,
@@ -82,34 +91,37 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         title: Row(
           children: [
-            const Text('DE.UP', style: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              'DE.UP',
+              style: TextStyle(
+                color: Colors.black87,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const Spacer(),
             Row(
               mainAxisSize: MainAxisSize.min,
-              children: List.generate(
-                menuLabels.length,
-                (index) {
-                  final isSelected = _selectedIndex == index;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: IconButton(
-                      onPressed: () => setState(() => _selectedIndex = index),
-                      icon: Icon(
-                        menuIcons[index],
-                        color: isSelected ? Colors.black87 : Colors.grey[600],
-                      ),
-                      tooltip: menuLabels[index],
+              children: List.generate(menuLabels.length, (index) {
+                final isSelected = _selectedIndex == index;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: IconButton(
+                    onPressed: () => setState(() => _selectedIndex = index),
+                    icon: Icon(
+                      menuIcons[index],
+                      color: isSelected ? Colors.black87 : Colors.grey[600],
                     ),
-                  );
-                },
-              ),
+                    tooltip: menuLabels[index],
+                  ),
+                );
+              }),
             ),
           ],
         ),
       ),
       body: pages[_selectedIndex],
     );
-
   }
 }
 
@@ -179,7 +191,7 @@ class HomeTab extends StatelessWidget {
           const SizedBox(height: 24),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: _buildSectionHeader('Kategori Populer'),
+            child: _buildSectionHeader('3 Pilihan Utama'),
           ),
           const SizedBox(height: 12),
           Padding(
@@ -188,10 +200,9 @@ class HomeTab extends StatelessWidget {
               spacing: 12,
               runSpacing: 12,
               children: const [
-                CategoryChip(label: 'Pertanian & Perkebunan'),
-                CategoryChip(label: 'Kerajinan Tangan'),
-                CategoryChip(label: 'Kuliner Desa'),
-                CategoryChip(label: 'Jasa Lokal'),
+                ChoicePill(label: 'Kerupuk Kulit dari BUMDes Garut'),
+                ChoicePill(label: 'Sayuran Segar dari BUMDes Ciwdey'),
+                ChoicePill(label: 'Sus Lezat dari BUMDes Pangalengan'),
               ],
             ),
           ),
@@ -206,7 +217,14 @@ class HomeTab extends StatelessWidget {
             child: Wrap(
               spacing: 16,
               runSpacing: 16,
-              children: provider.featured.map((product) => SizedBox(width: 280, child: ProductCard(product: product))).toList(),
+              children: provider.featured
+                  .map(
+                    (product) => SizedBox(
+                      width: 280,
+                      child: ProductCard(product: product),
+                    ),
+                  )
+                  .toList(),
             ),
           ),
           const SizedBox(height: 40),
@@ -214,7 +232,10 @@ class HomeTab extends StatelessWidget {
             width: double.infinity,
             color: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
-            child: const Text('Credit & logo logo', style: TextStyle(color: Colors.black54)),
+            child: const Text(
+              'Credit & logo logo',
+              style: TextStyle(color: Colors.black54),
+            ),
           ),
         ],
       ),
@@ -225,7 +246,10 @@ class HomeTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: const [
-        Text('DE.UP', style: TextStyle(fontSize: 42, fontWeight: FontWeight.bold)),
+        Text(
+          'DE.UP',
+          style: TextStyle(fontSize: 42, fontWeight: FontWeight.bold),
+        ),
         SizedBox(height: 16),
         Text(
           'Adalah aplikasi penyokong usaha pada tiap desa yang mana menjual dan memasarkan produk barang atau jasa unggulan di desanya.',
@@ -242,11 +266,18 @@ class HomeTab extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
-          BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.06), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(
+            color: Color.fromRGBO(0, 0, 0, 0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
       child: const Center(
-        child: Text('disini tar icon atau elemen desain', style: TextStyle(color: Colors.black45)),
+        child: Text(
+          'disini tar icon atau elemen desain',
+          style: TextStyle(color: Colors.black45),
+        ),
       ),
     );
   }
@@ -258,7 +289,11 @@ class HomeTab extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.04), blurRadius: 12, offset: const Offset(0, 6)),
+          BoxShadow(
+            color: Color.fromRGBO(0, 0, 0, 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       child: Row(
@@ -266,7 +301,10 @@ class HomeTab extends StatelessWidget {
           Icon(Icons.search, color: Colors.grey),
           SizedBox(width: 12),
           Expanded(
-            child: Text('Cari produk, toko, desa', style: TextStyle(color: Colors.black45)),
+            child: Text(
+              'Cari produk, toko, desa',
+              style: TextStyle(color: Colors.black45),
+            ),
           ),
           Icon(Icons.filter_list, color: Colors.grey),
         ],
@@ -275,7 +313,10 @@ class HomeTab extends StatelessWidget {
   }
 
   Widget _buildSectionHeader(String title) {
-    return Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold));
+    return Text(
+      title,
+      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+    );
   }
 }
 
@@ -358,7 +399,12 @@ class FeatureTile extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
-  const FeatureTile({required this.label, required this.icon, required this.onTap, super.key});
+  const FeatureTile({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -386,7 +432,11 @@ class FeatureTile extends StatelessWidget {
               child: Icon(icon, color: const Color(0xFF2F7A23)),
             ),
             const SizedBox(height: 12),
-            Text(label, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
           ],
         ),
       ),
@@ -400,7 +450,9 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stockLabel = product.stock == 0 ? 'Stok Habis' : 'Stok ${product.stock}';
+    final stockLabel = product.stock == 0
+        ? 'Stok Habis'
+        : 'Stok ${product.stock}';
     return GestureDetector(
       onTap: () => Navigator.pushNamed(
         context,
@@ -425,7 +477,9 @@ class ProductCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
               child: AspectRatio(
                 aspectRatio: 4 / 3,
                 child: Image.network(
@@ -443,15 +497,33 @@ class ProductCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(product.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(
+                    product.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 6),
-                  Text(product.storeName, style: const TextStyle(color: Colors.black54)),
+                  Text(
+                    product.storeName,
+                    style: const TextStyle(color: Colors.black54),
+                  ),
                   const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Rp ${product.price.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Text(stockLabel, style: TextStyle(color: product.stock == 0 ? Colors.red : Colors.green, fontWeight: FontWeight.w600)),
+                      Text(
+                        'Rp ${product.price.toStringAsFixed(0)}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        stockLabel,
+                        style: TextStyle(
+                          color: product.stock == 0 ? Colors.red : Colors.green,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -464,19 +536,28 @@ class ProductCard extends StatelessWidget {
   }
 }
 
-class CategoryChip extends StatelessWidget {
+class ChoicePill extends StatelessWidget {
   final String label;
 
-  const CategoryChip({required this.label, super.key});
+  const ChoicePill({required this.label, super.key});
 
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<ProductProvider>(context);
     final selected = provider.selectedCategory == label;
+
     return ChoiceChip(
-      label: Text(label),
+      label: Text(label, style: const TextStyle(fontSize: 13)),
       selected: selected,
-      onSelected: (_) => provider.filterByCategory(label),
+      onSelected: (_) {
+        if (label.contains('Kerupuk')) {
+          provider.filterByCategory('Kuliner Desa');
+        } else if (label.contains('Sayuran')) {
+          provider.filterByCategory('Pertanian & Perkebunan');
+        } else {
+          provider.filterByCategory('Kuliner Desa');
+        }
+      },
     );
   }
 }

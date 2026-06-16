@@ -331,7 +331,7 @@ class OrderController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'required|in:Menunggu Pembayaran,Menunggu Konfirmasi,Dikonfirmasi,Diproses,Dikirim,Selesai,Dibatalkan',
+            'status' => 'required|in:Menunggu Pembayaran,Menunggu Konfirmasi,Dikonfirmasi,Diproses,Dikemas,Dikirim,Estimasi Sampai,Selesai,Dibatalkan',
         ]);
 
         if ($validated['status'] === 'Dikirim') {

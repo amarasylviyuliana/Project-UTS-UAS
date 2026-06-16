@@ -6,7 +6,9 @@ class OrderStatus {
   static const String waitingConfirmation = 'Menunggu Konfirmasi';
   static const String confirmed = 'Dikonfirmasi';
   static const String processing = 'Diproses';
+  static const String packed = 'Dikemas';
   static const String shipped = 'Dikirim';
+  static const String estimatedArrival = 'Estimasi Sampai';
   static const String completed = 'Selesai';
   static const String cancelled = 'Dibatalkan';
 
@@ -16,7 +18,9 @@ class OrderStatus {
     waitingConfirmation,
     confirmed,
     processing,
+    packed,
     shipped,
+    estimatedArrival,
     completed,
     cancelled,
   ];
@@ -27,7 +31,9 @@ class OrderStatus {
     waitingConfirmation: 'Menunggu Konfirmasi Penjual',
     confirmed: 'Pesanan Dikonfirmasi',
     processing: 'Sedang Disiapkan',
+    packed: 'Pesanan Dikemas',
     shipped: 'Sedang Dikirim',
+    estimatedArrival: 'Estimasi Sampai',
     completed: 'Pesanan Selesai ✓',
     cancelled: 'Dibatalkan',
   };
@@ -38,7 +44,9 @@ class OrderStatus {
     waitingConfirmation: 'Menunggu Konfirmasi Pembayaran',
     confirmed: 'Pembayaran Dikonfirmasi - Siap Dikirim',
     processing: 'Sedang Disiapkan',
+    packed: 'Pesanan Dikemas',
     shipped: 'Sudah Dikirim',
+    estimatedArrival: 'Estimasi Sampai',
     completed: 'Pesanan Selesai',
     cancelled: 'Dibatalkan',
   };
@@ -71,10 +79,12 @@ class OrderStatus {
         // From Confirmed: can move to Processing or directly to Shipped
         return [processing, shipped];
       case processing:
-        // From Processing: can only move to Shipped
+        return [packed];
+      case packed:
         return [shipped];
       case shipped:
-        // From Shipped: can move to Completed
+        return [estimatedArrival];
+      case estimatedArrival:
         return [completed];
       case completed:
       case cancelled:

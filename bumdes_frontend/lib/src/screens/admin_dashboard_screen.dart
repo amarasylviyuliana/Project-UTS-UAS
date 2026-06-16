@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/report_service.dart';
 import 'home_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -13,6 +14,15 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _selectedIndex = 0;
+  bool _isLoadingReport = false;
+  String? _reportError;
+  Map<String, dynamic> _summary = {};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadPlatformReport());
+  }
 
   final List<Map<String, String>> _users = [
     {
@@ -167,7 +177,42 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _loadPlatformReport() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (!auth.isAuthenticated || auth.token == null) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingReport = true;
+      _reportError = null;
+    });
+
+    try {
+      final response = await ReportService().getPlatformReport(auth.token!);
+      if (!mounted) return;
+      setState(() {
+        _summary = Map<String, dynamic>.from(response['summary'] ?? {});
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _reportError = 'Gagal memuat saldo dan laporan admin: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingReport = false);
+      }
+    }
+  }
+
   Widget _buildDashboardTab() {
+    final currentBalance =
+        (_summary['current_balance'] ?? _summary['total_value'] ?? 0) as num;
+    final totalTransactions = (_summary['total_transactions'] ?? 0) as num;
+    final totalUsers = (_summary['total_users'] ?? 0) as num;
+    final totalStores = (_summary['total_stores'] ?? 0) as num;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
@@ -178,24 +223,60 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
+          if (_reportError != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                _reportError!,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          if (_isLoadingReport)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: LinearProgressIndicator(minHeight: 3),
+            ),
           Row(
             children: [
               Expanded(
-                child: _buildStatCard('Total Pengguna', '1.245', Colors.blue),
+                child: _buildStatCard(
+                  'Saldo Admin',
+                  'Rp ${currentBalance.toStringAsFixed(0)}',
+                  Colors.green,
+                ),
               ),
               const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('Total Toko', '48', Colors.green)),
+              Expanded(
+                child: _buildStatCard(
+                  'Total Toko',
+                  totalStores.toString(),
+                  Colors.green,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: _buildStatCard('Pesanan Hari Ini', '156', Colors.orange),
+                child: _buildStatCard(
+                  'Pesanan',
+                  totalTransactions.toString(),
+                  Colors.orange,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildStatCard('Revenue', 'Rp 45M', Colors.purple),
+                child: _buildStatCard(
+                  'Pengguna',
+                  totalUsers.toString(),
+                  Colors.purple,
+                ),
               ),
             ],
           ),

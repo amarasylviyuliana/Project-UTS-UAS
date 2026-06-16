@@ -503,11 +503,11 @@ class PaymentController extends Controller
     private function mapXenditPaymentMethods(string $method): array
     {
         return match (strtolower($method)) {
-            'btn_va' => ['VA'],
+            'btn_va' => [],
             'dana' => ['DANA'],
             'gopay' => ['GOPAY'],
             'shopeepay' => ['SHOPEEPAY'],
-            default => ['VA', 'DANA', 'GOPAY', 'SHOPEEPAY'],
+            default => [],
         };
     }
 
