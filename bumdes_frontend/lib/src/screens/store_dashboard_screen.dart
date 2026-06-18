@@ -11,6 +11,7 @@ import '../services/report_service.dart';
 import '../utils/format_helper.dart';
 import 'home_screen.dart';
 import 'product_form_screen.dart';
+import 'store_form_screen.dart';
 import 'edit_profile_screen.dart';
 import 'settings_screen.dart';
 import 'security_screen.dart';
@@ -128,7 +129,9 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       } else {
         // Try to load from API
         try {
-          final report = await _reportService.getStoreReport(token: auth.token!);
+          final report = await _reportService.getStoreReport(
+            token: auth.token!,
+          );
           if (mounted) {
             setState(() {
               _financialReport = report;
@@ -173,7 +176,9 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           product.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           product.category.toLowerCase().contains(_searchQuery.toLowerCase());
       final matchesCategory =
-          _selectedCategory == 'Semua' || product.category == _selectedCategory;
+          _selectedCategory == 'Semua' ||
+          product.category.contains(_selectedCategory) ||
+          _selectedCategory.contains(product.category);
       return matchesQuery && matchesCategory;
     }).toList();
 
@@ -387,6 +392,121 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              const Text(
+                'Produk Saya',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () => setState(() => _selectedIndex = 1),
+                child: const Text('Lihat Semua'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _sellerProducts.isEmpty
+              ? Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Belum ada produk',
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                  ),
+                )
+              : SizedBox(
+                  height: 200,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _sellerProducts.take(5).length,
+                    itemBuilder: (context, index) {
+                      final product = _sellerProducts[index];
+                      return Container(
+                        width: 150,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color.fromRGBO(0, 0, 0, 0.05),
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                topRight: Radius.circular(16),
+                              ),
+                              child: product.imageUrl.isNotEmpty
+                                  ? Image.network(
+                                      product.imageUrl,
+                                      height: 100,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        height: 100,
+                                        color: Colors.grey[200],
+                                        child: const Icon(
+                                          Icons.image_not_supported,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    )
+                                  : Container(
+                                      height: 100,
+                                      color: Colors.grey[200],
+                                      child: const Icon(
+                                        Icons.image_not_supported,
+                                        color: Colors.grey,
+                                        size: 36,
+                                      ),
+                                    ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    product.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Rp ${product.price.toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      color: Colors.green,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -471,6 +591,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                   '$waitingConfirmation transaksi menunggu konfirmasi.',
                   Icons.payment,
                   Colors.orange,
+                  onTap: () => _onMenuTap('Pesanan'),
                 ),
                 const SizedBox(height: 12),
                 _buildTaskCard(
@@ -478,6 +599,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                   'Periksa dan perbarui stok produk terlaris.',
                   Icons.shopping_bag,
                   Colors.green,
+                  onTap: () => _onMenuTap('Katalog'),
                 ),
                 const SizedBox(height: 12),
                 _buildTaskCard(
@@ -485,6 +607,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                   'Lihat detail pesanan masuk dan proses pengiriman.',
                   Icons.local_shipping,
                   Colors.blue,
+                  onTap: () => _onMenuTap('Pesanan'),
                 ),
               ],
             ),
@@ -521,7 +644,8 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
               ElevatedButton.icon(
                 icon: const Icon(Icons.add),
                 label: const Text('Tambah'),
-                onPressed: () {
+                onPressed: () async {
+                  debugPrint('token: ${auth.token}, role: ${auth.user?.role}');
                   if (auth.token == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -530,7 +654,14 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                     );
                     return;
                   }
-                  Navigator.pushNamed(context, ProductFormScreen.routeName);
+                  final result = await Navigator.pushNamed(
+                    context,
+                    ProductFormScreen.routeName,
+                  );
+                  final createdOrUpdated = result == true;
+                  if (createdOrUpdated == true && mounted) {
+                    await _loadSellerProducts();
+                  }
                 },
               ),
             ],
@@ -568,12 +699,15 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                     final product = filteredProducts[index];
                     return _ProductCard(
                       product: product,
-                      onEdit: () {
-                        Navigator.pushNamed(
+                      onEdit: () async {
+                        final updated = await Navigator.pushNamed<bool>(
                           context,
                           ProductFormScreen.routeName,
                           arguments: {'product': product},
                         );
+                        if (updated == true && mounted) {
+                          await _loadSellerProducts();
+                        }
                       },
                       onDelete: () =>
                           _confirmDeleteProduct(context, product, provider),
@@ -661,9 +795,10 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     String title,
     String subtitle,
     IconData icon,
-    Color color,
-  ) {
-    return Container(
+    Color color, {
+    VoidCallback? onTap,
+  }) {
+    final card = Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -699,9 +834,21 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
               ],
             ),
           ),
+          if (onTap != null) ...[
+            const SizedBox(width: 12),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+          ],
         ],
       ),
     );
+
+    return onTap != null
+        ? InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(18),
+            child: card,
+          )
+        : card;
   }
 
   Widget _buildOrdersTab() {
@@ -918,7 +1065,9 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: Colors.green.withValues(alpha: 0.1),
+                                      color: Colors.green.withValues(
+                                        alpha: 0.1,
+                                      ),
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     child: const Icon(
@@ -1156,9 +1305,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   void _navigateToDetailReport() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const FinancialReportDetailScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const FinancialReportDetailScreen()),
     );
   }
 
@@ -1271,8 +1418,10 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     }
 
     // Get max value for scaling
-    final maxSales = monthlySales.fold(0.0, (prev, current) => 
-        current.sales > prev ? current.sales : prev);
+    final maxSales = monthlySales.fold(
+      0.0,
+      (prev, current) => current.sales > prev ? current.sales : prev,
+    );
 
     return Column(
       children: monthlySales.take(6).map((month) {
@@ -1467,6 +1616,11 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           ),
           const SizedBox(height: 24),
           _ProfileOptionTile(
+            label: 'Daftarkan / Edit Toko',
+            onTap: () =>
+                Navigator.pushNamed(context, StoreFormScreen.routeName),
+          ),
+          _ProfileOptionTile(
             label: 'Edit Profil',
             onTap: () =>
                 Navigator.pushNamed(context, EditProfileScreen.routeName),
@@ -1558,7 +1712,13 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   }
 
   Widget _buildCategoryChips() {
-    const categories = ['Semua', 'Pangan', 'Pertanian', 'Kerajinan', 'Jasa'];
+    const categories = [
+      'Semua',
+      'Kuliner Desa',
+      'Pertanian & Perkebunan',
+      'Kerajinan Tangan',
+      'Jasa Lokal',
+    ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -1803,80 +1963,92 @@ class _ProductCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
-            ),
-            child: Image.network(
-              product.imageUrl,
-              height: 120,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stack) => Container(
-                height: 120,
-                color: Colors.grey[200],
-                child: const Icon(
-                  Icons.image_not_supported,
-                  size: 48,
-                  color: Colors.grey,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
                 ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Rp ${product.price.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  product.category,
-                  style: const TextStyle(color: Colors.black54, fontSize: 12),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: onEdit,
-                        child: const Text(
-                          'Ubah',
-                          style: TextStyle(fontSize: 12),
+                child: product.imageUrl.isNotEmpty
+                    ? Image.network(
+                        product.imageUrl,
+                        height: 120,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stack) => Container(
+                          height: 120,
+                          color: Colors.grey[200],
+                          child: const Icon(
+                            Icons.image_not_supported,
+                            size: 48,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      )
+                    : Container(
+                        height: 120,
+                        width: double.infinity,
+                        color: Colors.grey[200],
+                        child: const Icon(
+                          Icons.image_not_supported,
+                          size: 48,
+                          color: Colors.grey,
                         ),
                       ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: onDelete,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                        ),
-                        child: const Text(
-                          'Hapus',
-                          style: TextStyle(fontSize: 12),
-                        ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Rp ${product.price.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      product.category,
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 12,
                       ),
                     ),
                   ],
                 ),
-              ],
+              ),
+            ],
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Material(
+              color: Colors.transparent,
+              child: PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Colors.black54),
+                onSelected: (value) {
+                  if (value == 'ubah') {
+                    onEdit();
+                  } else if (value == 'hapus') {
+                    onDelete();
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(value: 'ubah', child: Text('Ubah')),
+                  const PopupMenuItem(value: 'hapus', child: Text('Hapus')),
+                ],
+              ),
             ),
           ),
         ],

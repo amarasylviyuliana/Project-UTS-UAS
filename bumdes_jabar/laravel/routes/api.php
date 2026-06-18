@@ -11,6 +11,9 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\MidtransController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\ApprovalController;
+use App\Http\Controllers\Admin\VerificationController;
 use App\Models\Product;
 
 /*
@@ -23,6 +26,15 @@ use App\Models\Product;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+
+// Handle CORS preflight requests
+Route::options('/{any}', function() {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+        ->header('Access-Control-Max-Age', '86400');
+})->where('any', '.*');
 
 // Public routes (no authentication required)
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -131,4 +143,37 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/buyer', [ReportController::class, 'buyerReport']);
     Route::get('/reports/store', [ReportController::class, 'storeReport']);
     Route::get('/reports/platform', [ReportController::class, 'platformReport']);
+
+    // Admin routes (authentication + admin role required)
+    Route::middleware('role:Admin')->prefix('admin')->group(function () {
+        // Admin management
+        Route::get('/admins', [AdminController::class, 'getAllAdmins']);
+        Route::get('/admins/{id}', [AdminController::class, 'getAdminDetail']);
+        Route::post('/admins', [AdminController::class, 'createAdmin']);
+        Route::put('/admins/{id}', [AdminController::class, 'updateAdmin']);
+        Route::get('/dashboard/stats', [AdminController::class, 'getDashboardStats']);
+
+        // Approval management
+        Route::get('/approvals/stats', [ApprovalController::class, 'getApprovalStats']);
+
+        // Store approvals
+        Route::get('/store-approvals', [ApprovalController::class, 'getPendingStoreApprovals']);
+        Route::get('/store-approvals/{id}', [ApprovalController::class, 'getStoreApprovalDetail']);
+        Route::put('/store-approvals/{id}', [ApprovalController::class, 'approveStore']);
+
+        // Product approvals
+        Route::get('/product-approvals', [ApprovalController::class, 'getPendingProductApprovals']);
+        Route::get('/product-approvals/{id}', [ApprovalController::class, 'getProductApprovalDetail']);
+        Route::put('/product-approvals/{id}', [ApprovalController::class, 'approveProduct']);
+
+        // Seller verification
+        Route::get('/verifications', [VerificationController::class, 'getPendingVerifications']);
+        Route::get('/verifications/{id}', [VerificationController::class, 'getVerificationDetail']);
+        Route::put('/verifications/{id}', [VerificationController::class, 'verifySeller']);
+        Route::get('/seller/{userId}/verification-history', [VerificationController::class, 'getSellerVerificationHistory']);
+
+        // Audit logs
+        Route::get('/audit-logs', [AdminController::class, 'getAllAuditLogs']);
+        Route::get('/audit-logs/admin/{adminId}', [AdminController::class, 'getAdminAuditLogs']);
+    });
 });

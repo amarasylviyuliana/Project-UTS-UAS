@@ -76,7 +76,7 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'Penjual') {
+        if (! $user->isSeller()) {
             return response()->json([
                 'message' => 'Anda tidak memiliki toko',
             ], 403);
@@ -101,7 +101,7 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'Penjual') {
+        if (! $user->isSeller()) {
             return response()->json([
                 'message' => 'Hanya penjual yang dapat mendaftarkan toko',
             ], 403);
