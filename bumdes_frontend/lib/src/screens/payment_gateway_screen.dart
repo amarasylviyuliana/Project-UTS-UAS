@@ -1,12 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import '../models/order_model.dart';
 import '../providers/auth_provider.dart';
 import '../services/order_service.dart';
-import 'home_screen.dart';
-import 'payment_webview_screen.dart';
 
 class PaymentGatewayScreen extends StatefulWidget {
   static const routeName = '/payment-gateway';
@@ -53,45 +50,27 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
         if (invoiceUrl != null && invoiceUrl.isNotEmpty) {
           if (!mounted) return;
 
-          if (kIsWeb) {
-            final opened = await launchUrlString(
-              invoiceUrl,
-              mode: LaunchMode.externalApplication,
-            );
+          final opened = await launchUrlString(
+            invoiceUrl,
+            mode: LaunchMode.externalApplication,
+          );
 
-            if (opened) {
-              if (!mounted) return;
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                HomeScreen.routeName,
-                (route) => false,
-              );
-              return;
-            }
+          if (!mounted) return;
+          if (opened) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Silakan lakukan pembayaran di Xendit. Setelah selesai, Anda akan diarahkan kembali ke halaman BUMDes.',
+                ),
+              ),
+            );
+            return;
           }
 
-          if (!mounted) return;
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => PaymentWebViewScreen(
-                url: invoiceUrl,
-                orderNumber: widget.order.orderNumber,
-              ),
-            ),
-          );
-          if (!mounted) return;
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            HomeScreen.routeName,
-            (route) => false,
-          );
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Silakan selesaikan pembayaran di halaman Xendit.'),
-            ),
-          );
+          setState(() {
+            _errorMessage =
+                'Tidak dapat membuka halaman pembayaran. Silakan coba lagi.';
+          });
           return;
         }
       }

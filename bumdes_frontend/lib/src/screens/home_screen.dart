@@ -121,6 +121,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+class CategoryChip extends StatelessWidget {
+  final String label;
+
+  const CategoryChip({super.key, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 1.0),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(color: Colors.white, fontSize: 14),
+      ),
+    );
+  }
+}
+
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
 
@@ -137,7 +159,7 @@ class HomeTab extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [const Color(0xFF1565C0), const Color(0xFF00D9FF)],
+                colors: [const Color.fromARGB(255, 121, 143, 169), const Color.fromARGB(255, 52, 169, 189)],
               ),
             ),
             padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
@@ -450,7 +472,7 @@ class FeatureTile extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor: const Color(0xFF00D9FF).withOpacity(0.2),
+              backgroundColor: const Color(0xFF00D9FF).withValues(alpha: 0.2),
               child: Icon(icon, color: const Color(0xFF00D9FF)),
             ),
             const SizedBox(height: 12),

@@ -119,92 +119,99 @@ class OrderController extends Controller
             }
         }
 
-        // Group by store
+        // Group by store so one buyer can purchase from multiple sellers in one checkout.
         $groupedByStore = $items->groupBy(function ($item) {
             return $item->product->store_id;
         });
 
-        if ($groupedByStore->count() > 1) {
+        if ($groupedByStore->isEmpty()) {
             return response()->json([
-                'message' => 'Anda hanya dapat memesan dari satu toko sekaligus. Pesanan Anda berisi produk dari ' . $groupedByStore->count() . ' toko berbeda.',
-                'code' => 'MULTIPLE_STORES',
-            ], 422);
-        }
-
-        $storeId = $groupedByStore->keys()->first();
-        $items = $groupedByStore->first();
-
-        if (!$storeId) {
-            return response()->json([
-                'message' => 'ID toko tidak ditemukan',
+                'message' => 'Tidak ada produk yang valid untuk diproses.',
                 'code' => 'INVALID_STORE',
-            ], 422);
-        }
-
-        // Calculate total
-        $total = 0;
-        foreach ($items as $item) {
-            $total += $item->product->price * $item->quantity;
-        }
-
-        if ($total <= 0) {
-            return response()->json([
-                'message' => 'Total pesanan harus lebih dari 0',
-                'code' => 'INVALID_TOTAL',
             ], 422);
         }
 
         $useCart = empty($validated['order_items']);
 
-        $result = DB::transaction(function () use ($user, $storeId, $items, $validated, $total, $deliveryAddress, $useCart) {
-            $order = new Order([
-                'order_number' => 'ORD-' . date('YmdHis') . '-' . Str::random(6),
-                'buyer_id' => $user->id,
-                'store_id' => $storeId,
-                'status' => 'Menunggu Pembayaran',
-                'recipient_name' => $validated['recipient_name'],
-                'delivery_address' => $deliveryAddress,
-                'recipient_phone' => $validated['recipient_phone'] ?? null,
-                'notes' => $validated['notes'] ?? null,
-                'total_price' => $total,
-            ]);
+        $result = DB::transaction(function () use ($user, $groupedByStore, $validated, $deliveryAddress, $useCart) {
+            $createdOrders = [];
 
-            $order->save();
+            foreach ($groupedByStore as $storeId => $storeItems) {
+                $storeTotal = 0;
+                foreach ($storeItems as $item) {
+                    $storeTotal += $item->product->price * $item->quantity;
+                }
 
-            foreach ($items as $item) {
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $item->product_id,
-                    'quantity' => $item->quantity,
-                    'unit_price' => $item->product->price,
-                    'subtotal' => $item->product->price * $item->quantity,
+                if ($storeTotal <= 0) {
+                    continue;
+                }
+
+                $order = new Order([
+                    'order_number' => 'ORD-' . date('YmdHis') . '-' . Str::random(6),
+                    'buyer_id' => $user->id,
+                    'store_id' => $storeId,
+                    'status' => 'Menunggu Pembayaran',
+                    'recipient_name' => $validated['recipient_name'],
+                    'delivery_address' => $deliveryAddress,
+                    'recipient_phone' => $validated['recipient_phone'] ?? null,
+                    'notes' => $validated['notes'] ?? null,
+                    'total_price' => $storeTotal,
                 ]);
 
-                if ($item->product->type === 'produk') {
-                    $item->product->decrement('stock', $item->quantity);
+                $order->save();
+
+                foreach ($storeItems as $item) {
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'product_id' => $item->product_id,
+                        'quantity' => $item->quantity,
+                        'unit_price' => $item->product->price,
+                        'subtotal' => $item->product->price * $item->quantity,
+                    ]);
+
+                    if ($item->product->type === 'produk') {
+                        $item->product->decrement('stock', $item->quantity);
+                    }
                 }
+
+                Payment::create([
+                    'order_id' => $order->id,
+                    'status' => 'Pending',
+                ]);
+
+                $createdOrders[] = $order->load('orderItems.product', 'store', 'payment');
             }
 
             if ($useCart) {
                 Cart::where('user_id', $user->id)->delete();
             }
 
-            Payment::create([
-                'order_id' => $order->id,
-                'status' => 'Pending',
-            ]);
-
-            return $order->load('orderItems.product', 'store', 'payment');
+            return $createdOrders;
         });
 
-        $orderData = $result->toArray();
-        $orderData['payment_status'] = 'Pending';
+        if (empty($result)) {
+            return response()->json([
+                'message' => 'Tidak ada pesanan yang berhasil dibuat.',
+                'code' => 'ORDER_NOT_CREATED',
+            ], 422);
+        }
+
+        $orderPayloads = array_map(function ($order) {
+            $data = $order->toArray();
+            $data['payment_status'] = 'Pending';
+            return $data;
+        }, $result);
 
         return response()->json([
-            'message' => 'Pesanan berhasil dibuat',
-            'order' => $orderData,
-            'data' => $orderData,
-            'code' => 'ORDER_CREATED',
+            'message' => count($orderPayloads) > 1
+                ? 'Pesanan berhasil dibuat untuk beberapa toko.'
+                : 'Pesanan berhasil dibuat',
+            'orders' => $orderPayloads,
+            'order' => count($orderPayloads) === 1 ? $orderPayloads[0] : null,
+            'data' => count($orderPayloads) === 1
+                ? $orderPayloads[0]
+                : ['orders' => $orderPayloads],
+            'code' => 'ORDERS_CREATED',
         ], 201);
     }
 
@@ -317,9 +324,9 @@ class OrderController extends Controller
     {
         $user = $request->user();
 
-        if (! $user->isSeller()) {
+        if (! $user->isSeller() && ! $user->isAdmin()) {
             return response()->json([
-                'message' => 'Hanya penjual yang dapat mengubah status pesanan',
+                'message' => 'Hanya penjual atau admin yang dapat mengubah status pesanan',
             ], 403);
         }
 

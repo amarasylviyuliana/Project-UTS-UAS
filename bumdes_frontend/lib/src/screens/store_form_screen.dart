@@ -67,10 +67,11 @@ class _StoreFormScreenState extends State<StoreFormScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Gagal menyimpan toko: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

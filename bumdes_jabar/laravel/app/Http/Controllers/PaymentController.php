@@ -345,8 +345,9 @@ class PaymentController extends Controller
         $secretKey = env('XENDIT_SECRET_KEY');
         $publicKey = env('XENDIT_PUBLIC_KEY');
         $webhookToken = env('XENDIT_WEBHOOK_TOKEN');
-        $successRedirectBase = env('XENDIT_SUCCESS_REDIRECT_URL') ?: env('APP_URL') . '/#/order-detail';
-        $failureRedirectBase = env('XENDIT_FAILURE_REDIRECT_URL') ?: env('APP_URL') . '/#/order-detail';
+        $frontendBaseUrl = rtrim(env('FRONTEND_URL') ?: env('APP_URL') ?: '', '/');
+        $successRedirectBase = env('XENDIT_SUCCESS_REDIRECT_URL') ?: ($frontendBaseUrl !== '' ? $frontendBaseUrl . '/#/order-detail' : '/#/order-detail');
+        $failureRedirectBase = env('XENDIT_FAILURE_REDIRECT_URL') ?: ($frontendBaseUrl !== '' ? $frontendBaseUrl . '/#/order-detail' : '/#/order-detail');
 
         if (!$secretKey || !$publicKey || !$webhookToken) {
             return response()->json([
@@ -376,10 +377,11 @@ class PaymentController extends Controller
             'customer_email' => $validated['customer_email'] ?? $user->email ?? null,
         ]);
 
-        $successRedirectUrl = $this->appendQueryString($successRedirectBase, [
+        $successRedirectUrl = $this->buildRedirectUrl($successRedirectBase, [
             'orderId' => $order->id,
+            'payment' => 'success',
         ]);
-        $failureRedirectUrl = $this->appendQueryString($failureRedirectBase, [
+        $failureRedirectUrl = $this->buildRedirectUrl($failureRedirectBase, [
             'orderId' => $order->id,
             'payment' => 'failed',
         ]);
@@ -488,6 +490,69 @@ class PaymentController extends Controller
             'message' => 'Webhook Xendit berhasil diproses',
             'status' => $status,
         ]);
+    }
+
+    private function buildRedirectUrl(string $url, array $params): string
+    {
+        if (empty($params)) {
+            return $url;
+        }
+
+        $parsed = parse_url($url);
+        if (!$parsed) {
+            return $url;
+        }
+
+        $scheme = $parsed['scheme'] ?? '';
+        $host = $parsed['host'] ?? '';
+        $port = $parsed['port'] ?? null;
+        $path = $parsed['path'] ?? '';
+        $fragment = $parsed['fragment'] ?? '';
+
+        $base = '';
+        if ($scheme !== '' && $host !== '') {
+            $base = $scheme . '://' . $host;
+            if ($port !== null) {
+                $base .= ':' . $port;
+            }
+            if ($path !== '') {
+                $base .= $path;
+            }
+        } else {
+            $base = $path;
+        }
+
+        if ($fragment !== '') {
+            $fragmentPath = $fragment;
+            $fragmentQuery = '';
+            if (str_contains($fragment, '?')) {
+                [$fragmentPath, $fragmentQuery] = explode('?', $fragment, 2);
+            }
+
+            parse_str($fragmentQuery, $fragmentParams);
+            foreach ($params as $key => $value) {
+                $fragmentParams[$key] = $value;
+            }
+
+            $fragmentString = $fragmentPath;
+            if (!empty($fragmentParams)) {
+                $fragmentString .= '?' . http_build_query($fragmentParams);
+            }
+
+            return $base . '#' . $fragmentString;
+        }
+
+        $query = [];
+        if (isset($parsed['query'])) {
+            parse_str($parsed['query'], $query);
+        }
+
+        foreach ($params as $key => $value) {
+            $query[$key] = $value;
+        }
+
+        $queryString = http_build_query($query);
+        return $base . '?' . $queryString;
     }
 
     private function appendQueryString(string $url, array $params): string

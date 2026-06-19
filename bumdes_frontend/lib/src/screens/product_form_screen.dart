@@ -128,11 +128,13 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     } catch (e) {
       debugPrint('getStore error: $e');
       if (e.toString().contains('404') || e.toString().contains('not found')) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Anda perlu mendaftarkan toko terlebih dahulu'),
           ),
         );
+        if (!mounted) return;
         Navigator.pushNamed(context, StoreFormScreen.routeName);
         return;
       }

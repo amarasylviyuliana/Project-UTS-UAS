@@ -208,6 +208,26 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     return '${arrival.day}/${arrival.month}/${arrival.year}';
   }
 
+  static const List<String> _trackingSteps = [
+    'Menunggu Pembayaran',
+    'Dikonfirmasi',
+    'Diproses',
+    'Dikemas',
+    'Dikirim',
+    'Estimasi Sampai',
+    'Selesai',
+  ];
+
+  int _getStatusStepIndex(String status) {
+    final index = _trackingSteps.indexOf(status);
+    return index >= 0 ? index : 0;
+  }
+
+  double _getProgressValue(String status) {
+    final index = _getStatusStepIndex(status);
+    return index / (_trackingSteps.length - 1);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_order == null) {
@@ -471,12 +491,31 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Status barang',
-                        style: TextStyle(fontWeight: FontWeight.w700),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Kemajuan Paket',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            '${(_getProgressValue(order.status) * 100).round()}%',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 6),
-                      Text('Keadaan produk: ${order.status}'),
+                      const SizedBox(height: 10),
+                      LinearProgressIndicator(
+                        value: _getProgressValue(order.status),
+                        minHeight: 8,
+                        backgroundColor: Colors.grey[200],
+                        color: Colors.green,
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Status sekarang: ${order.status}'),
                       const SizedBox(height: 4),
                       Text('Estimasi sampai: ${_estimatedArrivalLabel()}'),
                     ],
@@ -570,7 +609,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           ),
                   ),
                 ),
-              if (Provider.of<AuthProvider>(context).user?.role == 'seller')
+              if (Provider.of<AuthProvider>(context).user?.role == 'seller' ||
+                  Provider.of<AuthProvider>(context).user?.role == 'admin')
                 Column(
                   children: [
                     // Status: Menunggu Konfirmasi → Dikonfirmasi

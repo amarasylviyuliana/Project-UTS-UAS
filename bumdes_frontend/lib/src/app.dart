@@ -93,15 +93,25 @@ class BumdesApp extends StatelessWidget {
 
           if (settings.name != null) {
             final uri = Uri.parse(settings.name!);
+            final rawFragment = uri.fragment;
+            final routeUri = rawFragment.isNotEmpty
+                ? Uri.parse(rawFragment)
+                : uri;
 
-            // Support deep link to order detail using full path `/order-detail?orderId=...`
-            // or short redirect from payment gateway like `/?orderId=...`.
-            if (uri.path == OrderDetailScreen.routeName ||
-                (uri.path == '/' && uri.queryParameters['orderId'] != null)) {
+            // Support deep link to order detail using either:
+            // - full path `/order-detail?orderId=...`
+            // - hash route `/#/order-detail?orderId=...`
+            // - short redirect `/?orderId=...`
+            if (routeUri.path == OrderDetailScreen.routeName ||
+                (routeUri.path == '/' &&
+                    (routeUri.queryParameters['orderId'] != null ||
+                        uri.queryParameters['orderId'] != null))) {
               final args = settings.arguments as Map<String, dynamic>?;
               final order = args?['order'] as OrderModel?;
               final orderId = int.tryParse(
-                uri.queryParameters['orderId'] ?? '',
+                routeUri.queryParameters['orderId'] ??
+                    uri.queryParameters['orderId'] ??
+                    '',
               );
               return MaterialPageRoute(
                 builder: (_) =>

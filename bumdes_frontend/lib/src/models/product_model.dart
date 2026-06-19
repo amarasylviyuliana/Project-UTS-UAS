@@ -51,8 +51,9 @@ class ProductModel {
 
   static int _parseInt(dynamic value) {
     if (value is int) return value;
-    if (value is String)
+    if (value is String) {
       return int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    }
     if (value is num) return value.toInt();
     return 0;
   }
@@ -60,8 +61,9 @@ class ProductModel {
   static double _parseDouble(dynamic value) {
     if (value is double) return value;
     if (value is int) return value.toDouble();
-    if (value is String)
+    if (value is String) {
       return double.tryParse(value.replaceAll(',', '.')) ?? 0;
+    }
     if (value is num) return value.toDouble();
     return 0;
   }

@@ -294,6 +294,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   label: 'PENGGUNA',
                   index: 5,
                 ),
+                _buildSidebarMenuItem(
+                  icon: Icons.settings_outlined,
+                  label: 'KONFIGURASI',
+                  index: 6,
+                ),
               ],
             ),
           ),
@@ -363,6 +368,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return _buildReportsTab();
       case 5:
         return _buildUsersTab();
+      case 6:
+        return _buildConfigTab();
       default:
         return _buildDashboardTab();
     }
@@ -774,7 +781,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ],
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -965,7 +972,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ],
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -1677,16 +1684,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           label: 'Dashboard',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.people_outline),
-          label: 'Pengguna',
+          icon: Icon(Icons.shopping_cart_outlined),
+          label: 'Produk',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.store_outlined),
-          label: 'Toko',
+          label: 'BUMDes',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.assessment_outlined),
-          label: 'Laporan',
+          icon: Icon(Icons.receipt_outlined),
+          label: 'Pesanan',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.attach_money_outlined),
+          label: 'Keuangan',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.people_outline),
+          label: 'Pengguna',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.settings_outlined),

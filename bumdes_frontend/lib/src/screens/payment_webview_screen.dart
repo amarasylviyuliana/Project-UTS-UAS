@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'home_screen.dart';
+import 'order_detail_screen.dart';
 
 class PaymentWebViewScreen extends StatefulWidget {
   final String url;
@@ -45,6 +46,46 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
             });
           },
           onNavigationRequest: (request) {
+            final uri = Uri.tryParse(request.url);
+            final fragmentUri = uri != null && uri.fragment.isNotEmpty
+                ? Uri.tryParse(uri.fragment)
+                : null;
+            final url = request.url.toLowerCase();
+            final isPaymentComplete = url.contains('success=true') ||
+                url.contains('status=paid') ||
+                url.contains('invoice_status=paid') ||
+                url.contains('payment_status=paid') ||
+                url.contains('/order-detail') ||
+                url.contains('orderid=') ||
+                url.contains('order_id=');
+            final orderId = int.tryParse(
+              uri?.queryParameters['orderId'] ??
+                  uri?.queryParameters['order_id'] ??
+                  fragmentUri?.queryParameters['orderId'] ??
+                  fragmentUri?.queryParameters['order_id'] ??
+                  '',
+            );
+
+            if (isPaymentComplete && mounted) {
+              final routeName = orderId != null
+                  ? '${OrderDetailScreen.routeName}?orderId=$orderId'
+                  : HomeScreen.routeName;
+
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                routeName,
+                (route) => false,
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Pembayaran selesai. Anda bisa melihat status pesanan sekarang.',
+                  ),
+                ),
+              );
+              return NavigationDecision.prevent;
+            }
+
             return NavigationDecision.navigate;
           },
           onWebResourceError: (_) {
