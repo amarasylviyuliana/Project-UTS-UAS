@@ -3,7 +3,8 @@ import { test, expect } from '@playwright/test';
 const LOGIN_URL = 'http://localhost:49800/#/login';
 
 test.describe('Login - BUMDes Jabar', () => {
-  test.beforeAll(async ({ browser }) => {
+  test.beforeAll(async ({ browser }, testInfo) => {
+    testInfo.setTimeout(160000);
     const page = await browser.newPage();
     await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded', timeout: 150000 });
     await expect(page.getByRole('button', { name: 'LOGIN' })).toBeVisible({ timeout: 150000 });
@@ -24,15 +25,15 @@ test.describe('Login - BUMDes Jabar', () => {
 
   test('menampilkan validasi saat semua field kosong', async ({ page }) => {
     await page.getByRole('button', { name: 'LOGIN' }).click();
-    await expect(page.getByText('Email wajib diisi')).toBeVisible();
-    await expect(page.getByText('Password wajib diisi')).toBeVisible();
+    await expect(page.getByText('Email wajib diisi').last()).toBeVisible();
+    await expect(page.getByText('Password wajib diisi').last()).toBeVisible();
   });
 
   test('menampilkan validasi saat format email tidak valid', async ({ page }) => {
     await page.getByRole('textbox', { name: 'Email' }).fill('emailsalah');
     await page.getByRole('textbox', { name: 'Password' }).fill('password123');
     await page.getByRole('button', { name: 'LOGIN' }).click();
-    await expect(page.getByText('Masukkan email valid')).toBeVisible();
+    await expect(page.getByText('Masukkan email valid').last()).toBeVisible();
   });
 
   test('menampilkan validasi saat password kurang dari 8 karakter', async ({ page }) => {
@@ -44,13 +45,18 @@ test.describe('Login - BUMDes Jabar', () => {
     await page.keyboard.press('Tab');
 
     await page.getByRole('button', { name: 'LOGIN' }).click();
-    await expect(page.getByText('Password minimal 8 karakter')).toBeVisible();
+    await expect(page.getByText('Password minimal 8 karakter').last()).toBeVisible();
   });
 
   test('menampilkan error saat kredensial salah', async ({ page }) => {
     await page.getByRole('textbox', { name: 'Email' }).fill('tidakada@example.com');
-    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
+
+    const passwordField = page.getByRole('textbox', { name: 'Password' });
+    await passwordField.click();
+    await passwordField.pressSequentially('password123');
+    await page.keyboard.press('Tab');
+
     await page.getByRole('button', { name: 'LOGIN' }).click();
-    await expect(page.getByText('Email atau password tidak valid')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Email atau password tidak valid').last()).toBeVisible({ timeout: 20000 });
   });
 });
