@@ -6,7 +6,8 @@ class ApiService {
   final http.Client _client;
   final String? token;
 
-  ApiService({http.Client? client, this.token}) : _client = client ?? http.Client();
+  ApiService({http.Client? client, this.token})
+    : _client = client ?? http.Client();
 
   Map<String, String> get _headers {
     final headers = <String, String>{
@@ -20,16 +21,25 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> get(String path) async {
-    final response = await _client.get(Uri.parse(apiUrl(path)), headers: _headers);
+    final response = await _client.get(
+      Uri.parse(apiUrl(path)),
+      headers: _headers,
+    );
     return _normalizeResponse(response);
   }
 
   Future<dynamic> getRaw(String path) async {
-    final response = await _client.get(Uri.parse(apiUrl(path)), headers: _headers);
+    final response = await _client.get(
+      Uri.parse(apiUrl(path)),
+      headers: _headers,
+    );
     return _normalizeRawResponse(response);
   }
 
-  Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> post(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
     final url = Uri.parse(apiUrl(path));
     final response = await _client.post(
       url,
@@ -39,7 +49,10 @@ class ApiService {
     return _normalizeResponse(response);
   }
 
-  Future<Map<String, dynamic>> put(String path, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> put(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
     final response = await _client.put(
       Uri.parse(apiUrl(path)),
       headers: _headers,
@@ -49,35 +62,61 @@ class ApiService {
   }
 
   dynamic _normalizeRawResponse(http.Response response) {
-    final body = response.body.isEmpty ? '{}' : response.body;
-    final data = jsonDecode(body);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return data;
+    try {
+      final body = response.body.isEmpty ? '{}' : response.body;
+      final data = jsonDecode(body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return data;
+      }
+      if (data is Map<String, dynamic>) {
+        throw ApiException(
+          statusCode: response.statusCode,
+          message: data['message'] ?? 'Unknown server error',
+          errors: data['errors'] is Map<String, dynamic>
+              ? Map<String, dynamic>.from(data['errors'])
+              : null,
+        );
+      }
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: 'Unknown server error',
+      );
+    } on FormatException {
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: 'Respons server tidak valid. Coba lagi sebentar.',
+      );
     }
-    if (data is Map<String, dynamic>) {
+  }
+
+  Future<Map<String, dynamic>> _normalizeResponse(
+    http.Response response,
+  ) async {
+    try {
+      final body = response.body.isEmpty ? '{}' : response.body;
+      final data = jsonDecode(body);
+      if (data is! Map<String, dynamic>) {
+        throw ApiException(
+          statusCode: response.statusCode,
+          message: 'Respons server tidak valid.',
+        );
+      }
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return data;
+      }
       throw ApiException(
         statusCode: response.statusCode,
         message: data['message'] ?? 'Unknown server error',
-        errors: data['errors'] as Map<String, dynamic>?,
+        errors: data['errors'] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(data['errors'])
+            : null,
+      );
+    } on FormatException {
+      throw ApiException(
+        statusCode: response.statusCode,
+        message: 'Respons server tidak valid. Coba lagi sebentar.',
       );
     }
-    throw ApiException(
-      statusCode: response.statusCode,
-      message: 'Unknown server error',
-    );
-  }
-
-  Future<Map<String, dynamic>> _normalizeResponse(http.Response response) async {
-    final body = response.body.isEmpty ? '{}' : response.body;
-    final data = jsonDecode(body) as Map<String, dynamic>;
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return data;
-    }
-    throw ApiException(
-      statusCode: response.statusCode,
-      message: data['message'] ?? 'Unknown server error',
-      errors: data['errors'] as Map<String, dynamic>?,
-    );
   }
 }
 

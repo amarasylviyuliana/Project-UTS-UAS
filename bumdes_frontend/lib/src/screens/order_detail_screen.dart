@@ -4,6 +4,7 @@ import '../models/order_model.dart';
 import '../providers/auth_provider.dart';
 import '../services/order_service.dart';
 import 'payment_gateway_screen.dart';
+import 'order_tracking_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   static const routeName = '/order-detail';
@@ -188,8 +189,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         return Colors.orange;
       case 'dikonfirmasi':
       case 'diproses':
+      case 'dikemas':
         return Colors.blue;
       case 'dikirim':
+      case 'estimasi sampai':
         return Colors.indigo;
       case 'selesai':
         return Colors.green;
@@ -198,6 +201,31 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       default:
         return Colors.grey;
     }
+  }
+
+  String _estimatedArrivalLabel() {
+    final arrival = _order!.createdAt.add(const Duration(days: 3));
+    return '${arrival.day}/${arrival.month}/${arrival.year}';
+  }
+
+  static const List<String> _trackingSteps = [
+    'Menunggu Pembayaran',
+    'Dikonfirmasi',
+    'Diproses',
+    'Dikemas',
+    'Dikirim',
+    'Estimasi Sampai',
+    'Selesai',
+  ];
+
+  int _getStatusStepIndex(String status) {
+    final index = _trackingSteps.indexOf(status);
+    return index >= 0 ? index : 0;
+  }
+
+  double _getProgressValue(String status) {
+    final index = _getStatusStepIndex(status);
+    return index / (_trackingSteps.length - 1);
   }
 
   @override
@@ -452,6 +480,63 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
               const SizedBox(height: 18),
 
+              Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                elevation: 1,
+                color: Colors.orange[50],
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Kemajuan Paket',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            '${(_getProgressValue(order.status) * 100).round()}%',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      LinearProgressIndicator(
+                        value: _getProgressValue(order.status),
+                        minHeight: 8,
+                        backgroundColor: Colors.grey[200],
+                        color: Colors.green,
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Status sekarang: ${order.status}'),
+                      const SizedBox(height: 4),
+                      Text('Estimasi sampai: ${_estimatedArrivalLabel()}'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => OrderTrackingScreen(order: order),
+                    ),
+                  ),
+                  icon: const Icon(Icons.local_shipping_outlined),
+                  label: const Text('Lacak Pesanan'),
+                ),
+              ),
+              const SizedBox(height: 12),
               if (order.paymentStatus != null)
                 Card(
                   shape: RoundedRectangleBorder(
@@ -524,7 +609,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           ),
                   ),
                 ),
-              if (Provider.of<AuthProvider>(context).user?.role == 'seller')
+              if (Provider.of<AuthProvider>(context).user?.role == 'seller' ||
+                  Provider.of<AuthProvider>(context).user?.role == 'admin')
                 Column(
                   children: [
                     // Status: Menunggu Konfirmasi → Dikonfirmasi
@@ -561,17 +647,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         ),
                       ),
 
-                    // Status: Dikonfirmasi → Diproses (Optional intermediate step)
+                    // Status: Dikonfirmasi → Diproses → Dikemas
                     if (order.status.toLowerCase() == 'dikonfirmasi')
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12.0),
                         child: SizedBox(
                           width: double.infinity,
-                          child: OutlinedButton(
+                          child: ElevatedButton(
                             onPressed: _isPerformingAction
                                 ? null
                                 : () => _updateOrderStatus('Diproses'),
-                            style: OutlinedButton.styleFrom(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18),
@@ -585,9 +672,31 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         ),
                       ),
 
-                    // Status: Dikonfirmasi OR Diproses → Dikirim
-                    if (order.status.toLowerCase() == 'dikonfirmasi' ||
-                        order.status.toLowerCase() == 'diproses')
+                    if (order.status.toLowerCase() == 'diproses')
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isPerformingAction
+                                ? null
+                                : () => _updateOrderStatus('Dikemas'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.teal,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                            ),
+                            child: const Text(
+                              'Kemas Pesanan',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    if (order.status.toLowerCase() == 'dikemas')
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12.0),
                         child: SizedBox(
@@ -603,25 +712,39 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                 borderRadius: BorderRadius.circular(18),
                               ),
                             ),
-                            child: _isPerformingAction
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text(
-                                    'Kirim Pesanan',
-                                    style: TextStyle(fontSize: 16),
-                                  ),
+                            child: const Text(
+                              'Kirim Pesanan',
+                              style: TextStyle(fontSize: 16),
+                            ),
                           ),
                         ),
                       ),
 
-                    // Status: Dikirim → Selesai (Optional - usually buyer confirms)
                     if (order.status.toLowerCase() == 'dikirim')
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isPerformingAction
+                                ? null
+                                : () => _updateOrderStatus('Estimasi Sampai'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.amber,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                            ),
+                            child: const Text(
+                              'Tandai Estimasi Sampai',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    if (order.status.toLowerCase() == 'estimasi sampai')
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(

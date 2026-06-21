@@ -29,21 +29,31 @@ class ProductModel {
     return ProductModel(
       id: _parseInt(json['id']),
       name: json['name'] as String? ?? '',
-      storeName: json['store_name'] as String? ?? json['storeName'] as String? ?? '',
+      storeName:
+          json['store_name'] as String? ?? json['storeName'] as String? ?? '',
       location: json['location'] as String? ?? '',
-      category: json['category'] as String? ?? '',
+      category: json['category'] is Map
+          ? (json['category']['name'] as String? ?? '')
+          : (json['category'] as String? ?? ''),
       price: _parseDouble(json['price']),
       stock: _parseInt(json['stock']),
       description: json['description'] as String? ?? '',
-      imageUrl: json['image_url'] as String? ?? json['imageUrl'] as String? ?? '',
-      isService: json['is_service'] as bool? ?? json['isService'] as bool? ?? false,
+      imageUrl:
+          json['image_url'] as String? ??
+          json['photo_url'] as String? ??
+          json['imageUrl'] as String? ??
+          '',
+      isService:
+          json['is_service'] as bool? ?? json['isService'] as bool? ?? false,
       isSample: false,
     );
   }
 
   static int _parseInt(dynamic value) {
     if (value is int) return value;
-    if (value is String) return int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    if (value is String) {
+      return int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    }
     if (value is num) return value.toInt();
     return 0;
   }
@@ -51,7 +61,9 @@ class ProductModel {
   static double _parseDouble(dynamic value) {
     if (value is double) return value;
     if (value is int) return value.toDouble();
-    if (value is String) return double.tryParse(value.replaceAll(',', '.')) ?? 0;
+    if (value is String) {
+      return double.tryParse(value.replaceAll(',', '.')) ?? 0;
+    }
     if (value is num) return value.toDouble();
     return 0;
   }

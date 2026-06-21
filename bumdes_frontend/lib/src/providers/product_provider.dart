@@ -11,7 +11,7 @@ class ProductProvider extends ChangeNotifier {
   String selectedCategory = 'Semua';
 
   List<ProductModel> get products => _filtered.isEmpty ? _products : _filtered;
-  List<ProductModel> get featured => _products.take(4).toList();
+  List<ProductModel> get featured => _products.take(3).toList();
 
   ProductProvider() {
     _loadProducts();
@@ -45,56 +45,44 @@ class ProductProvider extends ChangeNotifier {
     _products.addAll([
       ProductModel(
         id: 1,
-        name: 'Kerupuk Kulit Garut',
-        storeName: 'BUMDes Cibungbulang',
-        location: 'Tasikmalaya',
+        name: 'Kerupuk Kulit dari BUMDes Garut',
+        storeName: 'BUMDes Garut',
+        location: 'Garut',
         category: 'Kuliner Desa',
         price: 25000,
         stock: 15,
         description:
-            'Kerupuk kulit khas Garut dengan cita rasa gurih dan renyah.',
+            'Kerupuk kulit khas Garut dengan cita rasa gurih, renyah, dan siap dipasarkan.',
         imageUrl: 'https://picsum.photos/seed/kerupuk/400/300',
         isService: false,
         isSample: true,
       ),
       ProductModel(
         id: 2,
-        name: 'Sewa Alat Pertanian',
-        storeName: 'BUMDes Sukamulya',
-        location: 'Bandung',
-        category: 'Jasa Lokal',
-        price: 80000,
-        stock: 0,
-        description: 'Layanan penyewaan cangkul dan sprayer untuk musim panen.',
-        imageUrl: 'https://picsum.photos/seed/alat/400/300',
-        isService: true,
-        isSample: true,
-      ),
-      ProductModel(
-        id: 3,
-        name: 'Anyaman Bambu',
-        storeName: 'BUMDes Lembang',
-        location: 'Lembang',
-        category: 'Kerajinan Tangan',
-        price: 75000,
-        stock: 10,
+        name: 'Sayuran Segar dari BUMDes Ciwdey',
+        storeName: 'BUMDes Ciwdey',
+        location: 'Ciwdey',
+        category: 'Pertanian & Perkebunan',
+        price: 18000,
+        stock: 25,
         description:
-            'Kerajinan bambu khas desa, cocok untuk dekorasi dan hadiah.',
-        imageUrl: 'https://picsum.photos/seed/bambu/400/300',
+            'Sayuran segar hasil panen lokal dari BUMDes Ciwdey untuk kebutuhan harian.',
+        imageUrl: 'https://picsum.photos/seed/sayur/400/300',
         isService: false,
         isSample: true,
       ),
       ProductModel(
-        id: 4,
-        name: 'Paket Wisata Desa',
-        storeName: 'BUMDes Cipanas',
-        location: 'Cianjur',
-        category: 'Jasa Lokal',
-        price: 150000,
-        stock: 99,
-        description: 'Wisata edukasi ke desa, pertanian, dan kerajinan lokal.',
-        imageUrl: 'https://picsum.photos/seed/wisata/400/300',
-        isService: true,
+        id: 3,
+        name: 'Sus Lezat dari BUMDes Pangalengan',
+        storeName: 'BUMDes Pangalengan',
+        location: 'Pangalengan',
+        category: 'Kuliner Desa',
+        price: 30000,
+        stock: 12,
+        description:
+            'Sus lembut dan nikmat khas Pangalengan, cocok untuk camilan keluarga.',
+        imageUrl: 'https://picsum.photos/seed/sus/400/300',
+        isService: false,
         isSample: true,
       ),
     ]);
@@ -150,6 +138,7 @@ class ProductProvider extends ChangeNotifier {
     double price,
     int stock,
     String description,
+    String? imageUrl,
   ) async {
     final product = await _productService.createProduct(
       token,
@@ -159,6 +148,7 @@ class ProductProvider extends ChangeNotifier {
       price,
       stock,
       description,
+      imageUrl,
     );
     _products.add(product);
     filterByCategory(selectedCategory);
@@ -184,6 +174,7 @@ class ProductProvider extends ChangeNotifier {
     double price,
     int stock,
     String description,
+    String? imageUrl,
   ) async {
     final product = await _productService.updateProduct(
       token,
@@ -194,6 +185,7 @@ class ProductProvider extends ChangeNotifier {
       price,
       stock,
       description,
+      imageUrl,
     );
     final index = _products.indexWhere((item) => item.id == productId);
     if (index >= 0) {

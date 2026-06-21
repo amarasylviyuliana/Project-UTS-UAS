@@ -24,8 +24,10 @@ import 'screens/help_screen.dart';
 import 'screens/about_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/financial_report_detail_screen.dart';
+import 'screens/order_tracking_screen.dart';
 
-final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();
 
 class BumdesApp extends StatelessWidget {
   const BumdesApp({super.key});
@@ -69,7 +71,8 @@ class BumdesApp extends StatelessWidget {
           ProductFormScreen.routeName: (_) => const ProductFormScreen(),
           StoreFormScreen.routeName: (_) => const StoreFormScreen(),
           SellerOrdersScreen.routeName: (_) => const SellerOrdersScreen(),
-          FinancialReportDetailScreen.routeName: (_) => const FinancialReportDetailScreen(),
+          FinancialReportDetailScreen.routeName: (_) =>
+              const FinancialReportDetailScreen(),
         },
         onGenerateRoute: (settings) {
           if (settings.name == ProductDetailScreen.routeName) {
@@ -78,18 +81,41 @@ class BumdesApp extends StatelessWidget {
               builder: (_) => ProductDetailScreen(product: args?['product']),
             );
           }
+          if (settings.name == OrderTrackingScreen.routeName) {
+            final args = settings.arguments as Map<String, dynamic>?;
+            final order = args?['order'] as OrderModel?;
+            if (order != null) {
+              return MaterialPageRoute(
+                builder: (_) => OrderTrackingScreen(order: order),
+              );
+            }
+          }
+
           if (settings.name != null) {
             final uri = Uri.parse(settings.name!);
+            final rawFragment = uri.fragment;
+            final routeUri = rawFragment.isNotEmpty
+                ? Uri.parse(rawFragment)
+                : uri;
 
-            // Support deep link to order detail using full path `/order-detail?orderId=...`
-            // or short redirect from payment gateway like `/?orderId=...`.
-            if (uri.path == OrderDetailScreen.routeName ||
-                (uri.path == '/' && uri.queryParameters['orderId'] != null)) {
+            // Support deep link to order detail using either:
+            // - full path `/order-detail?orderId=...`
+            // - hash route `/#/order-detail?orderId=...`
+            // - short redirect `/?orderId=...`
+            if (routeUri.path == OrderDetailScreen.routeName ||
+                (routeUri.path == '/' &&
+                    (routeUri.queryParameters['orderId'] != null ||
+                        uri.queryParameters['orderId'] != null))) {
               final args = settings.arguments as Map<String, dynamic>?;
               final order = args?['order'] as OrderModel?;
-              final orderId = int.tryParse(uri.queryParameters['orderId'] ?? '');
+              final orderId = int.tryParse(
+                routeUri.queryParameters['orderId'] ??
+                    uri.queryParameters['orderId'] ??
+                    '',
+              );
               return MaterialPageRoute(
-                builder: (_) => OrderDetailScreen(order: order, orderId: orderId),
+                builder: (_) =>
+                    OrderDetailScreen(order: order, orderId: orderId),
               );
             }
           }

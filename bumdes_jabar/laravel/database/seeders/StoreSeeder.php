@@ -10,31 +10,34 @@ class StoreSeeder extends Seeder
 {
     public function run(): void
     {
-        // Ensure there's at least one user and use its id for the demo store
-        $user = User::first();
-        if (! $user) {
-            $user = User::create([
-                'name' => 'Demo Store Owner',
-                'email' => 'owner@example.com',
-                'password' => bcrypt('password123'),
-            ]);
-        }
+        $stores = [
+            ['email' => 'seller.garut@bumdes.id', 'store_name' => 'BUMDes Garut', 'village' => 'Garut Kota', 'district' => 'Garut', 'regency' => 'Garut', 'contact_phone' => '081234567890'],
+            ['email' => 'seller.ciwidey@bumdes.id', 'store_name' => 'BUMDes Ciwidey', 'village' => 'Ciwidey', 'district' => 'Ciwidey', 'regency' => 'Bandung', 'contact_phone' => '081234567891'],
+            ['email' => 'seller.pangalengan@bumdes.id', 'store_name' => 'BUMDes Pangalengan', 'village' => 'Pangalengan', 'district' => 'Pangalengan', 'regency' => 'Bandung', 'contact_phone' => '081234567892'],
+        ];
 
-        Store::updateOrCreate([
-            'id' => 1,
-        ], [
-            'user_id' => $user->id,
-            'store_name' => 'Toko Demo BUMDes',
-            'description' => 'Toko contoh untuk keperluan seeder',
-            'village' => 'Demo Village',
-            'district' => 'Demo District',
-            'regency' => 'Demo Regency',
-            'contact_phone' => '081234567890',
-            'bank_account_number' => null,
-            'bank_name' => null,
-            'bank_account_holder' => null,
-            'store_photo_url' => null,
-            'is_active' => true,
-        ]);
+        foreach ($stores as $storeData) {
+            $seller = User::where('email', $storeData['email'])->first();
+            if (! $seller) {
+                continue;
+            }
+
+            Store::updateOrCreate(
+                ['user_id' => $seller->id],
+                [
+                    'store_name' => $storeData['store_name'],
+                    'description' => 'Toko demo BUMDes untuk produk lokal yang saling terkait dengan pembeli dan admin.',
+                    'village' => $storeData['village'],
+                    'district' => $storeData['district'],
+                    'regency' => $storeData['regency'],
+                    'contact_phone' => $storeData['contact_phone'],
+                    'bank_account_number' => '1234567890',
+                    'bank_name' => 'Bank BUMDes',
+                    'bank_account_holder' => $seller->name,
+                    'store_photo_url' => null,
+                    'is_active' => true,
+                ]
+            );
+        }
     }
 }

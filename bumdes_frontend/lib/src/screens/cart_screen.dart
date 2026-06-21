@@ -215,18 +215,41 @@ class _CartScreenState extends State<CartScreen> {
 
       debugPrint('DEBUG: Checkout response: $response');
 
-      final orderData = _extractOrderData(response);
-      final createdOrder = orderData != null
-          ? OrderModel.fromJson(orderData)
+      final orderPayloads = _extractOrdersData(response);
+      final createdOrder = orderPayloads.isNotEmpty
+          ? OrderModel.fromJson(orderPayloads.first)
           : null;
       cart.clear();
 
       if (!mounted) return;
-      if (createdOrder != null) {
+      if (createdOrder != null && orderPayloads.length == 1) {
         await Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => PaymentGatewayScreen(order: createdOrder),
+          ),
+        );
+      } else if (orderPayloads.isNotEmpty) {
+        await showDialog(
+          context: currentContext,
+          builder: (context) => AlertDialog(
+            title: const Text('Pesanan Diterima'),
+            content: Text(
+              response['message'] ??
+                  'Pesanan Anda berhasil dibuat untuk beberapa toko. Silakan cek riwayat untuk melanjutkan pembayaran.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(
+                    context,
+                    OrderHistoryScreen.routeName,
+                  );
+                },
+                child: const Text('Lihat Riwayat Pesanan'),
+              ),
+            ],
           ),
         );
       } else {
@@ -269,25 +292,44 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  Map<String, dynamic>? _extractOrderData(Map<String, dynamic> response) {
-    if (response['order'] is Map<String, dynamic>) {
-      return Map<String, dynamic>.from(
-        response['order'] as Map<String, dynamic>,
-      );
+  List<Map<String, dynamic>> _extractOrdersData(
+    Map<String, dynamic> response,
+  ) {
+    final directOrders = response['orders'];
+    if (directOrders is List) {
+      return directOrders
+          .whereType<Map<String, dynamic>>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
     }
-    if (response['data'] is Map<String, dynamic>) {
-      final data = response['data'] as Map<String, dynamic>;
+
+    final order = response['order'];
+    if (order is Map<String, dynamic>) {
+      return [Map<String, dynamic>.from(order)];
+    }
+
+    final data = response['data'];
+    if (data is Map<String, dynamic>) {
+      final nestedOrders = data['orders'];
+      if (nestedOrders is List) {
+        return nestedOrders
+            .whereType<Map<String, dynamic>>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+      }
       if (data['order'] is Map<String, dynamic>) {
-        return Map<String, dynamic>.from(data['order'] as Map<String, dynamic>);
+        return [Map<String, dynamic>.from(data['order'] as Map<String, dynamic>)];
       }
       if (data['id'] != null) {
-        return Map<String, dynamic>.from(data);
+        return [Map<String, dynamic>.from(data)];
       }
     }
+
     if (response['id'] != null) {
-      return Map<String, dynamic>.from(response);
+      return [Map<String, dynamic>.from(response)];
     }
-    return null;
+
+    return [];
   }
 
   Widget _buildOrderSummary(CartProvider cart) {

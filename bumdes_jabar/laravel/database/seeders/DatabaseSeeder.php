@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            ResetDemoDataSeeder::class,
             CategorySeeder::class,
             \Database\Seeders\UserSeeder::class,
             \Database\Seeders\StoreSeeder::class,

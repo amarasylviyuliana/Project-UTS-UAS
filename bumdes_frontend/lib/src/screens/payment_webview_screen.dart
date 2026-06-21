@@ -2,13 +2,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'order_history_screen.dart';
+import 'home_screen.dart';
+import 'order_detail_screen.dart';
 
 class PaymentWebViewScreen extends StatefulWidget {
   final String url;
   final String orderNumber;
 
-  const PaymentWebViewScreen({super.key, required this.url, required this.orderNumber});
+  const PaymentWebViewScreen({
+    super.key,
+    required this.url,
+    required this.orderNumber,
+  });
 
   @override
   State<PaymentWebViewScreen> createState() => _PaymentWebViewScreenState();
@@ -41,6 +46,46 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
             });
           },
           onNavigationRequest: (request) {
+            final uri = Uri.tryParse(request.url);
+            final fragmentUri = uri != null && uri.fragment.isNotEmpty
+                ? Uri.tryParse(uri.fragment)
+                : null;
+            final url = request.url.toLowerCase();
+            final isPaymentComplete = url.contains('success=true') ||
+                url.contains('status=paid') ||
+                url.contains('invoice_status=paid') ||
+                url.contains('payment_status=paid') ||
+                url.contains('/order-detail') ||
+                url.contains('orderid=') ||
+                url.contains('order_id=');
+            final orderId = int.tryParse(
+              uri?.queryParameters['orderId'] ??
+                  uri?.queryParameters['order_id'] ??
+                  fragmentUri?.queryParameters['orderId'] ??
+                  fragmentUri?.queryParameters['order_id'] ??
+                  '',
+            );
+
+            if (isPaymentComplete && mounted) {
+              final routeName = orderId != null
+                  ? '${OrderDetailScreen.routeName}?orderId=$orderId'
+                  : HomeScreen.routeName;
+
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                routeName,
+                (route) => false,
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Pembayaran selesai. Anda bisa melihat status pesanan sekarang.',
+                  ),
+                ),
+              );
+              return NavigationDecision.prevent;
+            }
+
             return NavigationDecision.navigate;
           },
           onWebResourceError: (_) {
@@ -54,10 +99,14 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
   }
 
   Future<void> _openInvoiceInBrowser() async {
-    final success = await launchUrlString(widget.url, mode: LaunchMode.externalApplication);
+    final success = await launchUrlString(
+      widget.url,
+      mode: LaunchMode.externalApplication,
+    );
     if (!success) {
       setState(() {
-        _fallbackError = 'Tidak dapat membuka halaman pembayaran di browser. Silakan salin tautan dan buka secara manual.';
+        _fallbackError =
+            'Tidak dapat membuka halaman pembayaran di browser. Silakan salin tautan dan buka secara manual.';
       });
       return;
     }
@@ -67,7 +116,11 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
     });
 
     if (!mounted) return;
-    Navigator.pushNamed(context, OrderHistoryScreen.routeName);
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      HomeScreen.routeName,
+      (route) => false,
+    );
   }
 
   @override
@@ -90,12 +143,19 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.open_in_browser, size: 72, color: Color(0xFF2A7F41)),
+                    const Icon(
+                      Icons.open_in_browser,
+                      size: 72,
+                      color: Color(0xFF2A7F41),
+                    ),
                     const SizedBox(height: 20),
                     const Text(
                       'Pembayaran web tidak mendukung tampilan WebView.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     const Text(
@@ -114,10 +174,18 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
                         onPressed: _openInvoiceInBrowser,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2A7F41),
-                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 24,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
                         ),
-                        child: const Text('Buka Halaman Pembayaran', style: TextStyle(fontSize: 16)),
+                        child: const Text(
+                          'Buka Halaman Pembayaran',
+                          style: TextStyle(fontSize: 16),
+                        ),
                       ),
                     if (_hasWebFallbackOpened)
                       const Padding(
@@ -135,9 +203,7 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
               children: [
                 WebViewWidget(controller: _controller),
                 if (_isLoading)
-                  const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  const Center(child: CircularProgressIndicator()),
               ],
             ),
     );

@@ -4,6 +4,12 @@ import '../models/order_model.dart';
 import 'api_service.dart';
 
 class ReportService {
+  Future<Map<String, dynamic>> getPlatformReport(String token) async {
+    final apiService = ApiService(token: token);
+    final response = await apiService.get('/reports/platform');
+    return Map<String, dynamic>.from(response);
+  }
+
   Future<FinancialReportModel> getStoreReport({
     required String token,
     String? startDate,
@@ -28,7 +34,9 @@ class ReportService {
       final response = await apiService.get(url);
 
       if (response['data'] != null) {
-        return FinancialReportModel.fromJson(response['data'] as Map<String, dynamic>);
+        return FinancialReportModel.fromJson(
+          response['data'] as Map<String, dynamic>,
+        );
       }
       throw Exception('No data in response');
     } catch (e) {
@@ -149,7 +157,9 @@ class ReportService {
     }
 
     final sortedProducts = productSales.entries.toList()
-      ..sort((a, b) => (b.value['total'] as num).compareTo(a.value['total'] as num));
+      ..sort(
+        (a, b) => (b.value['total'] as num).compareTo(a.value['total'] as num),
+      );
 
     return {
       'products': Map.fromEntries(sortedProducts.take(10)),

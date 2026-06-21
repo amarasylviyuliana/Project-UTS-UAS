@@ -91,36 +91,54 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         title: Row(
           children: [
-            const Text(
-              'BUMDES Jabar',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            const Text('DE.UP', style: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold)),
             const Spacer(),
             Row(
               mainAxisSize: MainAxisSize.min,
-              children: List.generate(menuLabels.length, (index) {
-                final isSelected = _selectedIndex == index;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                  child: IconButton(
-                    onPressed: () => setState(() => _selectedIndex = index),
-                    icon: Icon(
-                      menuIcons[index],
-                      color: isSelected ? Colors.white : Colors.white70,
+              children: List.generate(
+                menuLabels.length,
+                (index) {
+                  final isSelected = _selectedIndex == index;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: IconButton(
+                      onPressed: () => setState(() => _selectedIndex = index),
+                      icon: Icon(
+                        menuIcons[index],
+                        color: isSelected ? Colors.black87 : Colors.grey[600],
+                      ),
+                      tooltip: menuLabels[index],
                     ),
-                    tooltip: menuLabels[index],
-                  ),
-                );
-              }),
+                  );
+                },
+              ),
             ),
           ],
         ),
       ),
       body: pages[_selectedIndex],
+    );
+  }
+}
+
+class CategoryChip extends StatelessWidget {
+  final String label;
+
+  const CategoryChip({super.key, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 1.0),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(color: Colors.white, fontSize: 14),
+      ),
     );
   }
 }
@@ -141,7 +159,7 @@ class HomeTab extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [const Color(0xFF1565C0), const Color(0xFF00D9FF)],
+                colors: [const Color.fromARGB(255, 121, 143, 169), const Color.fromARGB(255, 52, 169, 189)],
               ),
             ),
             padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
@@ -194,15 +212,37 @@ class HomeTab extends StatelessWidget {
               },
             ),
           ),
-          Container(
-            width: double.infinity,
-            height: 200,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [const Color(0xFF1565C0), const Color(0xFF00D9FF)],
-              ),
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: _buildSectionHeader('Kategori Populer'),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: const [
+                CategoryChip(label: 'Pertanian & Perkebunan'),
+                CategoryChip(label: 'Kerajinan Tangan'),
+                CategoryChip(label: 'Kuliner Desa'),
+                CategoryChip(label: 'Jasa Lokal'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: _buildSectionHeader('Toko BUMDes Terpopuler'),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: provider.featured.map((product) => SizedBox(width: 280, child: ProductCard(product: product))).toList(),
             ),
           ),
           Container(
@@ -232,14 +272,7 @@ class HomeTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: const [
-        Text(
-          'Belanja Produk Unggulan Desa',
-          style: TextStyle(
-            fontSize: 42,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        Text('DE.UP', style: TextStyle(fontSize: 42, fontWeight: FontWeight.bold)),
         SizedBox(height: 16),
         Text(
           'Adalah aplikasi penyokong usaha pada tiap desa yang mana menjual dan memasarkan produk barang atau jasa unggulan di desanya.',
@@ -256,11 +289,7 @@ class HomeTab extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.03),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
+          BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.06), blurRadius: 20, offset: const Offset(0, 8)),
         ],
       ),
       child: const Center(
@@ -279,11 +308,7 @@ class HomeTab extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
+          BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.04), blurRadius: 12, offset: const Offset(0, 6)),
         ],
       ),
       child: Row(
@@ -303,14 +328,7 @@ class HomeTab extends StatelessWidget {
   }
 
   Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      ),
-    );
+    return Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold));
   }
 }
 
@@ -454,7 +472,7 @@ class FeatureTile extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor: const Color(0xFF00D9FF).withOpacity(0.2),
+              backgroundColor: const Color(0xFF00D9FF).withValues(alpha: 0.2),
               child: Icon(icon, color: const Color(0xFF00D9FF)),
             ),
             const SizedBox(height: 12),
@@ -562,19 +580,28 @@ class ProductCard extends StatelessWidget {
   }
 }
 
-class CategoryChip extends StatelessWidget {
+class ChoicePill extends StatelessWidget {
   final String label;
 
-  const CategoryChip({required this.label, super.key});
+  const ChoicePill({required this.label, super.key});
 
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<ProductProvider>(context);
     final selected = provider.selectedCategory == label;
+
     return ChoiceChip(
-      label: Text(label),
+      label: Text(label, style: const TextStyle(fontSize: 13)),
       selected: selected,
-      onSelected: (_) => provider.filterByCategory(label),
+      onSelected: (_) {
+        if (label.contains('Kerupuk')) {
+          provider.filterByCategory('Kuliner Desa');
+        } else if (label.contains('Sayuran')) {
+          provider.filterByCategory('Pertanian & Perkebunan');
+        } else {
+          provider.filterByCategory('Kuliner Desa');
+        }
+      },
     );
   }
 }

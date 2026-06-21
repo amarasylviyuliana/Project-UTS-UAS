@@ -40,7 +40,9 @@ class _StoreFormScreenState extends State<StoreFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (!auth.isAuthenticated || auth.token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Silakan login terlebih dahulu')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Silakan login terlebih dahulu')),
+      );
       return;
     }
 
@@ -59,11 +61,17 @@ class _StoreFormScreenState extends State<StoreFormScreen> {
       };
       await service.saveStore(auth.token!, body);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Toko berhasil disimpan')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Toko berhasil disimpan')));
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menyimpan toko: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal menyimpan toko: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -72,32 +80,75 @@ class _StoreFormScreenState extends State<StoreFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Daftarkan Toko')), 
+      appBar: AppBar(title: const Text('Daftarkan Toko')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: ListView(
             children: [
-              TextFormField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Nama Toko'), validator: (v) => v==null||v.isEmpty? 'Nama wajib' : null),
+              TextFormField(
+                controller: _nameCtrl,
+                decoration: const InputDecoration(labelText: 'Nama Toko'),
+                validator: (v) => v == null || v.isEmpty ? 'Nama wajib' : null,
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: _villageCtrl, decoration: const InputDecoration(labelText: 'Desa / Kelurahan'), validator: (v) => v==null||v.isEmpty? 'Wajib' : null),
+              TextFormField(
+                controller: _villageCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Desa / Kelurahan',
+                ),
+                validator: (v) => v == null || v.isEmpty ? 'Wajib' : null,
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: _districtCtrl, decoration: const InputDecoration(labelText: 'Kecamatan'), validator: (v) => v==null||v.isEmpty? 'Wajib' : null),
+              TextFormField(
+                controller: _districtCtrl,
+                decoration: const InputDecoration(labelText: 'Kecamatan'),
+                validator: (v) => v == null || v.isEmpty ? 'Wajib' : null,
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: _regencyCtrl, decoration: const InputDecoration(labelText: 'Kabupaten / Kota'), validator: (v) => v==null||v.isEmpty? 'Wajib' : null),
+              TextFormField(
+                controller: _regencyCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Kabupaten / Kota',
+                ),
+                validator: (v) => v == null || v.isEmpty ? 'Wajib' : null,
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'No. Kontak'), validator: (v) => v==null||v.isEmpty? 'Wajib' : null),
+              TextFormField(
+                controller: _phoneCtrl,
+                decoration: const InputDecoration(labelText: 'No. Kontak'),
+                validator: (v) => v == null || v.isEmpty ? 'Wajib' : null,
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: _bankName, decoration: const InputDecoration(labelText: 'Nama Bank'), validator: (v) => v==null||v.isEmpty? 'Wajib' : null),
+              TextFormField(
+                controller: _bankName,
+                decoration: const InputDecoration(labelText: 'Nama Bank'),
+                validator: (v) => v == null || v.isEmpty ? 'Wajib' : null,
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: _bankNumber, decoration: const InputDecoration(labelText: 'No. Rekening'), validator: (v) => v==null||v.isEmpty? 'Wajib' : null),
+              TextFormField(
+                controller: _bankNumber,
+                decoration: const InputDecoration(labelText: 'No. Rekening'),
+                validator: (v) => v == null || v.isEmpty ? 'Wajib' : null,
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: _bankHolder, decoration: const InputDecoration(labelText: 'Nama Pemilik Rekening'), validator: (v) => v==null||v.isEmpty? 'Wajib' : null),
+              TextFormField(
+                controller: _bankHolder,
+                decoration: const InputDecoration(
+                  labelText: 'Nama Pemilik Rekening',
+                ),
+                validator: (v) => v == null || v.isEmpty ? 'Wajib' : null,
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(onPressed: _isSubmitting? null: _save, child: _isSubmitting? const CircularProgressIndicator(): const Text('Simpan')),
+                child: ElevatedButton(
+                  onPressed: _isSubmitting ? null : _save,
+                  child: _isSubmitting
+                      ? const CircularProgressIndicator()
+                      : const Text('Simpan'),
+                ),
               ),
             ],
           ),

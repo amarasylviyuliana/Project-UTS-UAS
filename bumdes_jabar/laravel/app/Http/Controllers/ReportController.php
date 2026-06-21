@@ -154,6 +154,7 @@ class ReportController extends Controller
 
         $orders = $orderQuery->get();
         $completedOrders = $orders->where('status', 'Selesai');
+        $activeSales = $orders->whereNotIn('status', ['Menunggu Pembayaran', 'Dibatalkan']);
 
         $summary = [
             'total_users' => $totalUsers,
@@ -164,6 +165,7 @@ class ReportController extends Controller
             'total_transactions' => $orders->count(),
             'completed_transactions' => $completedOrders->count(),
             'total_value' => $completedOrders->sum('total_price'),
+            'current_balance' => $activeSales->sum('total_price'),
         ];
 
         // Daily breakdown
