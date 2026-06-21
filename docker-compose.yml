@@ -16,12 +16,20 @@ services:
       - bumdes-network
 
   frontend:
-    build: ./bumdes_frontend
+    build:
+      context: ./bumdes_frontend
+      dockerfile: Dockerfile
+      args:
+        # Build-time define untuk Flutter web
+        API_URL: http://backend:8000
     container_name: bumdes-frontend
     ports:
-      - "3000:3000"
+      - "0.0.0.0:3000:3000"
+    environment:
+      API_BASE_URL: http://192.168.1.17:8000
     networks:
       - bumdes-network
+
 
   db:
     image: mysql:8.0
