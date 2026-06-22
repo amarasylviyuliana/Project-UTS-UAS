@@ -1,21 +1,37 @@
 // Backend URL configuration
 // Automatically detect if running in Docker or local development
+
+import 'package:flutter/foundation.dart';
+
 String get backendUrl {
-  // Production: use IP server (http://192.168.1.17:8000)
-  // For local development: use localhost (http://localhost:8000)
-  if (kIsWeb) {
-    // Web: use IP server for remote access
-    return 'http://192.168.1.17:8000';
-  }
+  // Use API_URL from build-time define if provided (Docker build args)
+  const String apiUrlDefine = String.fromEnvironment('API_URL');
   
-  // Mobile/Desktop: use IP server
-  // In Docker container, change this to: 'http://backend:8000'
-  // In local development, use: 'http://localhost:8000'
-  // For remote server, use: 'http://192.168.1.17:8000'
-  return const String.fromEnvironment('API_URL', defaultValue: 'http://192.168.1.17:8000');
+  if (apiUrlDefine.isNotEmpty) {
+    return apiUrlDefine;
+  }
+
+  // Fallback to environment variable
+  const String envApiUrl = String.fromEnvironment(
+    'API_URL',
+    defaultValue: '',
+  );
+  
+  if (envApiUrl.isNotEmpty) {
+    return envApiUrl;
+  }
+
+  // Default fallback based on platform
+  if (kIsWeb) {
+    // Web: try to use localhost first (works if frontend and backend on same machine)
+    // For production: update docker-compose.yml to pass correct API_URL
+    return 'http://localhost:8000';
+  }
+
+  // Mobile/Desktop fallback
+  return 'http://localhost:8000';
 }
 
 const String apiPrefix = '/api';
 
 String apiUrl(String path) => '$backendUrl$apiPrefix$path';
-

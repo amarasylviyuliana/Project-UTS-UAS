@@ -8,6 +8,10 @@ import 'order_history_screen.dart';
 import 'profile_screen.dart';
 import 'login_screen.dart';
 
+import 'order_history_screen.dart';
+import 'profile_screen.dart';
+import 'login_screen.dart';
+
 class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
   const HomeScreen({super.key});
@@ -24,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final auth = Provider.of<AuthProvider>(context);
 
     // Role check - hanya pembeli yang boleh akses home
-    if (auth.user?.role != 'buyer' && auth.isAuthenticated) {
+    if (auth.isAuthenticated && auth.user?.role != 'buyer') {
       return Scaffold(
         backgroundColor: const Color(0xFFF6F6F6),
         appBar: AppBar(title: const Text('Akses Tidak Diizinkan')),
@@ -60,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
+
 
     final pages = <Widget>[
       const HomeTab(),

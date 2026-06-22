@@ -182,7 +182,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       return matchesQuery && matchesCategory;
     }).toList();
 
-    if (auth.user?.role != 'seller' && auth.user?.role != 'Penjual') {
+    if (auth.user?.role != 'seller') {
       return Scaffold(
         backgroundColor: const Color(0xFFF6F6F6),
         appBar: AppBar(title: const Text('Akses Tidak Diizinkan')),
@@ -211,6 +211,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
         ),
       );
     }
+
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F6),

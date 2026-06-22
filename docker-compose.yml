@@ -1,4 +1,4 @@
-services:
+﻿services:
   backend:
     build: ./bumdes_jabar/laravel
     container_name: bumdes-backend
@@ -7,9 +7,11 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 3306
-      DB_DATABASE: projectdb
+      DB_DATABASE: bumdes_jabar
       DB_USERNAME: root
       DB_PASSWORD: root
+    volumes:
+      - ./bumdes_jabar/laravel:/app
     depends_on:
       - db
     networks:
@@ -20,28 +22,33 @@ services:
       context: ./bumdes_frontend
       dockerfile: Dockerfile
       args:
-        # Build-time define untuk Flutter web
-        API_URL: http://backend:8000
+        API_URL: http://localhost:8000
     container_name: bumdes-frontend
     ports:
       - "0.0.0.0:3000:3000"
     environment:
-      API_BASE_URL: http://192.168.1.17:8000
+      API_BASE_URL: http://localhost:8000
     networks:
       - bumdes-network
-
+    depends_on:
+      - backend
 
   db:
     image: mysql:8.0
     container_name: bumdes-db
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: projectdb
+      MYSQL_DATABASE: bumdes_jabar
     ports:
       - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
     networks:
       - bumdes-network
 
 networks:
   bumdes-network:
     driver: bridge
+
+volumes:
+  mysql_data:

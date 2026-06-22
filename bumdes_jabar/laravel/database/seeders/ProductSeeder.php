@@ -12,23 +12,12 @@ use Illuminate\Database\Seeder;
 
 class ProductSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $store = \App\Models\Store::where('store_name', 'BUMDes Garut')->first();
-
-        if (! $store) {
-            $store = \App\Models\Store::first();
-        }
-
-        if (! $store) {
-            return;
-        }
-
         $stores = Store::all();
+
         if ($stores->isEmpty()) {
+            $this->command->error('[ProductSeeder] Tabel stores kosong. ProductSeeder DIBATALKAN. Pastikan StoreSeeder berjalan sukses sebelum ini (cek urutan di DatabaseSeeder.php).');
             return;
         }
 
@@ -38,9 +27,12 @@ class ProductSeeder extends Seeder
             ['store_name' => 'BUMDes Pangalengan', 'category_id' => 3, 'name' => 'Sus Lezat dari BUMDes Pangalengan', 'type' => 'produk', 'price' => 30000, 'stock' => 12, 'description' => 'Sus lembut dan nikmat khas Pangalengan, cocok untuk camilan keluarga.', 'photo_url' => 'https://picsum.photos/seed/sus/400/300'],
         ];
 
+        $createdCount = 0;
+
         foreach ($products as $productData) {
             $store = $stores->firstWhere('store_name', $productData['store_name']);
             if (! $store) {
+                $this->command->warn("[ProductSeeder] Store '{$productData['store_name']}' tidak ditemukan. Produk '{$productData['name']}' DILEWATI.");
                 continue;
             }
 
@@ -58,9 +50,23 @@ class ProductSeeder extends Seeder
                     'is_active' => true,
                 ]
             );
+
+            $createdCount++;
+        }
+
+        if ($createdCount === 0) {
+            $this->command->error('[ProductSeeder] Tidak ada satupun produk yang dibuat.');
+        } else {
+            $this->command->info("[ProductSeeder] {$createdCount} produk berhasil dibuat/diupdate.");
         }
 
         $buyers = User::where('role', 'Pembeli')->get();
+
+        if ($buyers->isEmpty()) {
+            $this->command->warn('[ProductSeeder] Tidak ada user dengan role Pembeli. Demo order/payment dilewati.');
+            return;
+        }
+
         $demoProducts = Product::all();
 
         foreach ($buyers as $index => $buyer) {

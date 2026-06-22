@@ -11,6 +11,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\MidtransController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\TestController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ApprovalController;
 use App\Http\Controllers\Admin\VerificationController;
@@ -26,15 +27,6 @@ use App\Models\Product;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
-
-// Handle CORS preflight requests
-Route::options('/{any}', function() {
-    return response()->json([])
-        ->header('Access-Control-Allow-Origin', '*')
-        ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
-        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-        ->header('Access-Control-Max-Age', '86400');
-})->where('any', '.*');
 
 // Public routes (no authentication required)
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -74,11 +66,28 @@ Route::get('/products/{productId}/reviews', [ReviewController::class, 'getProduc
 // Midtrans notification webhook (public endpoint)
 Route::post('/midtrans/notification', [MidtransController::class, 'notification']);
 
-// Xendit webhook endpoint (public endpoint)
-Route::post('/payments/webhook', [PaymentController::class, 'webhook']);
+// Test routes (development only)
+Route::post('/test/token', [TestController::class, 'generateToken']);
+Route::get('/test/check-token', [TestController::class, 'checkToken']);
+Route::post('/test/create-order', [TestController::class, 'testMidtrans']);
+
+// CORS Preflight OPTIONS handlers (must be before auth middleware)
+Route::options('/payments/midtrans/create', function () {
+    return response('', 200)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        ->header('Access-Control-Max-Age', '7200');
+});
 
 // Protected routes (authentication required)
 Route::middleware('auth:sanctum')->group(function () {
+    // Test routes
+    Route::get('/test/check-token', [TestController::class, 'checkToken']);
+    Route::get('/test/payment-route', function () {
+        return response()->json(['message' => 'Test payment route works']);
+    });
+
     // Auth routes
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::post('/auth/resend-verification', [AuthController::class, 'resendVerificationEmail']);
@@ -125,8 +134,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/orders/{id}/cancel', [OrderController::class, 'cancelOrder']);
 
     // Payment routes
+    // Specific routes BEFORE generic parameterized routes (route precedence)
+    Route::post('/payments/midtrans/create', [PaymentController::class, 'createMidtransPayment']);
+    
+    // Generic payment routes with parameters
     Route::get('/payments/{orderId}', [PaymentController::class, 'show']);
-    Route::post('/payments/create', [PaymentController::class, 'createInvoice']);
     Route::post('/payments/{orderId}/upload-proof', [PaymentController::class, 'uploadProof']);
     Route::post('/payments/{orderId}/submit', [PaymentController::class, 'submitPayment']);
     Route::get('/payments/{orderId}/proof', [PaymentController::class, 'getProof']);

@@ -16,9 +16,13 @@ class StoreSeeder extends Seeder
             ['email' => 'seller.pangalengan@bumdes.id', 'store_name' => 'BUMDes Pangalengan', 'village' => 'Pangalengan', 'district' => 'Pangalengan', 'regency' => 'Bandung', 'contact_phone' => '081234567892'],
         ];
 
+        $createdCount = 0;
+
         foreach ($stores as $storeData) {
             $seller = User::where('email', $storeData['email'])->first();
+
             if (! $seller) {
+                $this->command->warn("[StoreSeeder] Seller dengan email '{$storeData['email']}' tidak ditemukan. Store '{$storeData['store_name']}' DILEWATI. Pastikan UserSeeder sudah membuat user ini.");
                 continue;
             }
 
@@ -38,6 +42,14 @@ class StoreSeeder extends Seeder
                     'is_active' => true,
                 ]
             );
+
+            $createdCount++;
+        }
+
+        if ($createdCount === 0) {
+            $this->command->error('[StoreSeeder] Tidak ada satupun store yang dibuat. Cek email seller di UserSeeder.');
+        } else {
+            $this->command->info("[StoreSeeder] {$createdCount} store berhasil dibuat/diupdate.");
         }
     }
 }

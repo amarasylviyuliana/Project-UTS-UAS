@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Payment;
 use App\Models\Order;
-use App\Services\XenditService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +11,17 @@ use Illuminate\Support\Facades\Storage;
 
 class PaymentController extends Controller
 {
+    /**
+     * TEST: Simple test method to verify routing works
+     */
+    public function testRoute(): JsonResponse
+    {
+        return response()->json([
+            'message' => 'Payment route test successful',
+            'timestamp' => now(),
+        ]);
+    }
+
     /**
      * Get payment details for an order
      * REQ-26
@@ -308,282 +318,257 @@ class PaymentController extends Controller
             'data' => $payment,
         ]);
     }
+
     /**
-     * Create a Xendit invoice for an existing order.
+     * Create Midtrans payment token for an order
      */
-    public function createInvoice(Request $request): JsonResponse
+    public function createMidtransPayment(Request $request): JsonResponse
     {
-        $user = $request->user();
-        if (!$user) {
-            return response()->json([
-                'message' => 'User tidak terautentikasi',
-            ], 401);
-        }
-
-        $validated = $request->validate([
-            'order_id' => 'required|string|max:255',
-            'amount' => 'required|numeric|min:1',
-            'customer_name' => 'required|string|max:255',
-            'customer_email' => 'sometimes|nullable|email',
-            'payment_method' => 'sometimes|string|in:btn_va,dana,gopay,shopeepay',
-        ]);
-
-        $order = $this->findOrderByIdentifier($validated['order_id']);
-
-        if (!$order) {
-            return response()->json([
-                'message' => 'Pesanan tidak ditemukan',
-            ], 404);
-        }
-
-        if ($order->buyer_id !== $user->id) {
-            return response()->json([
-                'message' => 'Anda tidak punya akses ke pesanan ini',
-            ], 403);
-        }
-
-        $secretKey = env('XENDIT_SECRET_KEY');
-        $publicKey = env('XENDIT_PUBLIC_KEY');
-        $webhookToken = env('XENDIT_WEBHOOK_TOKEN');
-        $frontendBaseUrl = rtrim(env('FRONTEND_URL') ?: env('APP_URL') ?: '', '/');
-        $successRedirectBase = env('XENDIT_SUCCESS_REDIRECT_URL') ?: ($frontendBaseUrl !== '' ? $frontendBaseUrl . '/#/order-detail' : '/#/order-detail');
-        $failureRedirectBase = env('XENDIT_FAILURE_REDIRECT_URL') ?: ($frontendBaseUrl !== '' ? $frontendBaseUrl . '/#/order-detail' : '/#/order-detail');
-
-        if (!$secretKey || !$publicKey || !$webhookToken) {
-            return response()->json([
-                'message' => 'Xendit belum dikonfigurasi, silakan isi API Key pada file .env',
-            ], 500);
-        }
-
-        if (!str_starts_with($secretKey, 'xnd_secret_')
-            && !str_starts_with($secretKey, 'xnd_development_')
-            && !str_starts_with($secretKey, 'xnd_production_')) {
-            return response()->json([
-                'message' => 'Xendit secret key tidak valid. Periksa nilai XENDIT_SECRET_KEY di file .env',
-            ], 500);
-        }
-
-        $paymentMethod = $validated['payment_method'] ?? 'btn_va';
-        $paymentMethods = $this->mapXenditPaymentMethods($paymentMethod);
-        $externalId = $order->order_number . '-' . uniqid();
-
-        \Log::info('CreateInvoice request received', [
-            'user_id' => $user->id,
-            'order_id' => $order->id,
-            'order_number' => $order->order_number,
-            'amount' => $validated['amount'],
-            'payment_method' => $paymentMethod,
-            'customer_name' => $validated['customer_name'],
-            'customer_email' => $validated['customer_email'] ?? $user->email ?? null,
-        ]);
-
-        $successRedirectUrl = $this->buildRedirectUrl($successRedirectBase, [
-            'orderId' => $order->id,
-            'payment' => 'success',
-        ]);
-        $failureRedirectUrl = $this->buildRedirectUrl($failureRedirectBase, [
-            'orderId' => $order->id,
-            'payment' => 'failed',
-        ]);
-
         try {
-            $service = new XenditService();
-            $invoice = $service->createInvoice(
-                $externalId,
-                (float) $validated['amount'], 
-                $validated['customer_name'], 
-                $validated['customer_email'] ?? $user->email ?? 'no-reply@example.com',
-                $paymentMethods,
-                $successRedirectUrl,
-                $failureRedirectUrl,
-            );
+            // Get order_id from either JSON or form data
+            $orderId = $request->input('order_id');
+            
+            if (!$orderId) {
+                return response()->json([
+                    'message' => 'order_id is required',
+                ], 400);
+            }
 
-            \Log::info('Xendit invoice response', [
+            $user = $request->user();
+            if (!$user) {
+                return response()->json([
+                    'message' => 'User tidak terautentikasi',
+                ], 401);
+            }
+
+            $order = $this->findOrderByIdentifier($orderId);
+
+            if (!$order) {
+                return response()->json([
+                    'message' => 'Pesanan tidak ditemukan',
+                ], 404);
+            }
+
+            if ($order->buyer_id !== $user->id) {
+                return response()->json([
+                    'message' => 'Anda tidak punya akses ke pesanan ini',
+                ], 403);
+            }
+
+            \Log::info('Creating Midtrans payment', [
+                'user_id' => $user->id,
                 'order_id' => $order->id,
-                'external_id' => $externalId,
-                'invoice' => $invoice,
+                'order_number' => $order->order_number,
+                'total_price' => $order->total_price,
             ]);
-        } catch (\Throwable $e) {
-            \Log::error('Xendit createInvoice failed', [
+
+            // Check Midtrans configuration
+            $serverKey = env('MIDTRANS_SERVER_KEY');
+            $clientKey = env('MIDTRANS_CLIENT_KEY');
+            $isProduction = filter_var(env('MIDTRANS_IS_PRODUCTION', false), FILTER_VALIDATE_BOOLEAN);
+
+            if (!$serverKey || !$clientKey) {
+                return response()->json([
+                    'message' => 'Midtrans belum dikonfigurasi, silakan isi API Key pada file .env',
+                ], 500);
+            }
+
+            // Configure Midtrans
+            \Log::info('MIDTRANS runtime config', [
+                'MIDTRANS_IS_PRODUCTION' => $isProduction,
+                'serverKey_present' => !empty($serverKey),
+                'clientKey_present' => !empty($clientKey),
+                'serverKey_length' => strlen($serverKey),
+                'clientKey_length' => strlen($clientKey),
+            ]);
+
+            \Midtrans\Config::$serverKey = $serverKey;
+            \Midtrans\Config::$clientKey = $clientKey;
+            \Midtrans\Config::$isProduction = $isProduction;
+            \Midtrans\Config::$isSanitized = true;
+            \Midtrans\Config::$is3ds = true;
+
+            // Prepare transaction details
+            $grossAmount = (int) $order->total_price;
+            $transactionDetails = [
+                'order_id' => $order->order_number,
+                'gross_amount' => $grossAmount,
+            ];
+
+            $customerDetails = [
+                'first_name' => $user->name ?? 'Customer',
+                'email' => $user->email,
+                'phone' => $user->phone_number ?? '',
+            ];
+
+            $itemDetails = [];
+            $totalItemAmount = 0;
+            
+            if ($order->orderItems && count($order->orderItems) > 0) {
+                foreach ($order->orderItems as $item) {
+                    $itemPrice = (int) $item->unit_price;  // Use unit_price, not price
+                    $itemQuantity = (int) $item->quantity;
+                    $itemTotal = $itemPrice * $itemQuantity;
+                    $totalItemAmount += $itemTotal;
+                    
+                    $itemDetails[] = [
+                        'id' => (string) $item->id,
+                        'price' => $itemPrice,
+                        'quantity' => $itemQuantity,
+                        'name' => substr($item->product->name ?? 'Product', 0, 50),
+                    ];
+                }
+            } else {
+                // If no items, create a single item entry
+                $itemDetails[] = [
+                    'id' => 'ORDER-' . $order->id,
+                    'price' => $grossAmount,
+                    'quantity' => 1,
+                    'name' => 'Pesanan ' . $order->order_number,
+                ];
+            }
+
+            // Validate amount
+            if (count($itemDetails) > 1 && $totalItemAmount !== $grossAmount) {
+                \Log::warning('Midtrans item amount mismatch', [
+                    'order_id' => $order->id,
+                    'total_items_amount' => $totalItemAmount,
+                    'gross_amount' => $grossAmount,
+                    'difference' => $grossAmount - $totalItemAmount,
+                ]);
+            }
+
+            // Create transaction
+            $payload = [
+                'transaction_details' => $transactionDetails,
+                'customer_details' => $customerDetails,
+                'item_details' => $itemDetails,
+                'callbacks' => [
+                    'finish' => env('APP_URL') . '/#/order-detail/' . $order->id,
+                    'error' => env('APP_URL') . '/#/order-detail/' . $order->id . '?payment=failed',
+                    'pending' => env('APP_URL') . '/#/order-detail/' . $order->id,
+                ],
+            ];
+
+            \Log::info('Midtrans payload', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'gross_amount' => $grossAmount,
+                'payload' => json_encode($payload, JSON_UNESCAPED_SLASHES),
+            ]);
+
+            \Log::info('About to call Midtrans Snap', [
+                'server_key_present' => !empty($serverKey),
+                'payload_order_id' => $payload['transaction_details']['order_id'] ?? 'NOT SET',
+                'payload_gross_amount' => $payload['transaction_details']['gross_amount'] ?? 'NOT SET',
+            ]);
+
+            try {
+                $snapToken = \Midtrans\Snap::getSnapToken($payload);
+            } catch (\Throwable $midtransError) {
+                \Log::error('Midtrans API error caught', [
+                    'error_class' => get_class($midtransError),
+                    'error_message' => $midtransError->getMessage(),
+                    'error_code' => $midtransError->getCode(),
+                    'file' => $midtransError->getFile(),
+                    'line' => $midtransError->getLine(),
+                ]);
+                throw $midtransError;
+            }
+
+            // Create or update payment record
+            $payment = $order->payment ?: Payment::create([
+                'order_id' => $order->id,
+                'status' => 'Pending',
+                'payment_status' => 'Pending',
+            ]);
+
+            $payment->invoice_id = $order->order_number;
+            $payment->payment_method = 'MIDTRANS';
+            $payment->payment_status = 'Pending';
+            $payment->status = 'Pending';
+            $payment->save();
+
+            \Log::info('Midtrans snap token generated', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'snap_token' => $snapToken,
+                'client_key' => $clientKey,
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'amount' => $order->total_price,
+            ]);
+        } catch (\Midtrans\Exceptions\ServerException $e) {
+            // Server-side error (HTTP 500+)
+            \Log::error('Midtrans Server Error', [
                 'order_id' => $order->id ?? null,
-                'external_id' => $externalId ?? null,
+                'error' => $e->getMessage(),
+                'status_code' => $e->getHttpStatusCode ?? 'unknown',
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'message' => 'Gagal membuat payment Midtrans (Server Error)',
+                'error' => $e->getMessage(),
+            ], 502);
+        } catch (\Midtrans\Exceptions\CurlException $e) {
+            // Network/cURL error
+            \Log::error('Midtrans cURL Error', [
+                'order_id' => $order->id ?? null,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
-                'message' => 'Gagal membuat invoice Xendit',
+                'message' => 'Gagal terhubung ke payment gateway (Network Error)',
+                'error' => $e->getMessage(),
+            ], 503);
+        } catch (\Midtrans\Exceptions\AuthenticationException $e) {
+            // Authentication error (likely invalid keys)
+            \Log::error('Midtrans Authentication Error', [
+                'order_id' => $order->id ?? null,
+                'error' => $e->getMessage(),
+                'keys_configured' => [
+                    'serverKey_length' => strlen($serverKey),
+                    'clientKey_length' => strlen($clientKey),
+                ],
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'message' => 'Gagal autentikasi dengan payment gateway (Invalid API Keys)',
+                'error' => $e->getMessage(),
+            ], 401);
+        } catch (\Exception $e) {
+            \Log::error('Midtrans payment creation failed', [
+                'order_id' => $order->id ?? null,
+                'error' => $e->getMessage(),
+                'exception_class' => get_class($e),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'message' => 'Gagal membuat payment Midtrans',
+                'exception_class' => get_class($e),
+                'error' => $e->getMessage(),
+                'hint' => 'Cek MIDTRANS_SERVER_KEY/MIDTRANS_CLIENT_KEY dan payload transaction_details/item_details/gross_amount.',
             ], 500);
         }
-
-        $payment = $order->payment;
-        if (!$payment) {
-            $payment = Payment::create([
-                'order_id' => $order->id,
-                'status' => 'Pending',
-                'payment_status' => 'Pending',
-            ]);
-        }
-
-        $payment->invoice_id = $invoice['id'] ?? null;
-        $payment->invoice_url = $invoice['invoice_url'] ?? $invoice['url'] ?? null;
-        $payment->payment_method = strtoupper($paymentMethod);
-        $payment->payment_status = strtoupper($invoice['status'] ?? 'PENDING');
-        $payment->paid_at = strtoupper($invoice['status'] ?? '') === 'PAID' ? now() : null;
-        $payment->status = strtoupper($invoice['status'] ?? '') === 'PAID' ? 'Confirmed' : 'Pending';
-        $payment->save();
-
-        $order->status = $payment->payment_status === 'PAID' ? 'Dikonfirmasi' : 'Menunggu Pembayaran';
-        $order->save();
-
-        return response()->json([
-            'success' => true,
-            'invoice_id' => $payment->invoice_id,
-            'invoice_url' => $payment->invoice_url,
-            'status' => $payment->payment_status,
-        ], 201);
-    }
-
-    public function webhook(Request $request): JsonResponse
-    {
-        $token = $request->header('X-Callback-Token') ?? $request->input('token');
-        $expected = env('XENDIT_WEBHOOK_TOKEN');
-
-        if (!$expected || !$token || hash_equals($expected, $token) === false) {
-            return response()->json([
-                'message' => 'Token webhook Xendit tidak valid',
-            ], 401);
-        }
-
-        $payload = $request->all();
-        $invoiceId = $payload['id'] ?? null;
-        if (!$invoiceId) {
-            return response()->json([
-                'message' => 'Invoice ID tidak ditemukan di payload webhook',
-            ], 400);
-        }
-
-        $payment = Payment::where('invoice_id', $invoiceId)->first();
-        if (!$payment) {
-            return response()->json([
-                'message' => 'Payment record tidak ditemukan untuk invoice ini',
-            ], 404);
-        }
-
-        $status = strtoupper($payload['status'] ?? '');
-        $payment->payment_status = $status;
-        $payment->paid_at = $status === 'PAID' ? now() : null;
-        $payment->status = $status === 'PAID' ? 'Confirmed' : ($status === 'EXPIRED' || $status === 'FAILED' ? 'Pending' : 'Pending');
-        $payment->save();
-
-        $order = $payment->order;
-        if ($order) {
-            if ($status === 'PAID') {
-                $order->status = 'Dikonfirmasi';
-            } else {
-                $order->status = 'Menunggu Pembayaran';
-            }
-            $order->save();
-        }
-
-        return response()->json([
-            'message' => 'Webhook Xendit berhasil diproses',
-            'status' => $status,
-        ]);
-    }
-
-    private function buildRedirectUrl(string $url, array $params): string
-    {
-        if (empty($params)) {
-            return $url;
-        }
-
-        $parsed = parse_url($url);
-        if (!$parsed) {
-            return $url;
-        }
-
-        $scheme = $parsed['scheme'] ?? '';
-        $host = $parsed['host'] ?? '';
-        $port = $parsed['port'] ?? null;
-        $path = $parsed['path'] ?? '';
-        $fragment = $parsed['fragment'] ?? '';
-
-        $base = '';
-        if ($scheme !== '' && $host !== '') {
-            $base = $scheme . '://' . $host;
-            if ($port !== null) {
-                $base .= ':' . $port;
-            }
-            if ($path !== '') {
-                $base .= $path;
-            }
-        } else {
-            $base = $path;
-        }
-
-        if ($fragment !== '') {
-            $fragmentPath = $fragment;
-            $fragmentQuery = '';
-            if (str_contains($fragment, '?')) {
-                [$fragmentPath, $fragmentQuery] = explode('?', $fragment, 2);
-            }
-
-            parse_str($fragmentQuery, $fragmentParams);
-            foreach ($params as $key => $value) {
-                $fragmentParams[$key] = $value;
-            }
-
-            $fragmentString = $fragmentPath;
-            if (!empty($fragmentParams)) {
-                $fragmentString .= '?' . http_build_query($fragmentParams);
-            }
-
-            return $base . '#' . $fragmentString;
-        }
-
-        $query = [];
-        if (isset($parsed['query'])) {
-            parse_str($parsed['query'], $query);
-        }
-
-        foreach ($params as $key => $value) {
-            $query[$key] = $value;
-        }
-
-        $queryString = http_build_query($query);
-        return $base . '?' . $queryString;
-    }
-
-    private function appendQueryString(string $url, array $params): string
-    {
-        if (empty($params)) {
-            return $url;
-        }
-
-        $separator = str_contains($url, '?') ? '&' : '?';
-        return $url . $separator . http_build_query($params);
-    }
-
-    private function mapXenditPaymentMethods(string $method): array
-    {
-        return match (strtolower($method)) {
-            'btn_va' => [],
-            'dana' => ['DANA'],
-            'gopay' => ['GOPAY'],
-            'shopeepay' => ['SHOPEEPAY'],
-            default => [],
-        };
     }
 
     private function findOrderByIdentifier(string $orderId)
     {
         if (ctype_digit($orderId)) {
-            $order = Order::find((int) $orderId);
+            $order = Order::with('orderItems.product')->find((int) $orderId);
             if ($order) {
                 return $order;
             }
         }
 
-        return Order::where('order_number', $orderId)->first();
-    }}
+        return Order::with('orderItems.product')->where('order_number', $orderId)->first();
+    }
+}
