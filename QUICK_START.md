@@ -12,7 +12,7 @@
 cd bumdes_jabar/laravel
 php artisan serve --port=8000
 ```
-Check: `http://localhost:8000/api/products` returns JSON
+Check: `https://project-uts-uas-production.up.railway.app/api/products` returns JSON
 
 ### 2. Start Frontend
 ```bash
@@ -155,7 +155,7 @@ flutter run -d chrome
 ### Backend returns 404
 ```bash
 # Check API running
-curl http://localhost:8000/api/products
+curl https://project-uts-uas-production.up.railway.app/api/products
 
 # Check migrations
 php artisan migrate:status

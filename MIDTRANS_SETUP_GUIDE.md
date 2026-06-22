@@ -12,11 +12,17 @@
 
 2. ✅ **Menambahkan Midtrans Configuration**
    - Di `.env`:
+<<<<<<< HEAD
      ```
      MIDTRANS_SERVER_KEY=YOUR_PRODUCTION_SERVER_KEY_HERE
-     MIDTRANS_CLIENT_KEY=Mid-client-tf7Njr1jgRE9_EFZ
+     MIDTRANS_CLIENT_KEY=YOUR_PRODUCTION_CLIENT_KEY_HERE
      MIDTRANS_IS_PRODUCTION=false
      ```
+=======
+ MIDTRANS_SERVER_KEY=your-midtrans-server-key
+ MIDTRANS_CLIENT_KEY=your-midtrans-client-key
+ MIDTRANS_IS_PRODUCTION=false
+>>>>>>> 2dfedd0 (fix: add docker entrypoint with auto migration)
 
 3. ✅ **Membuat Midtrans Payment Endpoint**
    - New method: `createMidtransPayment()` di PaymentController
@@ -70,9 +76,7 @@ APP_URL=https://yourdomain.com
 2. Pilih merchant Anda
 3. Pergi ke **Settings > Notification URL**
 4. Tambahkan Notification URL:
-   ```
-   https://yourdomain.com/api/midtrans/notification
-   ```
+https://yourdomain.com/api/midtrans/notification
 5. Method: POST
 6. Save
 
@@ -91,41 +95,43 @@ MIDTRANS_IS_PRODUCTION=false  # Set to true untuk production
 ### Backend Testing (Postman/cURL)
 
 1. **Get Auth Token**
-   ```
-   POST /api/login
-   Body: {
-     "email": "user@example.com",
-     "password": "password"
-   }
-   ```
+POST /api/login
+
+Body: {
+
+"email": "user@example.com",
+
+"password": "password"
+
+}
 
 2. **Create Midtrans Payment**
-   ```
-   POST /api/payments/midtrans/create
-   Headers: Authorization: Bearer {token}
-   Body: {
-     "order_id": "ORD-123456"
-   }
-   ```
+POST /api/payments/midtrans/create
+
+Headers: Authorization: Bearer {token}
+
+Body: {
+
+"order_id": "ORD-123456"
+
+}
 
    Response:
-   ```json
+```json
    {
      "success": true,
      "snap_token": "02c4x5c99f34567890...",
-     "client_key": "Mid-client-tf7Njr1jgRE9_EFZ",
+     "client_key": "your-midtrans-client-key",
      "order_id": 1,
      "order_number": "ORD-123456",
      "amount": 50000
    }
-   ```
+```
 
 ### Flutter Testing
 
 1. Build and run aplikasi Flutter:
-   ```
-   flutter run
-   ```
+flutter run
 
 2. Navigate ke payment screen
 3. Klik "Bayar Sekarang"
@@ -177,14 +183,15 @@ MIDTRANS_IS_PRODUCTION=false  # Set to true untuk production
 ---
 
 ## 📊 Payment Status Flow
-
-```
 Pending → Capture/Settlement → Confirmed
-  ↓
+
+↓
+
 Deny/Expire/Cancel → Rejected
-  ↓
+
+↓
+
 Challenge → Manual Review
-```
 
 ---
 

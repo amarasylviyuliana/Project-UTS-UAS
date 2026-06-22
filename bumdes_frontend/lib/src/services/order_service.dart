@@ -6,7 +6,7 @@ import '../models/order_model.dart';
 class OrderService {
   Future<Map<String, dynamic>> createOrder(
     String token,
-    List<CartItemModel> items,
+    List<CartItemModel> items, 
     double total,
     String recipientName,
     String recipientPhone,
@@ -67,6 +67,18 @@ class OrderService {
       'payment_method': paymentMethod,
     };
     final response = await api.post('/payments/create', payload);
+    return response;
+  }
+
+  Future<Map<String, dynamic>> createMidtransPayment(
+    String token,
+    String orderId,
+  ) async {
+    final api = ApiService(token: token);
+    final payload = {
+      'order_id': orderId,
+    };
+    final response = await api.post('/payments/midtrans/create', payload);
     return response;
   }
 
@@ -144,12 +156,25 @@ class OrderService {
     }
   }
 
-  Future<OrderModel> getOrder(String token, int orderId) async {
+  Future<OrderModel> getOrder(
+    String token,
+    int orderId, {
+    Duration timeout = const Duration(seconds: 15),
+  }) async {
     final api = ApiService(token: token);
-    final response = await api.get('/orders/$orderId');
+    final response = await api
+        .get('/orders/$orderId')
+        .timeout(timeout, onTimeout: () {
+      throw ApiException(
+        statusCode: 408,
+        message: 'Timeout memuat detail pesanan',
+      );
+    });
     final orderData = response['data'] as Map<String, dynamic>;
     return OrderModel.fromJson(Map<String, dynamic>.from(orderData));
   }
+
+
 
   Future<List<OrderModel>> getSellerOrders(String token) async {
     final api = ApiService(token: token);

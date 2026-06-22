@@ -1,15 +1,18 @@
-﻿services:
+services:
   backend:
     build: ./bumdes_jabar/laravel
     container_name: bumdes-backend
     ports:
-      - "8000:8000"
+      - "0.0.0.0:8000:8000"
+    env_file:
+      - ./bumdes_jabar/laravel/.env
     environment:
       DB_HOST: db
       DB_PORT: 3306
       DB_DATABASE: bumdes_jabar
       DB_USERNAME: root
       DB_PASSWORD: root
+      APP_URL: http://localhost:3000
     volumes:
       - ./bumdes_jabar/laravel:/app
     depends_on:
@@ -22,7 +25,7 @@
       context: ./bumdes_frontend
       dockerfile: Dockerfile
       args:
-        API_URL: http://localhost:8000
+        API_URL: https://project-uts-uas-production.up.railway.app
     container_name: bumdes-frontend
     ports:
       - "0.0.0.0:3000:3000"
@@ -40,7 +43,7 @@
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: bumdes_jabar
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     networks:

@@ -45,7 +45,7 @@ cd bumdes_jabar/laravel
 php artisan serve --port=8000
 
 # Or if using built-in server
-php -S localhost:8000 -t public
+php -S https://project-uts-uas-production.up.railway.app -t public
 ```
 
 ### Terminal 2: Frontend (Flutter Web)
@@ -60,7 +60,7 @@ flutter run -d chrome --web-port=6006
 ```
 
 **Expected URLs:**
-- Backend API: `http://localhost:8000/api`
+- Backend API: `https://project-uts-uas-production.up.railway.app/api`
 - Frontend Web: `http://localhost:6006` (or default port)
 
 ---
@@ -586,7 +586,7 @@ flutter build web --release
 **Helpful Commands:**
 ```bash
 # Check backend status
-curl -i http://localhost:8000/api/products
+curl -i https://project-uts-uas-production.up.railway.app/api/products
 
 # Check migrations
 php artisan migrate:status

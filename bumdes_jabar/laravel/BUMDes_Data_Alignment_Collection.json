@@ -599,7 +599,7 @@
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:8000",
+      "value": "https://project-uts-uas-production.up.railway.app",
       "type": "string"
     },
     {

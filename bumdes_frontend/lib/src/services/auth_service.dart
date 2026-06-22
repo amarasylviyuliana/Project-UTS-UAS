@@ -1,19 +1,34 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_service.dart';
+import 'package:web/web.dart' as web;
 
 class AuthService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  static const String _tokenKey = 'auth_token';
 
   Future<void> saveToken(String token) async {
-    await _storage.write(key: 'auth_token', value: token);
+    if (kIsWeb) {
+      web.window.localStorage.setItem(_tokenKey, token);
+    } else {
+      await _storage.write(key: _tokenKey, value: token);
+    }
   }
 
   Future<String?> readToken() async {
-    return _storage.read(key: 'auth_token');
+    if (kIsWeb) {
+      final token = web.window.localStorage.getItem(_tokenKey);
+      return (token == null || token.isEmpty) ? null : token;
+    }
+    return _storage.read(key: _tokenKey);
   }
 
   Future<void> deleteToken() async {
-    await _storage.delete(key: 'auth_token');
+    if (kIsWeb) {
+      web.window.localStorage.removeItem(_tokenKey);
+    } else {
+      await _storage.delete(key: _tokenKey);
+    }
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
@@ -57,7 +72,6 @@ class AuthService {
       '/auth/email/verification-notification',
       '/email/verification-notification',
     ];
-
     late Exception lastException;
     for (final endpoint in endpoints) {
       try {
@@ -66,7 +80,6 @@ class AuthService {
         lastException = e is Exception ? e : Exception(e.toString());
       }
     }
-
     throw lastException;
   }
 

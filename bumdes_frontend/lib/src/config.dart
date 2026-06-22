@@ -25,11 +25,11 @@ String get backendUrl {
   if (kIsWeb) {
     // Web: try to use localhost first (works if frontend and backend on same machine)
     // For production: update docker-compose.yml to pass correct API_URL
-    return 'http://localhost:8000';
+    return 'hhttps://project-uts-uas-production.up.railway.app';
   }
 
   // Mobile/Desktop fallback
-  return 'http://localhost:8000';
+  return 'https://project-uts-uas-production.up.railway.app';
 }
 
 const String apiPrefix = '/api';

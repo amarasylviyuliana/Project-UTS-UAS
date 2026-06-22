@@ -391,7 +391,7 @@ class PaymentController extends Controller
             // Prepare transaction details
             $grossAmount = (int) $order->total_price;
             $transactionDetails = [
-                'order_id' => $order->order_number,
+                'order_id' => $order->order_number . '-' . time(),
                 'gross_amount' => $grossAmount,
             ];
 
@@ -444,9 +444,11 @@ class PaymentController extends Controller
                 'customer_details' => $customerDetails,
                 'item_details' => $itemDetails,
                 'callbacks' => [
-                    'finish' => env('APP_URL') . '/#/order-detail/' . $order->id,
-                    'error' => env('APP_URL') . '/#/order-detail/' . $order->id . '?payment=failed',
-                    'pending' => env('APP_URL') . '/#/order-detail/' . $order->id,
+    'finish' => env('FRONTEND_URL') . '/#/orders',
+    'error' => env('FRONTEND_URL') . '/#/orders',
+    'pending' => env('FRONTEND_URL') . '/#/orders',
+
+        
                 ],
             ];
 

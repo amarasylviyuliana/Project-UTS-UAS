@@ -35,9 +35,13 @@ COPY . .
 # Complete composer setup
 RUN composer dump-autoload
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Set permissions
 RUN chown -R www-data:www-data /app
 
 EXPOSE 8000
 
-CMD ["php", "artisan", "serve", "--host=0.0.0.0"]
+CMD ["docker-entrypoint.sh"]

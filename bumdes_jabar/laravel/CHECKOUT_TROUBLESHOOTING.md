@@ -153,7 +153,7 @@ php artisan migrate:status
 
 ### 2. Test Login Token
 ```bash
-curl -X POST http://localhost:8000/api/auth/login \
+curl -X POST https://project-uts-uas-production.up.railway.app/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -163,19 +163,19 @@ curl -X POST http://localhost:8000/api/auth/login \
 
 ### 3. Verify Token Works
 ```bash
-curl -X GET http://localhost:8000/api/auth/me \
+curl -X GET https://project-uts-uas-production.up.railway.app/api/auth/me \
   -H "Authorization: Bearer {your_token}"
 ```
 
 ### 4. Check Cart Items
 ```bash
-curl -X GET http://localhost:8000/api/cart \
+curl -X GET https://project-uts-uas-production.up.railway.app/api/cart \
   -H "Authorization: Bearer {your_token}"
 ```
 
 ### 5. Test Checkout
 ```bash
-curl -X POST http://localhost:8000/api/orders \
+curl -X POST https://project-uts-uas-production.up.railway.app/api/orders \
   -H "Authorization: Bearer {your_token}" \
   -H "Content-Type: application/json" \
   -d '{

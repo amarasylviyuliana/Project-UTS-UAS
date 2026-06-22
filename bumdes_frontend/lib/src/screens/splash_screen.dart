@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -30,11 +31,32 @@ class _SplashScreenState extends State<SplashScreen> {
     setState(() {
       _isCheckingAuth = false;
     });
+
+    // Auto-continue jika sudah authenticated (misalnya redirect dari Midtrans)
+    if (authProvider.isAuthenticated) {
+      _continueToApp();
+    }
   }
 
   void _continueToApp() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     if (authProvider.isAuthenticated) {
+      // Cek deep link dari redirect Midtrans (web only)
+      if (kIsWeb) {
+        final uri = Uri.base;
+        final fragment = uri.fragment; // bagian setelah #
+        // Kalau ada fragment selain splash/root, redirect ke sana
+        if (fragment.isNotEmpty &&
+            fragment != '/' &&
+            fragment != '/splash' &&
+            !fragment.startsWith('/splash')) {
+          final targetRoute = fragment.startsWith('/')
+              ? fragment
+              : '/$fragment';
+          Navigator.pushReplacementNamed(context, targetRoute);
+          return;
+        }
+      }
       Navigator.pushReplacementNamed(context, HomeScreen.routeName);
     } else {
       Navigator.pushReplacementNamed(context, LoginScreen.routeName);
