@@ -1,0 +1,10 @@
+[33m2dfedd0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mrestore-midtrans[m[33m)[m fix: add docker entrypoint with auto migration
+[33mc160df3[m Restore Midtrans payment integration from deploy-docker branch
+[33m4b8ba8f[m[33m ([m[1;32mmain[m[33m)[m .
+[33m214e6c6[m pubspec.lock
+[33mb3da1f1[m .
+[33mc4c474d[m test: tambah Playwright test untuk Cart & Checkout (5 test case, semua passed)
+[33ma27c7b5[m test: tambah Playwright test untuk Register (6 test case, semua passed)
+[33mde26c60[m test: semua test login Playwright pass (fix DB config + locator)
+[33m5c9b20c[m test: stabilkan Playwright test login (fix timing issue Flutter web)
+[33m3c2e7c1[m penambahan splash_screen dan penyesuaian user agar

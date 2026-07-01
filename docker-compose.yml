@@ -1,0 +1,79 @@
+﻿services:
+  backend:
+    build: ./bumdes_jabar/laravel
+    container_name: bumdes-backend
+    ports:
+      - "0.0.0.0:8000:8000"
+    env_file:
+      - ./bumdes_jabar/laravel/.env
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: bumdes_jabar
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      APP_URL: http://localhost:3000
+    volumes:
+      - ./bumdes_jabar/laravel:/app
+    depends_on:
+      - db
+    networks:
+      - bumdes-network
+
+  frontend:
+    build:
+      context: ./bumdes_frontend
+      dockerfile: Dockerfile
+      args:
+        API_URL: https://project-uts-uas-production.up.railway.app
+    container_name: bumdes-frontend
+    ports:
+      - "0.0.0.0:3000:3000"
+    environment:
+      API_BASE_URL: http://localhost:8000
+    networks:
+      - bumdes-network
+    depends_on:
+      - backend
+
+  db:
+    image: mysql:8.0
+    container_name: bumdes-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bumdes_jabar
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - bumdes-network
+
+  # ── n8n: Notifikasi otomatis pesanan baru ke Telegram ──────────────────
+  n8n:
+    build:
+      context: ./n8n
+      dockerfile: Dockerfile
+    container_name: bumdes-n8n
+    ports:
+      - "0.0.0.0:5678:5678"
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: admin
+      N8N_BASIC_AUTH_PASSWORD: passwordkuat123
+      WEBHOOK_URL: http://localhost:5678/
+      GENERIC_TIMEZONE: Asia/Jakarta
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - bumdes-network
+    depends_on:
+      - backend
+
+networks:
+  bumdes-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  n8n_data:

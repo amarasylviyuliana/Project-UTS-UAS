@@ -1,0 +1,12 @@
+FROM n8nio/n8n:latest
+
+# Custom Dockerfile untuk n8n — BUMDes Jabar
+# Notifikasi otomatis pesanan baru ke Telegram pengurus BUMDes
+
+ENV N8N_HOST=0.0.0.0
+ENV N8N_PORT=5678
+ENV N8N_PROTOCOL=http
+ENV GENERIC_TIMEZONE=Asia/Jakarta
+ENV TZ=Asia/Jakarta
+
+EXPOSE 5678
