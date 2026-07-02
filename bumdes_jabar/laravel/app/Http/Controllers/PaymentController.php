@@ -207,8 +207,10 @@ class PaymentController extends Controller
 
         $order->status = 'Dikonfirmasi';
         $order->save();
- // Kirim notifikasi konfirmasi pembayaran ke penjual & pembeli lewat n8n
+
+        // Kirim notifikasi konfirmasi pembayaran ke penjual & pembeli lewat n8n
         (new N8nNotificationService())->notifyPaymentConfirmed($order);
+
         return response()->json(['message' => 'Pembayaran dikonfirmasi', 'data' => $payment]);
     }
 
@@ -269,9 +271,9 @@ class PaymentController extends Controller
                 return response()->json(['message' => 'Anda tidak punya akses ke pesanan ini'], 403);
             }
 
-            $serverKey = env('MIDTRANS_SERVER_KEY');
-            $clientKey = env('MIDTRANS_CLIENT_KEY');
-            $isProduction = filter_var(env('MIDTRANS_IS_PRODUCTION', false), FILTER_VALIDATE_BOOLEAN);
+            $serverKey = config('services.midtrans.server_key');
+            $clientKey = config('services.midtrans.client_key');
+            $isProduction = filter_var(config('services.midtrans.is_production', false), FILTER_VALIDATE_BOOLEAN);
 
             if (!$serverKey || !$clientKey) {
                 return response()->json(['message' => 'Midtrans belum dikonfigurasi, silakan isi API Key pada file .env'], 500);

@@ -15,8 +15,8 @@ class MidtransController extends Controller
 {
     public function notification(Request $request): JsonResponse
     {
-        MidtransConfig::$serverKey = env('MIDTRANS_SERVER_KEY');
-        MidtransConfig::$isProduction = filter_var(env('MIDTRANS_IS_PRODUCTION', false), FILTER_VALIDATE_BOOLEAN);
+        MidtransConfig::$serverKey = config('services.midtrans.server_key');
+        MidtransConfig::$isProduction = filter_var(config('services.midtrans.is_production', false), FILTER_VALIDATE_BOOLEAN);
         MidtransConfig::$isSanitized = true;
         MidtransConfig::$is3ds = true;
 
@@ -113,10 +113,12 @@ class MidtransController extends Controller
                 $payment->save();
                 $order->save();
             });
-// Kirim notifikasi konfirmasi pembayaran ke penjual & pembeli lewat n8n
+
+            // Kirim notifikasi konfirmasi pembayaran ke penjual & pembeli lewat n8n
             if ($payment->status === 'Confirmed') {
                 (new N8nNotificationService())->notifyPaymentConfirmed($order);
             }
+
             return response()->json(['message' => 'Notification processed'], 200);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error processing notification', 'error' => $e->getMessage()], 500);

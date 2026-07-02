@@ -9,8 +9,8 @@ class MidtransService
 {
     public function __construct()
     {
-        MidtransConfig::$serverKey = env('MIDTRANS_SERVER_KEY');
-        MidtransConfig::$isProduction = filter_var(env('MIDTRANS_IS_PRODUCTION', false), FILTER_VALIDATE_BOOLEAN);
+        MidtransConfig::$serverKey = config('services.midtrans.server_key');
+        MidtransConfig::$isProduction = filter_var(config('services.midtrans.is_production', false), FILTER_VALIDATE_BOOLEAN);
         MidtransConfig::$isSanitized = true;
         MidtransConfig::$is3ds = true;
 

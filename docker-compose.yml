@@ -13,10 +13,12 @@
       DB_USERNAME: root
       DB_PASSWORD: root
       APP_URL: http://localhost:3000
+      N8N_WEBHOOK_URL: http://n8n:5678/webhook/Bumdes_order
     volumes:
       - ./bumdes_jabar/laravel:/app
     depends_on:
       - db
+      - n8n
     networks:
       - bumdes-network
 
@@ -25,7 +27,7 @@
       context: ./bumdes_frontend
       dockerfile: Dockerfile
       args:
-        API_URL: https://project-uts-uas-production.up.railway.app
+        API_URL: http://localhost:8000
     container_name: bumdes-frontend
     ports:
       - "0.0.0.0:3000:3000"
@@ -67,8 +69,6 @@
       - n8n_data:/home/node/.n8n
     networks:
       - bumdes-network
-    depends_on:
-      - backend
 
 networks:
   bumdes-network:

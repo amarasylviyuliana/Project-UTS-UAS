@@ -23,7 +23,8 @@ COPY . .
 RUN flutter pub get
 
 # Build web
-RUN flutter build web --release
+ARG API_URL 
+RUN flutter build web --release --dart-define=API_URL=${API_URL}
 
 # Nginx stage for serving
 FROM nginx:latest
