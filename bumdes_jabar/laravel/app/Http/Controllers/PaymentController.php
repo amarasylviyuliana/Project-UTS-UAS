@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Payment;
 use App\Models\Order;
+use App\Services\N8nNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -206,7 +207,8 @@ class PaymentController extends Controller
 
         $order->status = 'Dikonfirmasi';
         $order->save();
-
+ // Kirim notifikasi konfirmasi pembayaran ke penjual & pembeli lewat n8n
+        (new N8nNotificationService())->notifyPaymentConfirmed($order);
         return response()->json(['message' => 'Pembayaran dikonfirmasi', 'data' => $payment]);
     }
 

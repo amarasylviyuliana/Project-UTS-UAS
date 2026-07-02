@@ -9,6 +9,7 @@ use Midtrans\Config as MidtransConfig;
 use Midtrans\Notification as MidtransNotification;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Services\N8nNotificationService;
 
 class MidtransController extends Controller
 {
@@ -112,7 +113,10 @@ class MidtransController extends Controller
                 $payment->save();
                 $order->save();
             });
-
+// Kirim notifikasi konfirmasi pembayaran ke penjual & pembeli lewat n8n
+            if ($payment->status === 'Confirmed') {
+                (new N8nNotificationService())->notifyPaymentConfirmed($order);
+            }
             return response()->json(['message' => 'Notification processed'], 200);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error processing notification', 'error' => $e->getMessage()], 500);

@@ -8,6 +8,7 @@ use App\Models\Cart;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Services\XenditService;
+use App\Services\N8nNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -195,7 +196,11 @@ class OrderController extends Controller
                 'code' => 'ORDER_NOT_CREATED',
             ], 422);
         }
-
+ // Kirim notifikasi WhatsApp/Telegram ke penjual & pembeli lewat n8n
+        $n8nNotifier = new N8nNotificationService();
+        foreach ($result as $createdOrder) {
+            $n8nNotifier->notifyNewOrder($createdOrder);
+        }
         $orderPayloads = array_map(function ($order) {
             $data = $order->toArray();
             $data['payment_status'] = 'Pending';
