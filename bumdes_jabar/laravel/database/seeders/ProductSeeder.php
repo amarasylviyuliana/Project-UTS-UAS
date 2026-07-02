@@ -2,12 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Store;
-use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class ProductSeeder extends Seeder
@@ -58,50 +54,6 @@ class ProductSeeder extends Seeder
             $this->command->error('[ProductSeeder] Tidak ada satupun produk yang dibuat.');
         } else {
             $this->command->info("[ProductSeeder] {$createdCount} produk berhasil dibuat/diupdate.");
-        }
-
-        $buyers = User::where('role', 'Pembeli')->get();
-
-        if ($buyers->isEmpty()) {
-            $this->command->warn('[ProductSeeder] Tidak ada user dengan role Pembeli. Demo order/payment dilewati.');
-            return;
-        }
-
-        $demoProducts = Product::all();
-
-        foreach ($buyers as $index => $buyer) {
-            $demoProduct = $demoProducts->get($index) ?: $demoProducts->first();
-            if (! $demoProduct) {
-                continue;
-            }
-
-            $order = Order::firstOrCreate(
-                ['order_number' => 'ORD-DEMO-' . ($index + 1)],
-                [
-                    'buyer_id' => $buyer->id,
-                    'store_id' => $demoProduct->store_id,
-                    'status' => 'Menunggu Konfirmasi',
-                    'recipient_name' => $buyer->name,
-                    'recipient_phone' => $buyer->phone ?? '081000000000',
-                    'delivery_address' => $buyer->address ?? 'Bandung',
-                    'notes' => 'Demo order untuk sinkronisasi data buyer, penjual, dan admin.',
-                    'total_price' => $demoProduct->price * 2,
-                ]
-            );
-
-            OrderItem::firstOrCreate(
-                ['order_id' => $order->id, 'product_id' => $demoProduct->id],
-                [
-                    'quantity' => 2,
-                    'unit_price' => $demoProduct->price,
-                    'subtotal' => $demoProduct->price * 2,
-                ]
-            );
-
-            Payment::firstOrCreate(
-                ['order_id' => $order->id],
-                ['status' => 'Pending']
-            );
         }
     }
 }

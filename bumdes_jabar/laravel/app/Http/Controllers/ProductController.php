@@ -402,7 +402,18 @@ class ProductController extends Controller
             ], 404);
         }
 
-        $product->delete();
+        try {
+            $product->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::warning('Gagal hapus produk (seller) karena masih terkait data lain', [
+                'product_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Produk tidak bisa dihapus karena masih memiliki riwayat pesanan. Nonaktifkan produk ini alih-alih menghapusnya.',
+            ], 409);
+        }
 
         return response()->json([
             'message' => 'Produk berhasil dihapus',
@@ -444,7 +455,22 @@ class ProductController extends Controller
             ], 404);
         }
 
-        $product->delete();
+        try {
+            $product->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            // FIX: sebelumnya exception ini bocor sebagai 500 mentah kalau produk
+            // masih direferensikan oleh order_items (riwayat pesanan). Sekarang
+            // ditangani dengan pesan yang jelas + saran nonaktifkan saja, alih-alih
+            // menampilkan Internal Server Error yang membingungkan ke admin.
+            Log::warning('Gagal hapus produk (admin) karena masih terkait data lain', [
+                'product_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Produk tidak bisa dihapus permanen karena masih memiliki riwayat pesanan. Gunakan tombol "Nonaktifkan" agar produk tidak tampil ke pembeli tanpa menghapus riwayat transaksi.',
+            ], 409);
+        }
 
         return response()->json([
             'message' => 'Produk berhasil dihapus oleh admin',
