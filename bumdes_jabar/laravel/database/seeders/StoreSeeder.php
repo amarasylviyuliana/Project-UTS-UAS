@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Store;
-use App\Models\StoreApproval;
 use App\Models\User;
 
 class StoreSeeder extends Seeder
@@ -27,7 +26,9 @@ class StoreSeeder extends Seeder
                 continue;
             }
 
-            $store = Store::updateOrCreate(
+            // Toko demo langsung aktif tanpa membuat jejak StoreApproval palsu,
+            // supaya tidak muncul di tab Persetujuan admin sebagai "Sudah Diproses".
+            Store::updateOrCreate(
                 ['user_id' => $seller->id],
                 [
                     'store_name'          => $storeData['store_name'],
@@ -40,23 +41,9 @@ class StoreSeeder extends Seeder
                     'bank_name'           => 'Bank BUMDes',
                     'bank_account_holder' => $seller->name,
                     'store_photo_url'     => null,
-                    // FIX: is_active = false dulu, tunggu admin approve
-                    'is_active'           => false,
+                    'is_active'           => true,
                 ]
             );
-
-            // FIX: Buat StoreApproval otomatis dengan status Disetujui untuk data demo
-            // supaya toko demo langsung bisa dipakai tanpa proses approval manual
-            StoreApproval::updateOrCreate(
-                ['store_id' => $store->id],
-                [
-                    'status'      => 'Disetujui',
-                    'approved_at' => now(),
-                ]
-            );
-
-            // Aktifkan toko karena sudah "disetujui" oleh seeder
-            $store->update(['is_active' => true]);
 
             $createdCount++;
         }
