@@ -16,7 +16,7 @@ use App\Http\Controllers\Admin\ApprovalController;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Admin\VerificationController;
 use App\Models\Product;
-
+ use App\Http\Controllers\ProductAISearchController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -105,6 +105,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/products', [ProductController::class, 'store']);
     Route::put('/products/{id}', [ProductController::class, 'update']);
     Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+
+Route::post('/products/ai-search', [ProductAISearchController::class, 'search']);
 
     // Cart
     Route::get('/cart', [CartController::class, 'index']);
