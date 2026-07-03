@@ -16,7 +16,7 @@ use App\Http\Controllers\Admin\ApprovalController;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Admin\VerificationController;
 use App\Models\Product;
- use App\Http\Controllers\ProductAISearchController;
+use App\Http\Controllers\ProductAISearchController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -67,6 +67,7 @@ Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/featured', [ProductController::class, 'getFeatured']);
 Route::get('/stores/popular', [ProductController::class, 'getPopularStores']);
 Route::get('/products/search', [ProductController::class, 'search']);
+Route::post('/products/ai-search', [ProductAISearchController::class, 'search']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::get('/stores/{store_id}/products', [ProductController::class, 'getByStore']);
 Route::get('/products/{productId}/reviews', [ReviewController::class, 'getProductReviews']);
@@ -105,8 +106,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/products', [ProductController::class, 'store']);
     Route::put('/products/{id}', [ProductController::class, 'update']);
     Route::delete('/products/{id}', [ProductController::class, 'destroy']);
-
-Route::post('/products/ai-search', [ProductAISearchController::class, 'search']);
 
     // Cart
     Route::get('/cart', [CartController::class, 'index']);
