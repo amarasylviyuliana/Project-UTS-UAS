@@ -356,6 +356,10 @@ class OrderController extends Controller
         $order->status = $validated['status'];
         $order->save();
 
+        if ($validated['status'] === 'Selesai') {
+            app(\App\Services\WalletService::class)->creditFromCompletedOrder($order);
+        }
+
         return response()->json([
             'message' => 'Status pesanan diperbarui',
             'data' => $order,
@@ -386,6 +390,8 @@ class OrderController extends Controller
             'status' => 'Selesai',
             'completed_at' => now(),
         ]);
+
+        app(\App\Services\WalletService::class)->creditFromCompletedOrder($order);
 
         return response()->json([
             'message' => 'Penerimaan dikonfirmasi',
@@ -421,6 +427,14 @@ class OrderController extends Controller
             }
 
             $order->update(['status' => 'Dibatalkan']);
+
+            // Pastikan tidak ada proses pembayaran yang masih aktif setelah dibatalkan
+            if ($order->payment) {
+                $order->payment->update([
+                    'status' => 'Cancelled',
+                    'payment_status' => 'CANCELLED',
+                ]);
+            }
         });
 
         return response()->json([

@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Admin\VerificationController;
 use App\Models\Product;
 use App\Http\Controllers\ProductAISearchController;
+use App\Http\Controllers\WalletController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -96,6 +97,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
+
+    // Wallet / Saldo (Penjual)
+    Route::get('/wallet/balance', [WalletController::class, 'balance']);
+    Route::get('/wallet/transactions', [WalletController::class, 'transactions']);
+    Route::get('/wallet/withdrawals', [WalletController::class, 'withdrawals']);
+    Route::post('/wallet/withdrawals', [WalletController::class, 'requestWithdrawal']);
 
     // Store (seller)
     Route::get('/store', [ProfileController::class, 'getStore']);
@@ -202,6 +209,12 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/verifications/{id}',                   [VerificationController::class, 'getVerificationDetail']);
             Route::put('/verifications/{id}',                   [VerificationController::class, 'verifySeller']);
             Route::get('/seller/{userId}/verification-history', [VerificationController::class, 'getSellerVerificationHistory']);
+
+            // Saldo & Pajak (Admin)
+            Route::get('/wallet/summary',      [\App\Http\Controllers\Admin\WalletController::class, 'summary']);
+            Route::get('/wallet/transactions', [\App\Http\Controllers\Admin\WalletController::class, 'transactions']);
+            Route::get('/wallet/store-wallets', [\App\Http\Controllers\Admin\WalletController::class, 'storeWallets']);
+            Route::get('/withdrawals',         [\App\Http\Controllers\Admin\WalletController::class, 'withdrawals']);
 
             Route::get('/audit-logs',                 [AdminController::class, 'getAllAuditLogs']);
             Route::get('/audit-logs/admin/{adminId}', [AdminController::class, 'getAdminAuditLogs']);
