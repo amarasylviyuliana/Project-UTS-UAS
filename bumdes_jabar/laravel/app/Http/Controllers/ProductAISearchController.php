@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Services\GeminiSearchService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 class ProductAISearchController extends Controller
 {
@@ -20,8 +21,8 @@ class ProductAISearchController extends Controller
         try {
             $gemini = new GeminiSearchService();
             $criteria = $gemini->extractSearchCriteria($userQuery);
-        } catch (\Exception $e) {
-            \Log::error('AI product search failed', ['error' => $e->getMessage()]);
+        } catch (\Throwable $e) {
+            Log::error('AI product search failed', ['error' => $e->getMessage()]);
 
             // Fallback: kalau AI gagal, tetap coba cari pakai query asli
             $criteria = [
@@ -32,34 +33,47 @@ class ProductAISearchController extends Controller
             ];
         }
 
-        $products = Product::query()
-            ->when(!empty($criteria['keywords']), function ($q) use ($criteria) {
-                $q->where(function ($sub) use ($criteria) {
-                    foreach ($criteria['keywords'] as $keyword) {
-                        $keyword = trim($keyword);
-                        if ($keyword === '') {
-                            continue;
+        try {
+            $products = Product::query()
+                ->with('category') // biar relasi kategori ikut dikirim ke frontend
+                ->when(!empty($criteria['keywords']), function ($q) use ($criteria) {
+                    $q->where(function ($sub) use ($criteria) {
+                        foreach ($criteria['keywords'] as $keyword) {
+                            $keyword = trim($keyword);
+                            if ($keyword === '') {
+                                continue;
+                            }
+                            $sub->orWhere('name', 'like', "%{$keyword}%")
+                                ->orWhere('description', 'like', "%{$keyword}%");
                         }
-                        // Sesuaikan nama kolom di bawah ini dengan skema tabel products kamu
-                        // (mis. kalau tidak ada kolom 'description', hapus baris orWhere itu)
-                        $sub->orWhere('name', 'like', "%{$keyword}%")
-                            ->orWhere('description', 'like', "%{$keyword}%");
-                    }
-                });
-            })
-            ->when($criteria['category'], function ($q) use ($criteria) {
-                // Sesuaikan nama kolom kategori dengan skema kamu
-                // (mis. 'category' string, atau relasi 'category.name')
-                $q->where('category', 'like', "%{$criteria['category']}%");
-            })
-            ->when($criteria['min_price'], function ($q) use ($criteria) {
-                $q->where('price', '>=', $criteria['min_price']);
-            })
-            ->when($criteria['max_price'], function ($q) use ($criteria) {
-                $q->where('price', '<=', $criteria['max_price']);
-            })
-            ->limit(50)
-            ->get();
+                    });
+                })
+                ->when($criteria['category'], function ($q) use ($criteria) {
+                    // products.category_id -> categories.name (bukan kolom 'category' langsung)
+                    $q->whereHas('category', function ($catQuery) use ($criteria) {
+                        $catQuery->where('name', 'like', "%{$criteria['category']}%");
+                    });
+                })
+                ->when($criteria['min_price'], function ($q) use ($criteria) {
+                    $q->where('price', '>=', $criteria['min_price']);
+                })
+                ->when($criteria['max_price'], function ($q) use ($criteria) {
+                    $q->where('price', '<=', $criteria['max_price']);
+                })
+                ->where('is_active', true)
+                ->limit(50)
+                ->get();
+        } catch (\Throwable $e) {
+            Log::error('AI product search query failed', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'message' => 'Terjadi kesalahan saat mencari produk',
+                'query' => $userQuery,
+                'interpreted_criteria' => $criteria,
+                'count' => 0,
+                'data' => [],
+            ], 500);
+        }
 
         return response()->json([
             'message' => 'Hasil pencarian AI',

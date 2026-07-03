@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 class GeminiSearchService
 {
     protected string $apiKey;
-    protected string $model = 'gemini-2.0-flash';
+    protected string $model = 'gemini-2.5-flash';
 
     public function __construct()
     {

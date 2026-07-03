@@ -22,5 +22,5 @@ echo ">>> Setting storage permissions..."
 php artisan storage:link || true
 chown -R www-data:www-data /app/storage /app/bootstrap/cache
 
-echo ">>> Starting Laravel server..."
-php artisan serve --host=0.0.0.0 --port=8000
+echo ">>> Starting php-fpm + nginx via supervisor..."
+exec supervisord -c /etc/supervisor/conf.d/supervisord.confgit 
