@@ -19,9 +19,9 @@ class AdminService {
   }
 
   // ── ORDERS ──────────────────────────────────────────────────────────────────
-  Future<List<Map<String, dynamic>>> getAdminOrders(String token) async {
+  Future<List<Map<String, dynamic>>> getAdminOrders(String token, {int perPage = 200}) async {
     final api = ApiService(token: token);
-    for (final path in ['/admin/orders', '/orders', '/seller/orders']) {
+    for (final path in ['/admin/orders?per_page=$perPage', '/orders', '/seller/orders']) {
       try {
         final response = await api.getRaw(path);
         final list = _extractList(response);
@@ -53,9 +53,9 @@ class AdminService {
   }
 
   // ── USERS ───────────────────────────────────────────────────────────────────
-  Future<List<Map<String, dynamic>>> getAdminUsers(String token) async {
+  Future<List<Map<String, dynamic>>> getAdminUsers(String token, {int perPage = 200}) async {
     final api = ApiService(token: token);
-    for (final path in ['/admin/users', '/users']) {
+    for (final path in ['/admin/users?per_page=$perPage', '/users']) {
       try {
         final response = await api.getRaw(path);
         final list = _extractList(response);
@@ -204,10 +204,10 @@ class AdminService {
   }
 
   // ── PRODUCTS ─────────────────────────────────────────────────────────────────
-  Future<List<Map<String, dynamic>>> getAdminProducts(String token) async {
+  Future<List<Map<String, dynamic>>> getAdminProducts(String token, {int perPage = 200}) async {
     final api = ApiService(token: token);
     for (final path in [
-      '/admin/products',
+      '/admin/products?per_page=$perPage',
       '/admin/product-approvals',
       '/products',
     ]) {
@@ -240,11 +240,11 @@ class AdminService {
   }
 
   // ── STORES ───────────────────────────────────────────────────────────────────
-  Future<List<Map<String, dynamic>>> getAdminStores(String token) async {
+  Future<List<Map<String, dynamic>>> getAdminStores(String token, {int perPage = 200}) async {
     final api = ApiService(token: token);
     // FIX: hanya coba /admin/stores — endpoint yang benar
     // Jangan fallback ke /admin/store-approvals karena itu data berbeda
-    for (final path in ['/admin/stores', '/stores']) {
+    for (final path in ['/admin/stores?per_page=$perPage', '/stores']) {
       try {
         final response = await api.getRaw(path);
         return _extractList(response); // FIX: return langsung, jangan skip kalau kosong
@@ -363,5 +363,43 @@ class AdminService {
         .whereType<Map<String, dynamic>>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
+  }
+
+  // ── WALLET / SALDO & PAJAK (Admin) ────────────────────────────────────────────
+  Future<Map<String, dynamic>> getWalletSummary(String token) async {
+    final api = ApiService(token: token);
+    final response = await api.get('/admin/wallet/summary');
+    return Map<String, dynamic>.from(response['data'] ?? {});
+  }
+
+  Future<List<Map<String, dynamic>>> getPlatformTaxTransactions(
+    String token, {
+    int perPage = 200,
+  }) async {
+    final api = ApiService(token: token);
+    final response = await api.getRaw(
+      '/admin/wallet/transactions?scope=platform&per_page=$perPage',
+    );
+    return _extractList(response);
+  }
+
+  Future<List<Map<String, dynamic>>> getStoreWallets(
+    String token, {
+    int perPage = 200,
+  }) async {
+    final api = ApiService(token: token);
+    final response =
+        await api.getRaw('/admin/wallet/store-wallets?per_page=$perPage');
+    return _extractList(response);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllWithdrawals(
+    String token, {
+    int perPage = 200,
+  }) async {
+    final api = ApiService(token: token);
+    final response =
+        await api.getRaw('/admin/withdrawals?per_page=$perPage');
+    return _extractList(response);
   }
 }
