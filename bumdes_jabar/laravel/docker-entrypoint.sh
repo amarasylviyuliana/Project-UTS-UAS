@@ -14,6 +14,7 @@ php artisan config:clear
 php artisan cache:clear
 php artisan route:clear
 
+echo ">>> DEBUG: panjang GEMINI_API_KEY = ${#GEMINI_API_KEY} karakter"
 echo ">>> Caching config for production..."
 php artisan config:cache
 php artisan route:cache
