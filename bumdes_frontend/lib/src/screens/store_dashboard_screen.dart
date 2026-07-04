@@ -13,6 +13,7 @@ import '../utils/format_helper.dart';
 import 'home_screen.dart';
 import 'product_form_screen.dart';
 import 'store_form_screen.dart';
+import 'seller_wallet_screen.dart';
 import 'edit_profile_screen.dart';
 import 'settings_screen.dart';
 import 'security_screen.dart';
@@ -1396,6 +1397,11 @@ IconButton(
                 Navigator.pushNamed(context, StoreFormScreen.routeName),
           ),
           _ProfileOptionTile(
+            label: 'Saldo & Penarikan',
+            onTap: () =>
+                Navigator.pushNamed(context, SellerWalletScreen.routeName),
+          ),
+          _ProfileOptionTile(
             label: 'Edit Profil',
             onTap: () =>
                 Navigator.pushNamed(context, EditProfileScreen.routeName),
@@ -1404,11 +1410,6 @@ IconButton(
             label: 'Pengaturan',
             onTap: () =>
                 Navigator.pushNamed(context, SettingsScreen.routeName),
-          ),
-          _ProfileOptionTile(
-            label: 'Keamanan',
-            onTap: () =>
-                Navigator.pushNamed(context, SecurityScreen.routeName),
           ),
           _ProfileOptionTile(
             label: 'Bantuan & FAQ',

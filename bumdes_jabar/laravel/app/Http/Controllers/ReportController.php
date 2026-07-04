@@ -106,12 +106,49 @@ class ReportController extends Controller
                 ];
             });
 
+        // FIX: hitung biaya admin/pajak dari data ASLI di wallet_transactions
+        // (bukan tebakan 25% seperti sebelumnya di frontend).
+        $completedOrderIds = $orders->where('status', 'Selesai')->pluck('id');
+        $totalExpense = (float) \App\Models\WalletTransaction::whereNull('store_id')
+            ->where('category', 'tax')
+            ->whereIn('order_id', $completedOrderIds)
+            ->sum('amount');
+        $totalRevenue = (float) $summary['total_revenue'];
+        $netProfit = $totalRevenue - $totalExpense;
+
+        $transactions = $orders->where('status', 'Selesai')->map(function ($order) {
+            return [
+                'id' => $order->id,
+                'type' => 'income',
+                'description' => "Penjualan - {$order->order_number}",
+                'amount' => (float) $order->total_price,
+                'date' => optional($order->completed_at)->toIso8601String(),
+                'category' => 'Penjualan',
+                'order_id' => (string) $order->id,
+            ];
+        })->values();
+
         return response()->json([
             'message' => 'Laporan toko',
             'store_name' => $store->store_name,
             'summary' => $summary,
             'monthly_breakdown' => $monthlyRevenue->values(),
             'recent_orders' => $orders->take(10)->load('buyer', 'orderItems'),
+            // FIX: struktur "data" ini yang dibaca FinancialReportModel di
+            // frontend — sebelumnya tidak pernah dikirim, jadi frontend
+            // SELALU jatuh ke perhitungan dummy (pengeluaran = 25% asal
+            // tebak). Sekarang angkanya asli dari wallet_transactions.
+            'data' => [
+                'total_revenue' => $totalRevenue,
+                'total_expense' => $totalExpense,
+                'net_profit' => $netProfit,
+                'total_orders' => $orders->count(),
+                'completed_orders' => $summary['completed_orders'],
+                'transactions' => $transactions,
+                'period' => 'Custom',
+                'start_date' => $startDate ?? now()->subDays(30)->toIso8601String(),
+                'end_date' => $endDate ?? now()->toIso8601String(),
+            ],
         ]);
     }
 

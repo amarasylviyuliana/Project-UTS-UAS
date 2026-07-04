@@ -17,6 +17,7 @@ import 'screens/profile_screen.dart';
 import 'screens/store_dashboard_screen.dart';
 import 'screens/store_form_screen.dart';
 import 'screens/seller_orders_screen.dart';
+import 'screens/seller_wallet_screen.dart';
 import 'screens/edit_profile_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/security_screen.dart';
@@ -71,6 +72,7 @@ class BumdesApp extends StatelessWidget {
           ProductFormScreen.routeName: (_) => const ProductFormScreen(),
           StoreFormScreen.routeName: (_) => const StoreFormScreen(),
           SellerOrdersScreen.routeName: (_) => const SellerOrdersScreen(),
+          SellerWalletScreen.routeName: (_) => const SellerWalletScreen(),
           FinancialReportDetailScreen.routeName: (_) =>
               const FinancialReportDetailScreen(),
         },
