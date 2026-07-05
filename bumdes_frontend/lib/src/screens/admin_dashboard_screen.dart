@@ -510,11 +510,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         else if (_stores.isEmpty)
           _buildEmptyState('Belum ada toko terdaftar', Icons.store_outlined)
         else
-          ListView.separated(
-            shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-            itemCount: _stores.length,
+          PaginatedListView<Map<String, dynamic>>(
+            items: _stores,
+            pageSize: 10,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) => _buildStoreCard(_stores[index]),
+            itemBuilder: (context, store, index) => _buildStoreCard(store),
           ),
       ]),
     );
@@ -646,11 +646,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const Text('Menunggu Persetujuan',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.orange)),
             const SizedBox(height: 12),
-            ListView.separated(
-              shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-              itemCount: pending.length,
+            PaginatedListView<Map<String, dynamic>>(
+              items: pending,
+              pageSize: 10,
               separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) => _buildStoreApprovalCard(pending[index]),
+              itemBuilder: (context, item, index) => _buildStoreApprovalCard(item),
             ),
             const SizedBox(height: 24),
           ],
@@ -658,11 +658,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const Text('Sudah Diproses',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black54)),
             const SizedBox(height: 12),
-            ListView.separated(
-              shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-              itemCount: processed.length,
+            PaginatedListView<Map<String, dynamic>>(
+              items: processed,
+              pageSize: 10,
               separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) => _buildStoreApprovalCard(processed[index], readonly: true),
+              itemBuilder: (context, item, index) =>
+                  _buildStoreApprovalCard(item, readonly: true),
             ),
           ],
         ],
@@ -842,12 +843,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           SizedBox(width: 60),
         ])),
         const Divider(height: 1),
-        ...List.generate(_products.length, (index) {
-          final p = _products[index];
-          final productId = p['id'] as int?;
-          return Column(children: [
-            if (index > 0) const Divider(height: 1),
-            Padding(padding: const EdgeInsets.all(12), child: Row(children: [
+        PaginatedListView<Map<String, dynamic>>(
+          items: _products,
+          pageSize: 10,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, p, index) {
+            final productId = p['id'] as int?;
+            return Padding(padding: const EdgeInsets.all(12), child: Row(children: [
               Expanded(flex: 3, child: Text(p['name'] ?? '-',
                   style: const TextStyle(fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis)),
               Expanded(flex: 2, child: Text(p['store']?['store_name'] ?? '-',
@@ -864,9 +866,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   }
                 },
               )),
-            ])),
-          ]);
-        }),
+            ]));
+          },
+        ),
       ]),
     );
   }
@@ -896,11 +898,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Container(
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12),
           boxShadow: const [BoxShadow(color: Color.fromRGBO(0,0,0,0.05), blurRadius: 12, offset: Offset(0,4))]),
-      child: ListView.separated(
-        shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-        itemCount: _orders.length, separatorBuilder: (_, __) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final order = _orders[index];
+      child: PaginatedListView<Map<String, dynamic>>(
+        items: _orders,
+        pageSize: 10,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (context, order, index) {
           final id = order['id'] as int?;
           final status = order['status'] ?? '-';
           return Padding(padding: const EdgeInsets.all(12), child: Row(children: [
