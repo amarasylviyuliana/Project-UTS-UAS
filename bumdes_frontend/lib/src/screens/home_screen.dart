@@ -36,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    final role = auth.user?.role?.toLowerCase() ?? '';
+    final role = auth.user?.role.toLowerCase() ?? '';
     if (role == 'seller') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -93,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return PopScope(
       canPop: false,
-      onPopInvokedWithPopScope: (didPop, result) {
+      onPopInvoked: (didPop) {
         if (didPop) return;
         final now = DateTime.now();
         final isSecondPress = _lastBackPressTime != null &&
@@ -111,79 +111,96 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       },
       child: Scaffold(
-      backgroundColor: const Color(0xFFF6F6F6),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF1B5E20),
-        elevation: 0,
-        titleSpacing: 12,
-        // FIX: logo + teks kecil di kiri, biar tetap kebaca tanpa makan tempat
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              'assets/logo.jpeg',
-              width: 28,
-              height: 28,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const Icon(
-                Icons.eco,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Flexible(
-              child: Text(
-                'BUMDES_JABAR',
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+        backgroundColor: const Color(0xFFF6F6F6),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF1B5E20),
+          elevation: 0,
+          titleSpacing: 12,
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/logo.jpeg',
+                width: 28,
+                height: 28,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.eco,
                   color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+                  size: 24,
                 ),
               ),
-            ),
-          ],
-        ),
-        // FIX: navbar dipindah ke bottomNavigationBar di bawah (lihat
-        // properti `bottomNavigationBar` pada Scaffold) — lebih modern,
-        // ikon+label selalu kelihatan (tidak cuma tooltip), dan lebih
-        // nyaman disentuh dibanding ikon-ikon kecil berjejer di AppBar.
-      ),
-      body: pages[_selectedIndex],
-      bottomNavigationBar: NavigationBarTheme(
-        data: NavigationBarThemeData(
-          labelTextStyle: WidgetStateProperty.resolveWith((states) {
-            final isSelected = states.contains(WidgetState.selected);
-            return TextStyle(
-              fontSize: isNarrow ? 11 : 12,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: isSelected ? const Color(0xFF1B5E20) : Colors.black54,
-            );
-          }),
-        ),
-        child: NavigationBar(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: (index) =>
-              setState(() => _selectedIndex = index),
-          backgroundColor: Colors.white,
-          elevation: 8,
-          height: isNarrow ? 62 : 68,
-          indicatorColor: const Color(0xFF1B5E20).withValues(alpha: 0.12),
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: [
-            for (int i = 0; i < menuLabels.length; i++)
-              NavigationDestination(
-                icon: Icon(menuIcons[i], color: Colors.black54),
-                selectedIcon:
-                    Icon(menuIconsFilled[i], color: const Color(0xFF1B5E20)),
-                label: menuLabels[i],
+              const SizedBox(width: 8),
+              const Flexible(
+                child: Text(
+                  'BUMDES_JABAR',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
-          ],
+            ],
+          ),
+        ),
+        body: pages[_selectedIndex],
+        bottomNavigationBar: NavigationBarTheme(
+          data: NavigationBarThemeData(
+            labelTextStyle: WidgetStateProperty.resolveWith((states) {
+              final isSelected = states.contains(WidgetState.selected);
+              return TextStyle(
+                fontSize: isNarrow ? 11 : 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? const Color(0xFF1B5E20) : Colors.black54,
+              );
+            }),
+          ),
+          child: NavigationBar(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (index) =>
+                setState(() => _selectedIndex = index),
+            backgroundColor: Colors.white,
+            elevation: 8,
+            height: isNarrow ? 62 : 68,
+            indicatorColor: const Color(0xFF1B5E20).withValues(alpha: 0.12),
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            destinations: [
+              for (int i = 0; i < menuLabels.length; i++)
+                NavigationDestination(
+                  icon: Icon(menuIcons[i], color: Colors.black54),
+                  selectedIcon: Icon(menuIconsFilled[i],
+                      color: const Color(0xFF1B5E20)),
+                  label: menuLabels[i],
+                ),
+            ],
+          ),
         ),
       ),
     );
+  }
+}
+
+// ─── HOME TAB ────────────────────────────────────────────────────────────────
+
+class HomeTab extends StatefulWidget {
+  const HomeTab({super.key});
+
+  @override
+  State<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<HomeTab> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<ProductProvider>(context, listen: false).refresh();
+      }
+    });
   }
 
   Widget _buildHeroText() {
@@ -342,27 +359,6 @@ class _HomeScreenState extends State<HomeScreen> {
       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
     );
   }
-}
-
-// ─── HOME TAB ────────────────────────────────────────────────────────────────
-
-class HomeTab extends StatefulWidget {
-  const HomeTab({super.key});
-
-  @override
-  State<HomeTab> createState() => _HomeTabState();
-}
-
-class _HomeTabState extends State<HomeTab> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Provider.of<ProductProvider>(context, listen: false).refresh();
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -413,7 +409,6 @@ class _HomeTabState extends State<HomeTab> {
 
             const SizedBox(height: 24),
 
-            // ── Search Bar ──
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: _buildSearchBar(context),
@@ -421,7 +416,6 @@ class _HomeTabState extends State<HomeTab> {
 
             const SizedBox(height: 24),
 
-            // ── Produk Unggulan ──────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: _buildSectionHeader('Produk Unggulan'),
@@ -462,7 +456,6 @@ class _HomeTabState extends State<HomeTab> {
 
             const SizedBox(height: 24),
 
-            // ── Semua Produk ─────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
@@ -618,163 +611,6 @@ class _HomeTabState extends State<HomeTab> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildHeroText() {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'BUMDES_JABAR',
-          style: TextStyle(
-            fontSize: 36,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            letterSpacing: 1.0,
-          ),
-        ),
-        SizedBox(height: 8),
-        Text(
-          'Koperasi Umat Berdaulat',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.white60,
-            letterSpacing: 1.5,
-          ),
-        ),
-        SizedBox(height: 16),
-        Text(
-          'Adalah aplikasi penyokong usaha pada tiap desa yang mana menjual dan memasarkan produk barang atau jasa unggulan di desanya.',
-          style: TextStyle(fontSize: 16, color: Colors.white70, height: 1.6),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeroIllustration() {
-    return Container(
-      height: 280,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F0E8),
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.15),
-            blurRadius: 24,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Image.asset(
-              'assets/logo.jpeg',
-              height: 180,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.eco,
-                      size: 64,
-                      color: const Color(0xFF1B5E20).withValues(alpha: 0.6)),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'BUMDES JABAR',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1B5E20),
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const Text(
-                    'Koperasi Umat Berdaulat',
-                    style: TextStyle(fontSize: 11, color: Colors.black45),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildFeatureIcon(Icons.star_outline, 'Produk\nUnggulan'),
-              _buildFeatureIcon(
-                  Icons.shopping_cart_outlined, 'Keranjang\nBelanja'),
-              _buildFeatureIcon(
-                  Icons.receipt_long_outlined, 'Riwayat\nPesanan'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeatureIcon(IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1B5E20).withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: const Color(0xFF1B5E20), size: 22),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 11,
-            color: Colors.black54,
-            height: 1.3,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar(BuildContext context) {
-    final provider = Provider.of<ProductProvider>(context, listen: false);
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.04),
-            blurRadius: 12,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: TextField(
-        decoration: const InputDecoration(
-          hintText: 'Cari produk, toko, desa...',
-          hintStyle: TextStyle(color: Colors.black45),
-          prefixIcon: Icon(Icons.search, color: Color(0xFF1B5E20)),
-          suffixIcon: Icon(Icons.filter_list, color: Color(0xFF1B5E20)),
-          border: InputBorder.none,
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        ),
-        onChanged: (value) {
-          provider.search(value);
-        },
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
     );
   }
 }
