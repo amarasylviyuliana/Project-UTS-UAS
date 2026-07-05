@@ -6,6 +6,13 @@ class ApiService {
   final http.Client _client;
   final String? token;
 
+  /// FIX: callback global — dipanggil otomatis kalau server balas 401
+  /// (token expired/invalid) dari MANAPUN di aplikasi, supaya user
+  /// langsung diarahkan ke Login dengan rapi, bukan nyangkut lihat pesan
+  /// error teknis "Unauthenticated" di tengah layar.
+  /// Di-set sekali di main.dart/app.dart saat aplikasi start.
+  static void Function()? onUnauthorized;
+
   ApiService({http.Client? client, this.token})
     : _client = client ?? http.Client();
 
@@ -78,6 +85,7 @@ class ApiService {
         return data;
       }
       if (data is Map<String, dynamic>) {
+        if (response.statusCode == 401) onUnauthorized?.call();
         throw ApiException(
           statusCode: response.statusCode,
           message: data['message'] ?? 'Unknown server error',
@@ -113,6 +121,7 @@ class ApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return data;
       }
+      if (response.statusCode == 401) onUnauthorized?.call();
       throw ApiException(
         statusCode: response.statusCode,
         message: data['message'] ?? 'Unknown server error',

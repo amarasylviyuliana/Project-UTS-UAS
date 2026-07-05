@@ -46,7 +46,11 @@ return [
     |
     */
 
-    'expiration' => null,
+    // FIX: token awalnya tidak pernah expired ('expiration' => null) — kurang
+    // aman kalau device hilang/token bocor. Diset 30 hari (43200 menit):
+    // cukup panjang biar user tidak perlu sering login ulang (sesuai
+    // requirement "sesi harus tetap aktif"), tapi tetap ada batas wajar.
+    'expiration' => 43200,
 
     /*
     |--------------------------------------------------------------------------

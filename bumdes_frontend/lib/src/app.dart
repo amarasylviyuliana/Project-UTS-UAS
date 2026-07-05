@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/product_provider.dart';
+import 'services/api_service.dart';
 import 'models/order_model.dart';
 import 'screens/admin_dashboard_screen.dart';
 import 'screens/cart_screen.dart';
@@ -31,11 +32,28 @@ import 'screens/order_tracking_screen.dart';
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
 
+// FIX: navigatorKey global — dipakai supaya kalau token expired/invalid
+// (401) di manapun dalam aplikasi, kita bisa langsung arahkan user ke
+// halaman Login tanpa perlu BuildContext dari layar yang sedang aktif.
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 class BumdesApp extends StatelessWidget {
   const BumdesApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // FIX: begitu server balas 401 (token expired/invalid) dari request
+    // manapun, otomatis logout + balik ke Login — user tidak nyangkut
+    // lihat pesan error teknis di tengah pemakaian.
+    ApiService.onUnauthorized = () {
+      final ctx = navigatorKey.currentContext;
+      if (ctx != null) {
+        Provider.of<AuthProvider>(ctx, listen: false).logout();
+      }
+      navigatorKey.currentState
+          ?.pushNamedAndRemoveUntil(LoginScreen.routeName, (r) => false);
+    };
+
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
@@ -43,6 +61,7 @@ class BumdesApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         title: 'BUMDes Jabar',
         theme: ThemeData(
