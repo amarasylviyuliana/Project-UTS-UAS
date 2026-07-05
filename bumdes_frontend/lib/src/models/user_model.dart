@@ -5,6 +5,7 @@ class UserModel {
   final String role;
   final String? phone;
   final String? address;
+  final String? telegramChatId;
 
   UserModel({
     this.id,
@@ -13,6 +14,7 @@ class UserModel {
     this.role = 'buyer',
     this.phone,
     this.address,
+    this.telegramChatId,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,7 @@ class UserModel {
       role: normalizedRole,
       phone: json['phone'] as String?,
       address: json['address'] as String?,
+      telegramChatId: json['telegram_chat_id'] as String?,
     );
   }
 }

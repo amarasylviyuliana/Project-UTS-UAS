@@ -26,6 +26,7 @@ class User extends Authenticatable
         'password',
         'role',
         'phone',
+        'telegram_chat_id',
         'address',
         'photo_url',
     ];
@@ -122,4 +123,3 @@ class User extends Authenticatable
         return $this->sellerVerification?->status === 'Terverifikasi';
     }
 }
-

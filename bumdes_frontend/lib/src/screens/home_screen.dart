@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/product_provider.dart';
@@ -18,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  DateTime? _lastBackPressTime;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!auth.isAuthenticated) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          Navigator.pushReplacementNamed(context, LoginScreen.routeName);
+          Navigator.pushNamedAndRemoveUntil(context, LoginScreen.routeName, (r) => false);
         }
       });
       return const Scaffold(
@@ -78,11 +80,37 @@ class _HomeScreenState extends State<HomeScreen> {
       Icons.receipt_long_outlined,
       Icons.person_outline,
     ];
+    final menuIconsFilled = [
+      Icons.home,
+      Icons.search,
+      Icons.shopping_cart,
+      Icons.receipt_long,
+      Icons.person,
+    ];
 
     final screenWidth = MediaQuery.of(context).size.width;
     final isNarrow = screenWidth < 600;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithPopScope: (didPop, result) {
+        if (didPop) return;
+        final now = DateTime.now();
+        final isSecondPress = _lastBackPressTime != null &&
+            now.difference(_lastBackPressTime!) < const Duration(seconds: 2);
+        if (isSecondPress) {
+          SystemNavigator.pop();
+        } else {
+          _lastBackPressTime = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tekan sekali lagi untuk keluar aplikasi'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      },
+      child: Scaffold(
       backgroundColor: const Color(0xFFF6F6F6),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1B5E20),
@@ -118,29 +146,43 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        // FIX: icon navigasi selalu tampil di kanan app bar (mobile & desktop),
-        // dibuat lebih ringkas (padding & ukuran icon dikecilkan) agar pas di hp.
-        actions: [
-          for (int i = 0; i < menuLabels.length; i++)
-            IconButton(
-              icon: Icon(
-                menuIcons[i],
-                color: Colors.white,
-                size: isNarrow ? 20 : 24,
-              ),
-              tooltip: menuLabels[i],
-              padding: EdgeInsets.symmetric(
-                horizontal: isNarrow ? 4 : 8,
-              ),
-              constraints: const BoxConstraints(),
-              onPressed: () => setState(() => _selectedIndex = i),
-            ),
-          SizedBox(width: isNarrow ? 4 : 8),
-        ],
+        // FIX: navbar dipindah ke bottomNavigationBar di bawah (lihat
+        // properti `bottomNavigationBar` pada Scaffold) — lebih modern,
+        // ikon+label selalu kelihatan (tidak cuma tooltip), dan lebih
+        // nyaman disentuh dibanding ikon-ikon kecil berjejer di AppBar.
       ),
       body: pages[_selectedIndex],
-      // NOTE: bottomNavigationBar sudah dihapus karena navigasi
-      // sudah tersedia lewat ikon-ikon di app bar atas.
+      bottomNavigationBar: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            final isSelected = states.contains(WidgetState.selected);
+            return TextStyle(
+              fontSize: isNarrow ? 11 : 12,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected ? const Color(0xFF1B5E20) : Colors.black54,
+            );
+          }),
+        ),
+        child: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: (index) =>
+              setState(() => _selectedIndex = index),
+          backgroundColor: Colors.white,
+          elevation: 8,
+          height: isNarrow ? 62 : 68,
+          indicatorColor: const Color(0xFF1B5E20).withValues(alpha: 0.12),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: [
+            for (int i = 0; i < menuLabels.length; i++)
+              NavigationDestination(
+                icon: Icon(menuIcons[i], color: Colors.black54),
+                selectedIcon:
+                    Icon(menuIconsFilled[i], color: const Color(0xFF1B5E20)),
+                label: menuLabels[i],
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -814,13 +856,7 @@ class _SearchTabState extends State<SearchTab> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: [
-                  'Semua',
-                  'Pertanian & Perkebunan',
-                  'Kerajinan Tangan',
-                  'Kuliner Desa',
-                  'Jasa Lokal',
-                ]
+                children: provider.categories
                     .map(
                       (category) => Padding(
                         padding: const EdgeInsets.only(right: 8.0),

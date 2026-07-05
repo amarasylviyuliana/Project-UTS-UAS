@@ -16,6 +16,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
+  final _telegramChatIdController = TextEditingController();
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -26,6 +27,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
+    _telegramChatIdController.dispose();
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
@@ -41,6 +43,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _nameController.text = user.name;
       _phoneController.text = user.phone ?? '';
       _emailController.text = user.email;
+      _telegramChatIdController.text = user.telegramChatId ?? '';
     }
   }
 
@@ -60,6 +63,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final body = {
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
+        'telegram_chat_id': _telegramChatIdController.text.trim(),
       };
       await service.updateProfile(auth.token!, body);
       await auth.refreshProfile();
@@ -220,6 +224,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Email'),
                 validator: (v) => (v ?? '').contains('@') ? null : 'Email tidak valid',
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _telegramChatIdController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Telegram Chat ID (opsional)',
+                  hintText: 'Contoh: 123456789',
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Isi ini kalau mau dapat notifikasi pesanan lewat Telegram.\n\n'
+                  'Cara dapat Chat ID:\n'
+                  '1. Cari bot BUMDes Jabar di Telegram\n'
+                  '2. Ketik /start ke bot tersebut\n'
+                  '3. Bot akan membalas dengan Chat ID kamu\n'
+                  '4. Salin nomor itu ke kolom di atas',
+                  style: TextStyle(fontSize: 12, color: Colors.black87),
+                ),
               ),
               const SizedBox(height: 20),
               OutlinedButton(

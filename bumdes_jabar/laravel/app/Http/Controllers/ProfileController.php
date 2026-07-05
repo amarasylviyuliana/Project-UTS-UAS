@@ -21,10 +21,11 @@ class ProfileController extends Controller
     public function update(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name'      => 'sometimes|string|max:255',
-            'phone'     => 'sometimes|string|max:20',
-            'address'   => 'sometimes|string|max:500',
-            'photo_url' => 'sometimes|url',
+            'name'              => 'sometimes|string|max:255',
+            'phone'             => 'sometimes|string|max:20',
+            'telegram_chat_id'  => 'sometimes|nullable|string|max:50',
+            'address'           => 'sometimes|string|max:500',
+            'photo_url'         => 'sometimes|url',
         ]);
         $request->user()->update($validated);
         return response()->json(['message' => 'Profil diperbarui', 'user' => $request->user()]);
