@@ -313,6 +313,7 @@ IconButton(
 ),
           IconButton(
             onPressed: () => _showHeaderOptions(context),
+            tooltip: 'Menu Lainnya',
             icon: const Icon(Icons.more_vert, color: Colors.black54),
           ),
         ],
@@ -1395,7 +1396,6 @@ IconButton(
             label: 'Daftarkan / Edit Toko',
             onTap: () =>
                 Navigator.pushNamed(context, StoreFormScreen.routeName),
-                
           ),
           _ProfileOptionTile(
             label: 'Saldo & Penarikan',
@@ -1809,24 +1809,40 @@ IconButton(
 
   Widget _buildBottomNavigationBar() {
     const items = [
-      _NavItem(label: 'Dashboard', icon: Icons.dashboard_outlined),
-      _NavItem(label: 'Produk', icon: Icons.shopping_bag_outlined),
-      _NavItem(label: 'Pesanan', icon: Icons.receipt_long_outlined),
-      _NavItem(label: 'Laporan', icon: Icons.bar_chart_outlined),
-      _NavItem(label: 'Akun', icon: Icons.person_outline),
+      _NavItem(label: 'Dashboard', icon: Icons.dashboard_outlined, iconFilled: Icons.dashboard),
+      _NavItem(label: 'Produk', icon: Icons.shopping_bag_outlined, iconFilled: Icons.shopping_bag),
+      _NavItem(label: 'Pesanan', icon: Icons.receipt_long_outlined, iconFilled: Icons.receipt_long),
+      _NavItem(label: 'Laporan', icon: Icons.bar_chart_outlined, iconFilled: Icons.bar_chart),
+      _NavItem(label: 'Akun', icon: Icons.person_outline, iconFilled: Icons.person),
     ];
 
-    return BottomNavigationBar(
-      currentIndex: _selectedIndex,
-      selectedItemColor: const Color(0xFF2A7F41),
-      unselectedItemColor: Colors.grey[600],
-      showUnselectedLabels: true,
-      type: BottomNavigationBarType.fixed,
-      onTap: (index) => setState(() => _selectedIndex = index),
-      items: items
-          .map((item) => BottomNavigationBarItem(
-              icon: Icon(item.icon), label: item.label))
-          .toList(),
+    return NavigationBarTheme(
+      data: NavigationBarThemeData(
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final isSelected = states.contains(WidgetState.selected);
+          return TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? const Color(0xFF2A7F41) : Colors.black54,
+          );
+        }),
+      ),
+      child: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        backgroundColor: Colors.white,
+        elevation: 8,
+        height: 68,
+        indicatorColor: const Color(0xFF2A7F41).withValues(alpha: 0.12),
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        destinations: items
+            .map((item) => NavigationDestination(
+                  icon: Icon(item.icon, color: Colors.black54),
+                  selectedIcon: Icon(item.iconFilled, color: const Color(0xFF2A7F41)),
+                  label: item.label,
+                ))
+            .toList(),
+      ),
     );
   }
 }
@@ -2005,6 +2021,8 @@ class _ProductCard extends StatelessWidget {
 class _NavItem {
   final String label;
   final IconData icon;
+  final IconData iconFilled;
 
-  const _NavItem({required this.label, required this.icon});
+  const _NavItem({required this.label, required this.icon, IconData? iconFilled})
+      : iconFilled = iconFilled ?? icon;
 }

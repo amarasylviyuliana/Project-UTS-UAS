@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/admin_service.dart';
+import '../widgets/paginated_list.dart';
+import 'admin_wallet_screen.dart';
 import 'home_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -208,7 +210,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Text(auth.user?.name ?? 'Administrator',
               style: const TextStyle(fontSize: 14, color: Colors.black87)),
         ])),
-        IconButton(onPressed: _handleLogout, icon: const Icon(Icons.logout, color: Colors.red)),
+        IconButton(
+            onPressed: () => Navigator.pushNamed(context, AdminWalletScreen.routeName),
+            tooltip: 'Saldo & Pajak',
+            icon: const Icon(Icons.account_balance_wallet, color: Color(0xFF2A7F41))),
+        IconButton(onPressed: _handleLogout, tooltip: 'Keluar', icon: const Icon(Icons.logout, color: Colors.red)),
       ]),
     );
   }
@@ -224,7 +230,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Text(auth.user?.name ?? 'Administrator',
               style: const TextStyle(fontSize: 14, color: Colors.black54)),
         ]),
-        IconButton(onPressed: _handleLogout,
+        IconButton(
+            onPressed: () => Navigator.pushNamed(context, AdminWalletScreen.routeName),
+            tooltip: 'Saldo & Pajak',
+            icon: const Icon(Icons.account_balance_wallet, color: Color(0xFF2A7F41), size: 28)),
+        IconButton(onPressed: _handleLogout, tooltip: 'Keluar',
             icon: const Icon(Icons.logout, color: Colors.red, size: 28)),
       ]),
     );
@@ -902,7 +912,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 style: const TextStyle(fontSize: 13))),
             Expanded(child: _buildStatusChip(status)),
             Row(mainAxisSize: MainAxisSize.min, children: [
-              if (status != 'Dikonfirmasi' && status != 'Selesai')
+              if (status != 'Dikonfirmasi' && status != 'Selesai' && status != 'Dibatalkan')
                 TextButton(onPressed: id == null || _token == null ? null : () async {
                   await _adminService.updateOrderStatus(_token!, id, 'Dikonfirmasi');
                   _loadOrders();
@@ -1011,11 +1021,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         else Container(
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16),
               boxShadow: const [BoxShadow(color: Color.fromRGBO(0,0,0,0.05), blurRadius: 12, offset: Offset(0,4))]),
-          child: ListView.separated(
-            shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-            itemCount: userList.length, separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final user = userList[index];
+          child: PaginatedListView<Map<String, dynamic>>(
+            items: userList,
+            pageSize: 10,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, user, index) {
               final name = user['name'] ?? '-';
               final id = user['id'] as int?;
               final store = user['store'];
@@ -1067,31 +1077,65 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // ── BOTTOM NAV (FIX: hapus tab Verifikasi) ────────────────────────────────────
 
   Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      currentIndex: _selectedIndex > 5 ? 0 : _selectedIndex,
-      selectedItemColor: const Color(0xFF2A7F41),
-      unselectedItemColor: Colors.grey[600],
-      showUnselectedLabels: true,
-      type: BottomNavigationBarType.fixed,
-      onTap: (index) => setState(() => _selectedIndex = index),
-      items: [
-        const BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
-        const BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: 'Produk'),
-        BottomNavigationBarItem(
-          icon: Stack(children: [
-            const Icon(Icons.store_outlined),
-            if (_pendingApprovalsCount > 0)
-              Positioned(right: 0, top: 0, child: Container(
-                  width: 8, height: 8,
-                  decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle))),
-          ]),
-          label: 'BUMDes',
+    final destinations = [
+      const NavigationDestination(
+          icon: Icon(Icons.dashboard_outlined),
+          selectedIcon: Icon(Icons.dashboard),
+          label: 'Dashboard'),
+      const NavigationDestination(
+          icon: Icon(Icons.shopping_cart_outlined),
+          selectedIcon: Icon(Icons.shopping_cart),
+          label: 'Produk'),
+      NavigationDestination(
+        icon: Badge(
+          isLabelVisible: _pendingApprovalsCount > 0,
+          smallSize: 8,
+          backgroundColor: Colors.red,
+          child: const Icon(Icons.store_outlined),
         ),
-        const BottomNavigationBarItem(icon: Icon(Icons.receipt_outlined), label: 'Pesanan'),
-        const BottomNavigationBarItem(icon: Icon(Icons.attach_money_outlined), label: 'Keuangan'),
-        const BottomNavigationBarItem(icon: Icon(Icons.people_outline), label: 'Pengguna'),
-        // FIX: Tab Verifikasi dihapus
-      ],
+        selectedIcon: Badge(
+          isLabelVisible: _pendingApprovalsCount > 0,
+          smallSize: 8,
+          backgroundColor: Colors.red,
+          child: const Icon(Icons.store),
+        ),
+        label: 'BUMDes',
+      ),
+      const NavigationDestination(
+          icon: Icon(Icons.receipt_outlined),
+          selectedIcon: Icon(Icons.receipt),
+          label: 'Pesanan'),
+      const NavigationDestination(
+          icon: Icon(Icons.attach_money_outlined),
+          selectedIcon: Icon(Icons.attach_money),
+          label: 'Keuangan'),
+      const NavigationDestination(
+          icon: Icon(Icons.people_outline),
+          selectedIcon: Icon(Icons.people),
+          label: 'Pengguna'),
+    ];
+
+    return NavigationBarTheme(
+      data: NavigationBarThemeData(
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final isSelected = states.contains(WidgetState.selected);
+          return TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? const Color(0xFF2A7F41) : Colors.black54,
+          );
+        }),
+      ),
+      child: NavigationBar(
+        selectedIndex: _selectedIndex > 5 ? 0 : _selectedIndex,
+        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        backgroundColor: Colors.white,
+        elevation: 8,
+        height: 68,
+        indicatorColor: const Color(0xFF2A7F41).withValues(alpha: 0.12),
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        destinations: destinations,
+      ),
     );
   }
 
