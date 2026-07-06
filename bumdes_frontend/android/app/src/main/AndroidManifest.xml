@@ -1,4 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- FIX: izin ini SEBELUMNYA TIDAK ADA SAMA SEKALI — tanpa INTERNET,
+         Android memblokir SEMUA request jaringan aplikasi (login, load
+         produk, AI search, checkout, dst semuanya gagal), padahal di Web
+         tidak masalah karena browser tidak butuh izin eksplisit seperti ini. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Untuk fitur pilih foto produk/profil dari galeri (image_picker) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
     <application
         android:label="bumdes_frontend"
         android:name="${applicationName}"
