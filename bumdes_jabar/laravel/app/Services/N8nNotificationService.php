@@ -33,8 +33,10 @@ class N8nNotificationService
             'order_number' => $order->order_number,
             'bumdes_nama'  => $order->store->store_name ?? '-',
             'bumdes_wa'    => $order->store->contact_phone ?? '',
-            'pembeli_nama' => $order->buyer->name ?? $order->recipient_name,
-            'pembeli_wa'   => $order->buyer->phone ?? $order->recipient_phone ?? '',
+            // Prefer recipient_name provided at checkout; fallback to account name
+            'pembeli_nama' => $order->recipient_name ?? $order->buyer->name,
+            // Prefer recipient phone provided at checkout; fallback to account phone
+            'pembeli_wa'   => $order->recipient_phone ?? $order->buyer->phone ?? '',
             'pembeli_telegram_chat_id' => $order->buyer->telegram_chat_id ?? null,
             'item'         => $itemNames,
             'status'       => $order->status,
@@ -57,8 +59,8 @@ class N8nNotificationService
             'order_number'   => $order->order_number,
             'bumdes_nama'    => $order->store->store_name ?? '-',
             'bumdes_wa'      => $order->store->contact_phone ?? '',
-            'pembeli_nama'   => $order->buyer->name ?? $order->recipient_name,
-            'pembeli_wa'     => $order->buyer->phone ?? $order->recipient_phone ?? '',
+            'pembeli_nama'   => $order->recipient_name ?? $order->buyer->name,
+            'pembeli_wa'     => $order->recipient_phone ?? $order->buyer->phone ?? '',
             'pembeli_telegram_chat_id' => $order->buyer->telegram_chat_id ?? null,
             'total'          => (float) $order->total_price,
             'payment_method' => $order->payment->payment_method ?? '-',

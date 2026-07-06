@@ -45,6 +45,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
+    // Jika pengguna sudah terautentikasi, hindari menampilkan form register
+    // dan langsung arahkan ke dashboard yang sesuai (ganti rute).
+    if (auth.isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        String route = '/home';
+        if (auth.user?.role == 'admin') {
+          route = '/admin-dashboard';
+        } else if (auth.user?.role == 'seller') {
+          route = '/store-dashboard';
+        }
+        Navigator.pushReplacementNamed(context, route);
+      });
+      return const SizedBox.shrink();
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Daftar Akun Baru')),
       body: Padding(
@@ -56,7 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text('Pilih peran Anda sebagai Pembeli atau Penjual BUMDes.'),
+            const Text('Akun yang dibuat akan menjadi akun Pembeli.'),
             const SizedBox(height: 20),
             Form(
               key: _formKey,
@@ -102,18 +117,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  // ── Hanya buyer dan seller, admin tidak bisa daftar sendiri ──
-                  DropdownButtonFormField<String>(
-                    value: _selectedRole,
-                    decoration: const InputDecoration(labelText: 'Peran'),
-                    items: const [
-                      DropdownMenuItem(value: 'buyer', child: Text('Pembeli Umum')),
-                      DropdownMenuItem(value: 'seller', child: Text('Penjual BUMDes')),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) setState(() => _selectedRole = value);
-                    },
-                  ),
+                  // Peran diset otomatis sebagai Pembeli.
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,

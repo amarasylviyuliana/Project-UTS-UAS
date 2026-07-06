@@ -93,6 +93,21 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
+    // Jika sudah login, langsung redirect ke rute yang sesuai dan
+    // gantikan halaman login sehingga back tidak kembali ke login.
+    if (auth.isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        String route = HomeScreen.routeName;
+        if (auth.user?.role == 'admin') {
+          route = AdminDashboardScreen.routeName;
+        } else if (auth.user?.role == 'seller') {
+          route = StoreDashboardScreen.routeName;
+        }
+        Navigator.pushReplacementNamed(context, route);
+      });
+      return const SizedBox.shrink();
+    }
     return Scaffold(
       backgroundColor: const Color(0xFF4B4B4B),
       body: Center(
