@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/admin_service.dart';
+import '../services/api_service.dart';
 import '../utils/format_helper.dart';
 import '../widgets/paginated_list.dart';
 
@@ -19,6 +20,7 @@ class _AdminWalletScreenState extends State<AdminWalletScreen>
   late TabController _tabController;
 
   double _platformIncome = 0;
+  double _platformBalance = 0;
   double _taxPercentage = 0;
   List<Map<String, dynamic>> _taxTransactions = [];
   List<Map<String, dynamic>> _storeWallets = [];
@@ -39,12 +41,14 @@ class _AdminWalletScreenState extends State<AdminWalletScreen>
     super.dispose();
   }
 
+  String? get _token => Provider.of<AuthProvider>(context, listen: false).token;
+
   Future<void> _loadAll() async {
     setState(() {
       _loading = true;
       _error = null;
     });
-    final token = Provider.of<AuthProvider>(context, listen: false).token;
+    final token = _token;
     if (token == null) return;
     try {
       final results = await Future.wait([
@@ -57,6 +61,9 @@ class _AdminWalletScreenState extends State<AdminWalletScreen>
       final summary = results[0] as Map<String, dynamic>;
       setState(() {
         _platformIncome = (summary['platform_income'] as num?)?.toDouble() ?? 0;
+        // Fallback ke platform_income kalau backend lama belum mengirim platform_balance.
+        _platformBalance = (summary['platform_balance'] as num?)?.toDouble() ??
+            _platformIncome;
         _taxPercentage = (summary['tax_percentage'] as num?)?.toDouble() ?? 0;
         _taxTransactions = results[1] as List<Map<String, dynamic>>;
         _storeWallets = results[2] as List<Map<String, dynamic>>;
@@ -70,6 +77,147 @@ class _AdminWalletScreenState extends State<AdminWalletScreen>
         _loading = false;
       });
     }
+  }
+
+  Future<void> _showWithdrawDialog() async {
+    final formKey = GlobalKey<FormState>();
+    final amountController = TextEditingController();
+    final bankNameController = TextEditingController();
+    final accountNumberController = TextEditingController();
+    final accountNameController = TextEditingController();
+    bool submitting = false;
+    String? errorText;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Tarik Saldo Platform'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Saldo tersedia: ${FormatHelper.formatCurrency(_platformBalance)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Saldo ini berasal dari akumulasi biaya admin/pajak seluruh transaksi penjual.',
+                    style: TextStyle(fontSize: 11, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Nominal Penarikan',
+                      prefixText: 'Rp ',
+                    ),
+                    validator: (v) {
+                      final amount = double.tryParse(v ?? '');
+                      if (amount == null || amount <= 0) {
+                        return 'Masukkan nominal yang valid';
+                      }
+                      if (amount > _platformBalance) {
+                        return 'Saldo tidak mencukupi';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: bankNameController,
+                    decoration: const InputDecoration(labelText: 'Nama Bank'),
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Wajib diisi' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: accountNumberController,
+                    keyboardType: TextInputType.number,
+                    decoration:
+                        const InputDecoration(labelText: 'Nomor Rekening'),
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Wajib diisi' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: accountNameController,
+                    decoration: const InputDecoration(
+                        labelText: 'Nama Pemilik Rekening'),
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Wajib diisi' : null,
+                  ),
+                  if (errorText != null) ...[
+                    const SizedBox(height: 8),
+                    Text(errorText!,
+                        style: const TextStyle(color: Colors.red)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed:
+                  submitting ? null : () => Navigator.of(context).pop(),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: submitting
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setDialogState(() {
+                        submitting = true;
+                        errorText = null;
+                      });
+                      try {
+                        final token = _token;
+                        if (token == null) return;
+                        await _adminService.requestPlatformWithdrawal(
+                          token,
+                          amount: double.parse(amountController.text),
+                          bankName: bankNameController.text,
+                          bankAccountNumber: accountNumberController.text,
+                          bankAccountName: accountNameController.text,
+                        );
+                        if (context.mounted) Navigator.of(context).pop();
+                        await _loadAll();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Penarikan saldo platform berhasil!')),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          submitting = false;
+                          errorText = e is ApiException
+                              ? e.message
+                              : 'Gagal memproses penarikan.';
+                        });
+                      }
+                    },
+              child: submitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Tarik Sekarang'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -109,21 +257,41 @@ class _AdminWalletScreenState extends State<AdminWalletScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Total Pemasukan Admin (Biaya Admin/Pajak)',
+                            const Text('Saldo Platform Tersedia',
                                 style: TextStyle(color: Colors.white70)),
                             const SizedBox(height: 8),
                             Text(
-                              FormatHelper.formatCurrency(_platformIncome),
+                              FormatHelper.formatCurrency(_platformBalance),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 26,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 4),
                             Text(
-                              'Tarif saat ini: ${_taxPercentage.toStringAsFixed(0)}% dari tiap transaksi Selesai',
+                              'Total pemasukan sepanjang waktu: ${FormatHelper.formatCurrency(_platformIncome)}',
+                              style: const TextStyle(color: Colors.white70, fontSize: 11),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Tarif saat ini: ${_taxPercentage.toStringAsFixed(0)}% dari tiap transaksi Selesai (dipotong dari saldo penjual sebagai biaya admin)',
                               style: const TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _platformBalance > 0
+                                    ? _showWithdrawDialog
+                                    : null,
+                                icon: const Icon(Icons.arrow_upward),
+                                label: const Text('Tarik Saldo'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: const Color(0xFF1565C0),
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -135,7 +303,7 @@ class _AdminWalletScreenState extends State<AdminWalletScreen>
                         tabs: const [
                           Tab(text: 'Riwayat Pajak'),
                           Tab(text: 'Saldo Semua Toko'),
-                          Tab(text: 'Penarikan Toko'),
+                          Tab(text: 'Penarikan'),
                         ],
                       ),
                       Expanded(
@@ -218,9 +386,18 @@ class _AdminWalletScreenState extends State<AdminWalletScreen>
         pageSize: 10,
         itemBuilder: (context, w, index) {
           final store = w['store'] as Map<String, dynamic>?;
+          final isPlatform = store == null;
           return ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.account_balance)),
-            title: Text(store?['store_name'] ?? 'Toko tidak diketahui'),
+            leading: CircleAvatar(
+              backgroundColor: isPlatform ? Colors.blue[100] : null,
+              child: Icon(
+                isPlatform ? Icons.account_balance_wallet : Icons.account_balance,
+                color: isPlatform ? Colors.blue : null,
+              ),
+            ),
+            title: Text(isPlatform
+                ? 'Penarikan Saldo Platform (Admin)'
+                : (store['store_name'] ?? 'Toko tidak diketahui')),
             subtitle: Text('${w['bank_name']} - ${w['bank_account_number']}'),
             trailing: Text(
               FormatHelper.formatCurrency((w['amount'] as num?)?.toDouble() ?? 0),

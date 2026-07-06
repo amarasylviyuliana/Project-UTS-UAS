@@ -402,4 +402,22 @@ class AdminService {
         await api.getRaw('/admin/withdrawals?per_page=$perPage');
     return _extractList(response);
   }
+
+  /// Ajukan penarikan saldo Admin/platform (dari kumpulan biaya admin/pajak).
+  Future<Map<String, dynamic>> requestPlatformWithdrawal(
+    String token, {
+    required double amount,
+    required String bankName,
+    required String bankAccountNumber,
+    required String bankAccountName,
+  }) async {
+    final api = ApiService(token: token);
+    final response = await api.post('/admin/wallet/withdrawals', {
+      'amount': amount,
+      'bank_name': bankName,
+      'bank_account_number': bankAccountNumber,
+      'bank_account_name': bankAccountName,
+    });
+    return response['data'] ?? {};
+  }
 }

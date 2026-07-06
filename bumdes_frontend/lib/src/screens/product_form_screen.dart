@@ -7,6 +7,8 @@ import '../models/product_model.dart';
 import '../providers/product_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/profile_service.dart';
+import '../services/profile_service.dart';
+import '../services/product_service.dart';
 import 'store_form_screen.dart';
 
 
@@ -32,8 +34,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   Uint8List? _imageBytes;
   String? _existingImageUrl;
   final ImagePicker _picker = ImagePicker();
-  bool _isSaving = false;
+ bool _isSaving = false;
   bool _argsLoaded = false;
+  double _platformFeePercentage = 0;
 
   static const List<String> _validCategories = [
     'Pertanian & Perkebunan',
@@ -49,10 +52,23 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     'Jasa Lokal': 4,
   };
 
+ @override
+  void initState() {
+    super.initState();
+    _loadPlatformFeePercentage();
+  }
+
+  Future<void> _loadPlatformFeePercentage() async {
+    final fee = await ProductService().getPlatformFeePercentage();
+    if (!mounted) return;
+    setState(() => _platformFeePercentage = fee);
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_argsLoaded) return;
+  
     _argsLoaded = true;
 
     final args =
@@ -435,6 +451,31 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   return null;
                 },
               ),
+              if (_platformFeePercentage > 0) ...[
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.shade300),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline, size: 16, color: Colors.amber.shade800),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Setiap pesanan yang Selesai akan dipotong biaya admin/pajak platform sebesar ${_platformFeePercentage.toStringAsFixed(0)}% dari harga di atas. Sisanya baru masuk ke saldo Anda, jadi saldo Anda tidak akan tiba-tiba berkurang tanpa alasan.',
+                          style: TextStyle(fontSize: 11.5, color: Colors.amber.shade900),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
 
               if (_type == 'product') ...[

@@ -38,6 +38,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   List<Map<String, dynamic>> _stores = [];
   List<Map<String, dynamic>> _storeApprovals = [];
 
+  double _platformBalance = 0;
+  double _taxPercentage = 0;
+  bool _isLoadingWallet = false;
+
   final _adminService = AdminService();
 
   @override
@@ -53,6 +57,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _loadProducts();
     _loadStores();
     _loadStoreApprovals();
+    _loadWalletSummary();
+  }
+
+  Future<void> _loadWalletSummary() async {
+    final token = _token;
+    if (token == null) return;
+    setState(() => _isLoadingWallet = true);
+    try {
+      final summary = await _adminService.getWalletSummary(token);
+      if (!mounted) return;
+      setState(() {
+        final income = (summary['platform_income'] as num?)?.toDouble() ?? 0;
+        _platformBalance =
+            (summary['platform_balance'] as num?)?.toDouble() ?? income;
+        _taxPercentage = (summary['tax_percentage'] as num?)?.toDouble() ?? 0;
+      });
+    } catch (_) {
+      // Diamkan — kartu saldo cukup tampilkan 0 kalau gagal, tab Keuangan tetap terbuka.
+    } finally {
+      if (mounted) setState(() => _isLoadingWallet = false);
+    }
   }
 
   String? get _token {
@@ -913,8 +938,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Expanded(child: Text(_formatRupiah(_parseDouble(order['total'] ?? order['total_price'])),
                 style: const TextStyle(fontSize: 13))),
             Expanded(child: _buildStatusChip(status)),
-            Row(mainAxisSize: MainAxisSize.min, children: [
-              if (status != 'Dikonfirmasi' && status != 'Selesai' && status != 'Dibatalkan')
+           Row(mainAxisSize: MainAxisSize.min, children: [
+              // FIX: sebelumnya tombol ini muncul untuk SEMUA status selain
+              // Dikonfirmasi/Selesai/Dibatalkan — termasuk "Menunggu Pembayaran",
+              // sehingga Admin bisa "mengkonfirmasi" pesanan yang belum benar-benar
+              // dibayar. Sekarang hanya muncul saat pesanan sudah "Menunggu
+              // Konfirmasi" (bukti pembayaran sudah diunggah Pembeli), sesuai alur
+              // bisnis yang seharusnya diverifikasi lewat proses pembayaran.
+              if (status == 'Menunggu Konfirmasi')
                 TextButton(onPressed: id == null || _token == null ? null : () async {
                   await _adminService.updateOrderStatus(_token!, id, 'Dikonfirmasi');
                   _loadOrders();
@@ -948,7 +979,84 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _buildReportCard('Total Pesanan', totalOrders.toString(), 'Seluruh waktu', Colors.blue),
         const SizedBox(height: 12),
         _buildReportCard('Total Pengguna', totalUsers.toString(), 'Saat ini', Colors.purple),
+        const SizedBox(height: 24),
+        const Text('Saldo & Pajak Platform', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        const Text(
+          'Saldo ini berasal dari akumulasi biaya admin/pajak yang dipotong dari setiap pesanan penjual berstatus Selesai.',
+          style: TextStyle(fontSize: 12, color: Colors.black54),
+        ),
+        const SizedBox(height: 12),
+        _buildPlatformWalletCard(),
       ]),
+    );
+  }
+
+  Widget _buildPlatformWalletCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Saldo Platform Tersedia', style: TextStyle(color: Colors.white70)),
+          const SizedBox(height: 8),
+          _isLoadingWallet
+              ? const SizedBox(
+                  height: 26,
+                  width: 26,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : Text(
+                  _formatRupiah(_platformBalance),
+                  style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
+                ),
+          const SizedBox(height: 6),
+          Text(
+            'Tarif biaya admin saat ini: ${_taxPercentage.toStringAsFixed(0)}% dari tiap transaksi Selesai',
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    await Navigator.pushNamed(context, AdminWalletScreen.routeName);
+                    _loadWalletSummary();
+                  },
+                  icon: const Icon(Icons.arrow_upward),
+                  label: const Text('Tarik Saldo'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF1565C0),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await Navigator.pushNamed(context, AdminWalletScreen.routeName);
+                    _loadWalletSummary();
+                  },
+                  icon: const Icon(Icons.receipt_long, color: Colors.white),
+                  label: const Text('Lihat Detail', style: TextStyle(color: Colors.white)),
+                  style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
