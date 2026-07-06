@@ -338,7 +338,7 @@ class _AdminWalletScreenState extends State<AdminWalletScreen>
               backgroundColor: Colors.blue,
               child: Icon(Icons.percent, color: Colors.white, size: 18),
             ),
-            title: Text(store?['store_name'] ?? 'Toko tidak diketahui'),
+            title: Text(store?['store_name'] ?? 'Biaya Admin Platform'),
             subtitle: Text(trx['description'] ?? '-',
                 maxLines: 1, overflow: TextOverflow.ellipsis),
             trailing: Text(
