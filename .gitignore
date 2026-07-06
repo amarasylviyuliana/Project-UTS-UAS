@@ -1,4 +1,6 @@
-﻿bumdes_frontend/build/
+﻿bumdes_frontend/build/*
+!bumdes_frontend/build/web/
+!bumdes_frontend/build/web/**
 e -i *
 jq.exe
 seq-editor.ps1
