@@ -235,10 +235,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Text(auth.user?.name ?? 'Administrator',
               style: const TextStyle(fontSize: 14, color: Colors.black87)),
         ])),
-        IconButton(
-            onPressed: () => Navigator.pushNamed(context, AdminWalletScreen.routeName),
-            tooltip: 'Saldo & Pajak',
-            icon: const Icon(Icons.account_balance_wallet, color: Color(0xFF2A7F41))),
+        // FIX: tombol ikon "Saldo & Pajak" di header dihapus atas permintaan —
+        // akses ke halaman Saldo & Pajak Platform tetap tersedia lewat
+        // tombol "Tarik Saldo" / "Lihat Detail" di tab Keuangan.
         IconButton(onPressed: _handleLogout, tooltip: 'Keluar', icon: const Icon(Icons.logout, color: Colors.red)),
       ]),
     );
@@ -255,10 +254,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Text(auth.user?.name ?? 'Administrator',
               style: const TextStyle(fontSize: 14, color: Colors.black54)),
         ]),
-        IconButton(
-            onPressed: () => Navigator.pushNamed(context, AdminWalletScreen.routeName),
-            tooltip: 'Saldo & Pajak',
-            icon: const Icon(Icons.account_balance_wallet, color: Color(0xFF2A7F41), size: 28)),
+        // FIX: tombol ikon "Saldo & Pajak" di header dihapus atas permintaan —
+        // akses ke halaman Saldo & Pajak Platform tetap tersedia lewat
+        // tombol "Tarik Saldo" / "Lihat Detail" di tab Keuangan.
         IconButton(onPressed: _handleLogout, tooltip: 'Keluar',
             icon: const Icon(Icons.logout, color: Colors.red, size: 28)),
       ]),
