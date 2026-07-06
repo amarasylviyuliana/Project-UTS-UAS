@@ -928,21 +928,35 @@ IconButton(
                 )
               : RefreshIndicator(
                   onRefresh: _loadSellerProducts,
-                  child: GridView.builder(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 8),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.62,
-                    ),
-                    itemCount: filteredProducts.length,
-                    itemBuilder: (context, index) {
-                      final product = filteredProducts[index];
-                      return _ProductCard(
-                        product: product,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // FIX: kolom grid menyesuaikan lebar layar, bukan
+                      // di-hardcode 2 terus — di HP tetap 2, tapi di
+                      // tablet/desktop otomatis nambah biar tidak boros
+                      // ruang kosong dan card tidak melebar aneh.
+                      final width = constraints.maxWidth;
+                      final crossAxisCount = width >= 1100
+                          ? 5
+                          : width >= 850
+                          ? 4
+                          : width >= 600
+                          ? 3
+                          : 2;
+                      return GridView.builder(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 8),
+                        gridDelegate:
+                            SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.62,
+                        ),
+                        itemCount: filteredProducts.length,
+                        itemBuilder: (context, index) {
+                          final product = filteredProducts[index];
+                          return _ProductCard(
+                            product: product,
                         onEdit: () {
                           final ctx = context;
                           WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -958,6 +972,8 @@ IconButton(
                         },
                         onDelete: () => _confirmDeleteProduct(
                             context, product, provider),
+                      );
+                        },
                       );
                     },
                   ),
