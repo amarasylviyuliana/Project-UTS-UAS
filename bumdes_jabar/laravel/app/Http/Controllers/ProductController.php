@@ -59,22 +59,22 @@ class ProductController extends Controller
             'is_active' => $product->is_active,
         ];
     }
-
-    /**
-     * Get featured products for homepage
-     * REQ-20
+/**
+     * Get all active products (dipanggil GET /products, dipakai halaman
+     * "Semua Produk" pembeli). Sebelumnya method ini tidak ada sama sekali
+     * -> route /products error 500 "Method ...::index does not exist"
+     * -> Flutter fallback diam-diam ke sample/dummy data.
      */
-    public function getFeatured(): JsonResponse
+    public function index(): JsonResponse
     {
         $products = Product::where('is_active', true)
             ->with('store', 'category')
             ->latest()
-            ->limit(3)
             ->get()
             ->map(fn($product) => $this->mapProductForResponse($product));
 
         return response()->json([
-            'message' => 'Produk unggulan',
+            'message' => 'Daftar produk',
             'data' => $products,
         ]);
     }
