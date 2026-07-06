@@ -281,17 +281,7 @@ class _HomeTabState extends State<HomeTab> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildFeatureIcon(Icons.star_outline, 'Produk\nUnggulan'),
-              _buildFeatureIcon(
-                  Icons.shopping_cart_outlined, 'Keranjang\nBelanja'),
-              _buildFeatureIcon(
-                  Icons.receipt_long_outlined, 'Riwayat\nPesanan'),
-            ],
-          ),
+          // Only show the logo here. Feature icons and labels removed as requested.
         ],
       ),
     );

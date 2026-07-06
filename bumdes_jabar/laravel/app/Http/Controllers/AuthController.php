@@ -18,15 +18,15 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Password::min(8)],
-            'role' => 'required|in:Pembeli,Penjual,Admin',
         ]);
 
         try {
+            // Registrasi hanya untuk akun Pembeli melalui UI publik.
             $user = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
-                'role' => $validated['role'],
+                'role' => 'Pembeli',
                 'email_verified_at' => now(),
             ]);
 
