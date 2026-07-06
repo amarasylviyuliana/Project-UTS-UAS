@@ -14,9 +14,9 @@ class StoreWallet extends Model
         'balance',
     ];
 
-    protected $casts = [
-        'balance' => 'decimal:2',
-    ];
+   protected $casts = [
+    'balance' => 'float',
+];
 
     public function store()
     {
