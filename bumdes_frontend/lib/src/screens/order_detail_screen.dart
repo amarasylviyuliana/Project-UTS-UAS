@@ -535,8 +535,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
 
               const SizedBox(height: 20),
-              if (order.status.toLowerCase().contains('pembayaran') ||
-                  order.status.toLowerCase().contains('pending'))
+              if ((order.status.toLowerCase().contains('pembayaran') ||
+                      order.status.toLowerCase().contains('pending')) &&
+                  Provider.of<AuthProvider>(context, listen: false).user?.role != 'seller' &&
+                  Provider.of<AuthProvider>(context, listen: false).user?.role != 'admin')
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
