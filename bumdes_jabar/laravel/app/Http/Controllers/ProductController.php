@@ -469,4 +469,30 @@ class ProductController extends Controller
             'data' => $products,
         ]);
     }
+
+    /**
+     * Get all product categories.
+     * Dipakai untuk dropdown kategori di form tambah/edit produk dan filter pencarian.
+     */
+    public function getCategories(): JsonResponse
+    {
+        $categories = Category::all();
+
+        return response()->json($categories);
+    }
+
+    /**
+     * Info persentase biaya admin/pajak platform (publik).
+     * Dipakai di form tambah produk agar Penjual tahu dari awal
+     * bahwa saldo mereka akan dipotong biaya ini saat pesanan Selesai.
+     */
+    public function getPlatformFeeInfo(): JsonResponse
+    {
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'tax_percentage' => (float) config('platform.tax_percentage', 5),
+            ],
+        ]);
+    }
 }
