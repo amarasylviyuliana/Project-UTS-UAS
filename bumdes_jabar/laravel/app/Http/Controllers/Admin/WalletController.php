@@ -22,9 +22,37 @@ class WalletController extends Controller
         return response()->json([
             'status' => 'success',
             'data' => [
+                // Total pemasukan pajak sepanjang waktu (statistik, tidak berkurang saat ditarik).
                 'platform_income' => $this->walletService->getPlatformIncome(),
+                // Saldo yang benar-benar bisa ditarik saat ini (income - sudah ditarik).
+                'platform_balance' => $this->walletService->getPlatformBalance(),
                 'tax_percentage' => (float) config('platform.tax_percentage', 5),
             ],
+        ]);
+    }
+
+    /** Ajukan penarikan saldo Admin/platform (dari kumpulan biaya admin/pajak). */
+    public function requestWithdrawal(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'bank_name' => 'required|string|max:100',
+            'bank_account_number' => 'required|string|max:50',
+            'bank_account_name' => 'required|string|max:150',
+        ]);
+
+        try {
+            $withdrawal = $this->walletService->requestPlatformWithdrawal(
+                (float) $validated['amount'],
+                $validated,
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'message' => 'Penarikan saldo platform berhasil diproses',
+            'data' => $withdrawal,
         ]);
     }
 
