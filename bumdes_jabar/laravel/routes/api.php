@@ -58,6 +58,7 @@ Route::match(['get', 'put', 'delete', 'patch'], '/auth/register', function () {
 
 // Product routes (public)
 Route::get('/categories', [ProductController::class, 'getCategories']);
+Route::get('/platform/fee-info', [ProductController::class, 'getPlatformFeeInfo']);
 Route::get('/debug/products', function () {
     return response()->json([
         'message' => 'Debug product list',
@@ -210,11 +211,12 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::put('/verifications/{id}',                   [VerificationController::class, 'verifySeller']);
             Route::get('/seller/{userId}/verification-history', [VerificationController::class, 'getSellerVerificationHistory']);
 
-            // Saldo & Pajak (Admin)
-            Route::get('/wallet/summary',      [\App\Http\Controllers\Admin\WalletController::class, 'summary']);
-            Route::get('/wallet/transactions', [\App\Http\Controllers\Admin\WalletController::class, 'transactions']);
-            Route::get('/wallet/store-wallets', [\App\Http\Controllers\Admin\WalletController::class, 'storeWallets']);
-            Route::get('/withdrawals',         [\App\Http\Controllers\Admin\WalletController::class, 'withdrawals']);
+           // Saldo & Pajak (Admin)
+Route::get('/wallet/summary',      [\App\Http\Controllers\Admin\WalletController::class, 'summary']);
+Route::get('/wallet/transactions', [\App\Http\Controllers\Admin\WalletController::class, 'transactions']);
+Route::get('/wallet/store-wallets', [\App\Http\Controllers\Admin\WalletController::class, 'storeWallets']);
+Route::post('/wallet/withdrawals', [\App\Http\Controllers\Admin\WalletController::class, 'requestWithdrawal']);
+Route::get('/withdrawals',         [\App\Http\Controllers\Admin\WalletController::class, 'withdrawals']);
 
             Route::get('/audit-logs',                 [AdminController::class, 'getAllAuditLogs']);
             Route::get('/audit-logs/admin/{adminId}', [AdminController::class, 'getAdminAuditLogs']);

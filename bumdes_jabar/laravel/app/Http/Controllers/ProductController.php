@@ -61,31 +61,6 @@ class ProductController extends Controller
     }
 
     /**
-     * Get all categories
-     * REQ-17
-     */
-    public function getCategories(): JsonResponse
-    {
-        $categories = Category::all();
-        return response()->json($categories);
-    }
-
-    /**
-     * Get all products (public list)
-     * REQ-20
-     */
-    public function index(): JsonResponse
-    {
-        $products = Product::where('is_active', true)
-            ->with('store', 'category')
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(fn($product) => $this->mapProductForResponse($product));
-
-        return response()->json($products);
-    }
-
-    /**
      * Get featured products for homepage
      * REQ-20
      */
