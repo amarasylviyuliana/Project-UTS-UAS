@@ -7,9 +7,7 @@ use App\Models\User;
 use App\Models\Store;
 use App\Models\Product;
 use App\Models\Admin;
-use App\Models\StoreApproval;
 use App\Models\ProductApproval;
-use App\Models\SellerVerification;
 
 class CheckDataAlignment extends Command
 {
@@ -78,66 +76,7 @@ class CheckDataAlignment extends Command
         }
         $this->newLine();
 
-        // 3. Check Stores without approval record
-        $this->line('3️⃣  Checking stores without approval record...');
-        $storesWithoutApproval = Store::whereDoesntHave('storeApproval')->get();
-
-        if ($storesWithoutApproval->count() > 0) {
-            $this->warn("⚠️  Found {$storesWithoutApproval->count()} stores without approval record");
-            $issues[] = ['issue' => 'Stores without approval', 'count' => $storesWithoutApproval->count()];
-
-            if ($this->option('fix')) {
-                foreach ($storesWithoutApproval as $store) {
-                    // Find or create default admin
-                    $admin = Admin::where('is_super_admin', true)->first();
-                    if (!$admin) {
-                        $admin = Admin::first();
-                    }
-
-                    if ($admin) {
-                        StoreApproval::create([
-                            'store_id' => $store->id,
-                            'admin_id' => $admin->id,
-                            'status' => $store->is_active ? 'Disetujui' : 'Menunggu Persetujuan',
-                            'approved_at' => $store->is_active ? now() : null,
-                        ]);
-                    }
-                }
-                $this->info("✅ Created {$storesWithoutApproval->count()} approval records");
-            }
-        } else {
-            $this->info('✅ All stores have approval records');
-        }
-        $this->newLine();
-
-        // 4. Check Sellers without verification record
-        $this->line('4️⃣  Checking sellers without verification record...');
-        $sellersWithoutVerif = User::where('role', 'Penjual')
-            ->whereDoesntHave('sellerVerification')
-            ->get();
-
-        if ($sellersWithoutVerif->count() > 0) {
-            $this->warn("⚠️  Found {$sellersWithoutVerif->count()} sellers without verification record");
-            $issues[] = ['issue' => 'Sellers without verification', 'count' => $sellersWithoutVerif->count()];
-
-            if ($this->option('fix')) {
-                foreach ($sellersWithoutVerif as $user) {
-                    if ($user->store) {
-                        SellerVerification::create([
-                            'user_id' => $user->id,
-                            'store_id' => $user->store->id,
-                            'status' => 'Menunggu Verifikasi',
-                        ]);
-                    }
-                }
-                $this->info("✅ Created {$sellersWithoutVerif->count()} verification records");
-            }
-        } else {
-            $this->info('✅ All sellers have verification records');
-        }
-        $this->newLine();
-
-        // 5. Check Products without approval record
+        // 3. Check Products without approval record
         $this->line('5️⃣  Checking products without approval record...');
         $productsWithoutApproval = Product::whereDoesntHave('productApproval')->get();
 
@@ -168,39 +107,26 @@ class CheckDataAlignment extends Command
         }
         $this->newLine();
 
-        // 6. Check orphaned approvals
-        $this->line('6️⃣  Checking orphaned approval records...');
-        $orphanedStoreApprovals = StoreApproval::whereDoesntHave('store')->count();
+        // 5. Check orphaned approvals
+        $this->line('5️⃣  Checking orphaned approval records...');
         $orphanedProductApprovals = ProductApproval::whereDoesntHave('product')->count();
-        $orphanedVerifications = SellerVerification::whereDoesntHave('store')->count();
 
-        if ($orphanedStoreApprovals > 0 || $orphanedProductApprovals > 0 || $orphanedVerifications > 0) {
+        if ($orphanedProductApprovals > 0) {
             $this->warn("⚠️  Found orphaned records");
-            if ($orphanedStoreApprovals > 0) {
-                $this->warn("   - $orphanedStoreApprovals orphaned store approvals");
-                $issues[] = ['issue' => 'Orphaned store approvals', 'count' => $orphanedStoreApprovals];
-            }
-            if ($orphanedProductApprovals > 0) {
-                $this->warn("   - $orphanedProductApprovals orphaned product approvals");
-                $issues[] = ['issue' => 'Orphaned product approvals', 'count' => $orphanedProductApprovals];
-            }
-            if ($orphanedVerifications > 0) {
-                $this->warn("   - $orphanedVerifications orphaned verifications");
-                $issues[] = ['issue' => 'Orphaned verifications', 'count' => $orphanedVerifications];
-            }
+            $this->warn("   - $orphanedProductApprovals orphaned product approvals");
+            $issues[] = ['issue' => 'Orphaned product approvals', 'count' => $orphanedProductApprovals];
         } else {
             $this->info('✅ No orphaned records found');
         }
         $this->newLine();
 
-        // 7. Summary
+        // 6. Summary
         $this->line('📊 Summary:');
         $this->info('✅ Total users: ' . User::count());
         $this->info('✅ Total admins: ' . Admin::count());
         $this->info('✅ Total sellers: ' . User::where('role', 'Penjual')->count());
         $this->info('✅ Total stores: ' . Store::count());
-        $this->info('✅ Total verified sellers: ' . SellerVerification::where('status', 'Terverifikasi')->count());
-        $this->info('✅ Total approved stores: ' . StoreApproval::where('status', 'Disetujui')->count());
+        $this->info('✅ Total active stores: ' . Store::where('is_active', true)->count());
         $this->info('✅ Total products: ' . Product::count());
         $this->info('✅ Total approved products: ' . ProductApproval::where('status', 'Disetujui')->count());
         $this->newLine();

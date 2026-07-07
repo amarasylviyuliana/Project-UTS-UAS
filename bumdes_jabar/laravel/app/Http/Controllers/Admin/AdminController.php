@@ -182,14 +182,12 @@ class AdminController extends Controller
 
         $stats = [
             'total_users'    => \App\Models\User::count(),
+            'total_sellers'  => \App\Models\User::where('role', 'Penjual')->count(),
             'total_stores'   => \App\Models\Store::count(),
+            'total_active_stores' => \App\Models\Store::where('is_active', true)->count(),
             'total_orders'   => \App\Models\Order::count(),
             'total_revenue'  => (float) \App\Models\Order::where('status', 'Selesai')->sum('total_price'),
-            'pending_store_approvals'   => \App\Models\StoreApproval::where('status', 'Menunggu Persetujuan')->count(),
             'pending_product_approvals' => \App\Models\ProductApproval::where('status', 'Menunggu Persetujuan')->count(),
-            'pending_verifications'     => \App\Models\SellerVerification::where('status', 'Menunggu Verifikasi')->count(),
-            'total_verified_sellers'    => \App\Models\SellerVerification::where('status', 'Terverifikasi')->count(),
-            'total_approved_stores'     => \App\Models\StoreApproval::where('status', 'Disetujui')->count(),
             'total_approved_products'   => \App\Models\ProductApproval::where('status', 'Disetujui')->count(),
         ];
 
@@ -243,14 +241,14 @@ class AdminController extends Controller
 
     /**
      * Get all users (admin)
-     * FIX: eager-load store + storeApproval supaya data toko penjual
-     * (nama toko, status persetujuan) ikut muncul di tab Pengguna admin.
-     * Sebelumnya endpoint ini cuma return field user biasa, jadi FE
-     * tidak pernah punya data toko untuk ditampilkan.
+     *
+     * Menu Pengguna adalah pusat pengelolaan akun (Admin, Penjual, Pembeli).
+     * Data toko/BUMDes penjual ditampilkan langsung di sini karena dibuat
+     * bersamaan dengan akun Penjual. Tidak ada lagi status approval toko.
      */
     public function getAllUsers(Request $request)
     {
-        $query = \App\Models\User::with(['store.storeApproval']);
+        $query = \App\Models\User::with(['store']);
 
         if ($request->role) {
             $query->where('role', $request->role);
@@ -265,16 +263,19 @@ class AdminController extends Controller
                     'email'      => $user->email,
                     'role'       => $user->role,
                     'phone'      => $user->phone,
+                    'address'    => $user->address,
                     'created_at' => $user->created_at,
-                    // FIX: data toko penjual, null kalau user belum punya toko
+                    // Data toko penjual, null kalau user belum punya toko
                     'store' => $user->store ? [
-                        'id'             => $user->store->id,
-                        'store_name'     => $user->store->store_name,
-                        'is_active'      => $user->store->is_active,
-                        'store_approval' => $user->store->storeApproval ? [
-                            'status'          => $user->store->storeApproval->status,
-                            'rejected_reason' => $user->store->storeApproval->rejected_reason,
-                        ] : null,
+                        'id'               => $user->store->id,
+                        'store_name'       => $user->store->store_name,
+                        'description'      => $user->store->description,
+                        'contact_phone'    => $user->store->contact_phone,
+                        'village'          => $user->store->village,
+                        'district'         => $user->store->district,
+                        'regency'          => $user->store->regency,
+                        'store_photo_url'  => $user->store->store_photo_url,
+                        'is_active'        => $user->store->is_active,
                     ] : null,
                 ];
             });
@@ -290,7 +291,7 @@ class AdminController extends Controller
      */
     public function getAllStores(Request $request)
     {
-        $stores = \App\Models\Store::with(['user', 'storeApproval'])
+        $stores = \App\Models\Store::with(['user'])
             ->orderBy('created_at', 'desc')
             ->paginate(15)
             ->through(function ($store) {
@@ -306,7 +307,6 @@ class AdminController extends Controller
                     'regency'         => $store->regency,
                     'is_active'       => $store->is_active,
                     'status'          => $store->is_active ? 'Aktif' : 'Nonaktif',
-                    'approval_status' => $store->storeApproval?->status,
                     'owner_name'      => $store->user?->name,
                     'user' => $store->user ? [
                         'id'    => $store->user->id,
@@ -384,20 +384,12 @@ class AdminController extends Controller
 
         if ($request->has('is_active')) {
             $store->update(['is_active' => $request->is_active]);
-
-            // Sync store_approval status juga
-            if ($store->storeApproval) {
-                $store->storeApproval->update([
-                    'status' => $request->is_active ? 'Disetujui' : 'Ditolak',
-                    'approved_at' => $request->is_active ? now() : null,
-                ]);
-            }
         }
 
         return response()->json([
             'status'  => 'success',
             'message' => 'Status toko berhasil diperbarui',
-            'data'    => $store->fresh()->load('storeApproval'),
+            'data'    => $store->fresh(),
         ]);
     }
 
@@ -474,27 +466,109 @@ class AdminController extends Controller
 
     /**
      * Create user (admin)
+     *
+     * ALUR BARU: Registrasi Penjual publik + pendaftaran/approval toko sudah
+     * dihapus. Sekarang SATU-SATUNYA cara membuat akun Penjual adalah lewat
+     * endpoint ini. Kalau role = Penjual, Admin WAJIB mengisi data toko/BUMDes
+     * sekaligus (nama toko, deskripsi, telepon, alamat, logo opsional). User +
+     * Store dibuat dalam satu transaksi dan LANGSUNG AKTIF — tidak ada lagi
+     * status "Menunggu Persetujuan".
      */
     public function createUser(Request $request)
     {
-        $request->validate([
-            'name'  => 'required|string',
-            'email' => 'required|email|unique:users',
-            'role'  => 'required|string',
-        ]);
+        $isSeller = strtolower((string) $request->role) === 'penjual';
 
-        $user = \App\Models\User::create([
-            'name'     => $request->name,
-            'email'    => $request->email,
-            'role'     => $request->role,
-            'password' => bcrypt('password123'),
-        ]);
+        $rules = [
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|email|unique:users',
+            'role'     => 'required|string',
+            'password' => 'nullable|string|min:8',
+            'phone'    => 'nullable|string|max:20',
+            'address'  => 'nullable|string|max:500',
+        ];
 
-        return response()->json(['status' => 'success', 'data' => $user], 201);
+        if ($isSeller) {
+            $rules = array_merge($rules, [
+                'store_name'          => 'required|string|max:255',
+                'description'         => 'nullable|string',
+                'village'             => 'required|string|max:100',
+                'district'            => 'required|string|max:100',
+                'regency'             => 'required|string|max:100',
+                'contact_phone'       => 'required|string|max:20',
+                'bank_account_number' => 'nullable|string|max:50',
+                'bank_name'           => 'nullable|string|max:100',
+                'bank_account_holder' => 'nullable|string|max:255',
+                'store_photo'         => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
+            ]);
+        }
+
+        $validated = $request->validate($rules);
+
+        try {
+            $result = \Illuminate\Support\Facades\DB::transaction(function () use ($request, $validated, $isSeller) {
+                $user = \App\Models\User::create([
+                    'name'     => $validated['name'],
+                    'email'    => $validated['email'],
+                    'role'     => $validated['role'],
+                    'phone'    => $validated['phone'] ?? null,
+                    'address'  => $validated['address'] ?? null,
+                    'password' => bcrypt($validated['password'] ?? 'password123'),
+                    'email_verified_at' => now(),
+                ]);
+
+                $store = null;
+
+                if ($isSeller) {
+                    $storePhotoUrl = null;
+                    if ($request->hasFile('store_photo')) {
+                        $storePhotoUrl = $request->file('store_photo')->store('store-photos', 'public');
+                    }
+
+                    // Toko dibuat langsung aktif — tidak ada lagi proses
+                    // pendaftaran/approval toko yang terpisah.
+                    $store = \App\Models\Store::create([
+                        'user_id'             => $user->id,
+                        'store_name'          => $validated['store_name'],
+                        'description'         => $validated['description'] ?? null,
+                        'village'             => $validated['village'],
+                        'district'            => $validated['district'],
+                        'regency'             => $validated['regency'],
+                        'contact_phone'       => $validated['contact_phone'],
+                        'bank_account_number' => $validated['bank_account_number'] ?? null,
+                        'bank_name'           => $validated['bank_name'] ?? null,
+                        'bank_account_holder' => $validated['bank_account_holder'] ?? $validated['name'],
+                        'store_photo_url'     => $storePhotoUrl,
+                        'is_active'           => true,
+                    ]);
+                }
+
+                return [$user, $store];
+            });
+
+            [$user, $store] = $result;
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => $isSeller
+                    ? 'Akun Penjual dan Toko/BUMDes berhasil dibuat dan langsung aktif'
+                    : 'Pengguna berhasil dibuat',
+                'data' => array_merge($user->toArray(), [
+                    'store' => $store,
+                ]),
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal membuat pengguna: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
      * Update user (admin)
+     *
+     * Kalau user adalah Penjual dan mengirim field data toko, data toko
+     * ikut diperbarui sekaligus (toko tetap satu-satunya milik user itu).
      */
     public function updateUser(Request $request, $id)
     {
@@ -502,7 +576,25 @@ class AdminController extends Controller
         if (!$user) {
             return response()->json(['status' => 'error', 'message' => 'User tidak ditemukan'], 404);
         }
-        $user->update($request->only(['name', 'email', 'role']));
-        return response()->json(['status' => 'success', 'data' => $user]);
+
+        $user->update($request->only(['name', 'email', 'role', 'phone', 'address']));
+
+        $storeFields = $request->only([
+            'store_name', 'description', 'village', 'district', 'regency',
+            'contact_phone', 'bank_account_number', 'bank_name', 'bank_account_holder',
+        ]);
+
+        if ($user->isSeller() && !empty($storeFields)) {
+            $store = $user->store ?: new \App\Models\Store(['user_id' => $user->id, 'is_active' => true]);
+            $store->fill($storeFields);
+
+            if ($request->hasFile('store_photo')) {
+                $store->store_photo_url = $request->file('store_photo')->store('store-photos', 'public');
+            }
+
+            $store->save();
+        }
+
+        return response()->json(['status' => 'success', 'data' => $user->fresh()->load('store')]);
     }
 }

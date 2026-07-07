@@ -39,17 +39,19 @@ class AdminService {
     String status,
   ) async {
     final api = ApiService(token: token);
+    Object? lastError;
     for (final path in [
       '/admin/orders/$orderId/status',
       '/orders/$orderId/status',
     ]) {
       try {
         return await api.put(path, {'status': status});
-      } catch (_) {
+      } catch (e) {
+        lastError = e;
         continue;
       }
     }
-    return {};
+    throw lastError ?? Exception('Gagal memperbarui status pesanan: tidak ada endpoint yang merespons');
   }
 
   // ── USERS ───────────────────────────────────────────────────────────────────
@@ -59,8 +61,6 @@ class AdminService {
       try {
         final response = await api.getRaw(path);
         final list = _extractList(response);
-        // FIX: jangan skip kalau list kosong — mungkin memang belum ada user
-        // hanya skip kalau throw exception
         return list;
       } catch (_) {
         continue;
@@ -69,139 +69,73 @@ class AdminService {
     return [];
   }
 
+  /// Buat pengguna baru (Admin/Penjual/Pembeli).
+  ///
+  /// ALUR BARU: kalau `data['role'] == 'Penjual'`, `data` HARUS sudah
+  /// menyertakan field data toko/BUMDes sekaligus (store_name, village,
+  /// district, regency, contact_phone, dst) — lihat
+  /// AdminController@createUser di backend. Backend akan membuat User +
+  /// Store dalam satu transaksi dan langsung aktif.
   Future<Map<String, dynamic>> createUser(
     String token,
     Map<String, dynamic> data,
   ) async {
     final api = ApiService(token: token);
+    Object? lastError;
     for (final path in ['/admin/users', '/users']) {
       try {
         return await api.post(path, data);
-      } catch (_) {
+      } catch (e) {
+        lastError = e;
         continue;
       }
     }
-    return {};
+    throw lastError ?? Exception('Gagal membuat pengguna: tidak ada endpoint yang merespons');
   }
 
+  /// Update pengguna. Kalau user adalah Penjual dan `data` menyertakan field
+  /// toko, data toko ikut diperbarui sekaligus (lihat AdminController@updateUser).
   Future<Map<String, dynamic>> updateUser(
     String token,
     int userId,
     Map<String, dynamic> data,
   ) async {
     final api = ApiService(token: token);
+    Object? lastError;
     for (final path in ['/admin/users/$userId', '/users/$userId']) {
       try {
         return await api.put(path, data);
-      } catch (_) {
+      } catch (e) {
+        lastError = e;
         continue;
       }
     }
-    return {};
+    throw lastError ?? Exception('Gagal memperbarui pengguna: tidak ada endpoint yang merespons');
   }
 
   Future<Map<String, dynamic>> deleteUser(String token, int userId) async {
     final api = ApiService(token: token);
+    Object? lastError;
     for (final path in ['/admin/users/$userId', '/users/$userId']) {
       try {
         return await api.delete(path);
-      } catch (_) {
+      } catch (e) {
+        lastError = e;
         continue;
       }
     }
-    return {};
+    throw lastError ?? Exception('Gagal menghapus pengguna: tidak ada endpoint yang merespons');
   }
 
-  // ── STORE APPROVALS ──────────────────────────────────────────────────────────
-  Future<List<Map<String, dynamic>>> getStoreApprovals(String token) async {
-    final api = ApiService(token: token);
-
-    // Coba endpoint khusus store-approvals dulu
-    for (final path in [
-      '/admin/store-approvals',
-      '/admin/stores/pending',
-    ]) {
-      try {
-        final response = await api.getRaw(path);
-        final list = _extractList(response);
-        // FIX: kalau dapat data (berapapun), langsung return
-        // Jangan return kalau kosong — coba endpoint berikutnya dulu
-        if (list.isNotEmpty) return list;
-      } catch (_) {
-        continue;
-      }
-    }
-
-    // FIX FALLBACK: Kalau endpoint khusus tidak ada / kosong,
-    // ambil dari /admin/stores lalu filter yang statusnya pending/menunggu
-    // Ini mengatasi backend yang tidak punya endpoint store-approvals terpisah
-    try {
-      final response = await api.getRaw('/admin/stores');
-      final allStores = _extractList(response);
-      final pendingStores = allStores.where((store) {
-        // Cek approval_status di store
-        final approvalStatus =
-            (store['approval_status'] ?? '').toString().toLowerCase();
-        // Cek di dalam object store_approval jika ada
-        final storeApproval = store['store_approval'] as Map<String, dynamic>?;
-        final approvalStatusNested =
-            (storeApproval?['status'] ?? '').toString().toLowerCase();
-
-        final isPending = approvalStatus.contains('menunggu') ||
-            approvalStatus.contains('pending') ||
-            approvalStatus.isEmpty ||
-            approvalStatusNested.contains('menunggu') ||
-            approvalStatusNested.contains('pending') ||
-            approvalStatusNested.isEmpty;
-
-        // Jangan masukkan yang is_active=true dan sudah disetujui
-        final isActive = store['is_active'] == true;
-        final isApproved = approvalStatus == 'disetujui' ||
-            approvalStatusNested == 'disetujui';
-
-        return isPending && !(isActive && isApproved);
-      }).toList();
-
-      // Bungkus dalam format yang sama dengan store-approvals
-      // agar _buildStoreApprovalCard bisa baca dengan benar
-      return pendingStores.map((store) {
-        return <String, dynamic>{
-          'id': store['id'],
-          'status': store['approval_status'] ??
-              store['store_approval']?['status'] ??
-              'Menunggu Persetujuan',
-          'created_at': store['created_at'],
-          'store': store,
-        };
-      }).toList();
-    } catch (_) {
-      return [];
-    }
-  }
-
-  Future<Map<String, dynamic>> approveStore(
-    String token,
-    int approvalId,
-    String status, {
-    String? reason,
-  }) async {
-    final api = ApiService(token: token);
-    final body = <String, dynamic>{'status': status};
-    if (reason != null && reason.isNotEmpty) {
-      body['rejected_reason'] = reason;
-    }
-    for (final path in [
-      '/admin/store-approvals/$approvalId',
-      '/admin/stores/$approvalId/approve',
-    ]) {
-      try {
-        return await api.put(path, body);
-      } catch (_) {
-        continue;
-      }
-    }
-    return {};
-  }
+  // CATATAN PERUBAHAN ALUR BISNIS:
+  // Fitur "Persetujuan Toko" (getStoreApprovals/approveStore) dan "Verifikasi
+  // Penjual" (getPendingVerifications/verifySeller) sudah DIHAPUS total dari
+  // sini karena endpoint backend-nya (/admin/store-approvals,
+  // /admin/verifications) sudah tidak ada. Toko sekarang dibuat langsung oleh
+  // Admin lewat createUser() di atas dan otomatis aktif — tidak ada lagi
+  // proses menunggu/menyetujui/menolak toko atau verifikasi identitas penjual.
+  // Kalau Admin ingin mengaktifkan/menonaktifkan toko yang sudah ada,
+  // pakai updateStore() di bawah dengan {'is_active': true/false}.
 
   // ── PRODUCTS ─────────────────────────────────────────────────────────────────
   Future<List<Map<String, dynamic>>> getAdminProducts(String token, {int perPage = 200}) async {
@@ -213,7 +147,7 @@ class AdminService {
     ]) {
       try {
         final response = await api.getRaw(path);
-        return _extractList(response); // FIX: return langsung
+        return _extractList(response);
       } catch (_) {
         continue;
       }
@@ -226,28 +160,28 @@ class AdminService {
     int productId,
   ) async {
     final api = ApiService(token: token);
+    Object? lastError;
     for (final path in [
       '/admin/products/$productId',
       '/products/$productId'
     ]) {
       try {
         return await api.delete(path);
-      } catch (_) {
+      } catch (e) {
+        lastError = e;
         continue;
       }
     }
-    return {};
+    throw lastError ?? Exception('Gagal menghapus produk: tidak ada endpoint yang merespons');
   }
 
   // ── STORES ───────────────────────────────────────────────────────────────────
   Future<List<Map<String, dynamic>>> getAdminStores(String token, {int perPage = 200}) async {
     final api = ApiService(token: token);
-    // FIX: hanya coba /admin/stores — endpoint yang benar
-    // Jangan fallback ke /admin/store-approvals karena itu data berbeda
     for (final path in ['/admin/stores?per_page=$perPage', '/stores']) {
       try {
         final response = await api.getRaw(path);
-        return _extractList(response); // FIX: return langsung, jangan skip kalau kosong
+        return _extractList(response);
       } catch (_) {
         continue;
       }
@@ -255,83 +189,41 @@ class AdminService {
     return [];
   }
 
+  /// Aktifkan/nonaktifkan toko, atau ubah data toko lain. Contoh:
+  /// `updateStore(token, storeId, {'is_active': false})`
   Future<Map<String, dynamic>> updateStore(
     String token,
     int storeId,
     Map<String, dynamic> data,
   ) async {
     final api = ApiService(token: token);
+    Object? lastError;
     for (final path in ['/admin/stores/$storeId', '/stores/$storeId']) {
       try {
         return await api.put(path, data);
-      } catch (_) {
+      } catch (e) {
+        lastError = e;
         continue;
       }
     }
-    return {};
+    throw lastError ?? Exception('Gagal memperbarui toko: tidak ada endpoint yang merespons');
   }
 
   Future<Map<String, dynamic>> deleteStore(String token, int storeId) async {
     final api = ApiService(token: token);
+    Object? lastError;
     for (final path in ['/admin/stores/$storeId', '/stores/$storeId']) {
       try {
         return await api.delete(path);
-      } catch (_) {
+      } catch (e) {
+        lastError = e;
         continue;
       }
     }
-    return {};
-  }
-
-  // ── SELLER VERIFICATIONS ──────────────────────────────────────────────────────
-  Future<List<Map<String, dynamic>>> getPendingVerifications(
-      String token) async {
-    final api = ApiService(token: token);
-    for (final path in [
-      '/admin/verifications',
-      '/admin/seller-verifications',
-    ]) {
-      try {
-        final response = await api.getRaw(path);
-        return _extractList(response); // FIX: return langsung
-      } catch (_) {
-        continue;
-      }
-    }
-    return [];
-  }
-
-  Future<Map<String, dynamic>> verifySeller(
-    String token,
-    int verificationId,
-    String status, {
-    String? rejectionReason,
-  }) async {
-    final api = ApiService(token: token);
-    final body = <String, dynamic>{'status': status};
-    if (rejectionReason != null && rejectionReason.isNotEmpty) {
-      body['rejection_reason'] = rejectionReason;
-    }
-    for (final path in [
-      '/admin/verifications/$verificationId',
-      '/admin/seller-verifications/$verificationId',
-      '/admin/store-approvals/$verificationId',
-    ]) {
-      try {
-        return await api.put(path, body);
-      } catch (_) {
-        continue;
-      }
-    }
-    return {};
+    throw lastError ?? Exception('Gagal menghapus toko: tidak ada endpoint yang merespons');
   }
 
   // ── HELPER ───────────────────────────────────────────────────────────────────
-  // FIX: Handle semua format response Laravel:
-  // 1. List langsung: [...]
-  // 2. {status, data: [...]}
-  // 3. {status, data: {current_page, data: [...]}} ← Laravel paginate
-  // 4. {status, data: {data: [...]}} ← nested
   List<Map<String, dynamic>> _extractList(dynamic response) {
     List<dynamic> raw = [];
 
@@ -343,15 +235,11 @@ class AdminService {
           response['stores'] ??
           response['users'] ??
           response['products'] ??
-          response['orders'] ??
-          response['approvals'] ??
-          response['verifications'];
+          response['orders'];
 
       if (dataField is List) {
-        // Format: {data: [...]}
         raw = dataField;
       } else if (dataField is Map<String, dynamic>) {
-        // Format: {data: {current_page:1, data: [...]}} ← Laravel paginate
         final nested = dataField['data'];
         if (nested is List) {
           raw = nested;
@@ -368,8 +256,14 @@ class AdminService {
   // ── WALLET / SALDO & PAJAK (Admin) ────────────────────────────────────────────
   Future<Map<String, dynamic>> getWalletSummary(String token) async {
     final api = ApiService(token: token);
-    final response = await api.get('/admin/wallet/summary');
-    return Map<String, dynamic>.from(response['data'] ?? {});
+    // FIX: sebelumnya tidak ada try/catch — kalau endpoint gagal, exception
+    // menyebar tanpa ditangkap dan bisa bikin layar wallet crash.
+    try {
+      final response = await api.get('/admin/wallet/summary');
+      return Map<String, dynamic>.from(response['data'] ?? {});
+    } catch (_) {
+      return {};
+    }
   }
 
   Future<List<Map<String, dynamic>>> getPlatformTaxTransactions(
@@ -377,10 +271,14 @@ class AdminService {
     int perPage = 200,
   }) async {
     final api = ApiService(token: token);
-    final response = await api.getRaw(
-      '/admin/wallet/transactions?scope=platform&per_page=$perPage',
-    );
-    return _extractList(response);
+    try {
+      final response = await api.getRaw(
+        '/admin/wallet/transactions?scope=platform&per_page=$perPage',
+      );
+      return _extractList(response);
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<List<Map<String, dynamic>>> getStoreWallets(
@@ -388,9 +286,13 @@ class AdminService {
     int perPage = 200,
   }) async {
     final api = ApiService(token: token);
-    final response =
-        await api.getRaw('/admin/wallet/store-wallets?per_page=$perPage');
-    return _extractList(response);
+    try {
+      final response =
+          await api.getRaw('/admin/wallet/store-wallets?per_page=$perPage');
+      return _extractList(response);
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<List<Map<String, dynamic>>> getAllWithdrawals(
@@ -398,9 +300,13 @@ class AdminService {
     int perPage = 200,
   }) async {
     final api = ApiService(token: token);
-    final response =
-        await api.getRaw('/admin/withdrawals?per_page=$perPage');
-    return _extractList(response);
+    try {
+      final response =
+          await api.getRaw('/admin/withdrawals?per_page=$perPage');
+      return _extractList(response);
+    } catch (_) {
+      return [];
+    }
   }
 
   /// Ajukan penarikan saldo Admin/platform (dari kumpulan biaya admin/pajak).
@@ -412,6 +318,8 @@ class AdminService {
     required String bankAccountName,
   }) async {
     final api = ApiService(token: token);
+    // Ini operasi mutating (POST) — biarkan exception menyebar kalau gagal,
+    // supaya UI tahu penarikan tidak benar-benar berhasil.
     final response = await api.post('/admin/wallet/withdrawals', {
       'amount': amount,
       'bank_name': bankName,

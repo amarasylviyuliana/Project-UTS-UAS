@@ -14,7 +14,6 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ApprovalController;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Controllers\Admin\VerificationController;
 use App\Models\Product;
 use App\Http\Controllers\ProductAISearchController;
 use App\Http\Controllers\WalletController;
@@ -199,17 +198,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::put('/orders/{id}/status',  [AdminController::class, 'updateOrderStatus']);
 
             Route::get('/approvals/stats',         [ApprovalController::class, 'getApprovalStats']);
-            Route::get('/store-approvals',         [ApprovalController::class, 'getPendingStoreApprovals']);
-            Route::get('/store-approvals/{id}',    [ApprovalController::class, 'getStoreApprovalDetail']);
-            Route::put('/store-approvals/{id}',    [ApprovalController::class, 'approveStore']);
             Route::get('/product-approvals',       [ApprovalController::class, 'getPendingProductApprovals']);
             Route::get('/product-approvals/{id}',  [ApprovalController::class, 'getProductApprovalDetail']);
             Route::put('/product-approvals/{id}',  [ApprovalController::class, 'approveProduct']);
-
-            Route::get('/verifications',                        [VerificationController::class, 'getPendingVerifications']);
-            Route::get('/verifications/{id}',                   [VerificationController::class, 'getVerificationDetail']);
-            Route::put('/verifications/{id}',                   [VerificationController::class, 'verifySeller']);
-            Route::get('/seller/{userId}/verification-history', [VerificationController::class, 'getSellerVerificationHistory']);
 
            // Saldo & Pajak (Admin)
 Route::get('/wallet/summary',      [\App\Http\Controllers\Admin\WalletController::class, 'summary']);

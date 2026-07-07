@@ -45,7 +45,10 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   bool _loadingReport = false;
   final ReportService _reportService = ReportService();
 
-  // FIX: Simpan status approval toko
+  // Status aktif/nonaktif toko (ditentukan Admin), bukan lagi status approval.
+  // null  = toko belum dibuat Admin untuk akun ini
+  // true  = toko aktif
+  // false = toko dinonaktifkan Admin
   bool? _isStoreApproved;
   bool _checkingStoreStatus = false;
 
@@ -65,7 +68,6 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     super.dispose();
   }
 
-  // FIX: Cek status approval toko
   Future<void> _checkStoreApprovalStatus() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (!auth.isAuthenticated || auth.token == null) return;
@@ -650,38 +652,38 @@ IconButton(
   // ── STORE STATUS BANNER ────────────────────────────────────────────────────
 
   Widget _buildStoreStatusBanner() {
-    // FIX: Gunakan _isStoreApproved dari state (sudah di-cache via _checkStoreApprovalStatus)
-    // Tidak pakai FutureBuilder lagi supaya tidak rebuild terus & tidak stale.
+    // Sekarang toko dibuat langsung oleh Admin dan otomatis aktif,
+    // jadi Penjual tidak bisa lagi "mendaftarkan" toko sendiri.
     if (_checkingStoreStatus) {
       // Masih loading, jangan tampilkan apa-apa
       return const SizedBox.shrink();
     }
 
     if (_isStoreApproved == null) {
-      // Belum pernah dicek / toko belum terdaftar
+      // Toko belum dibuat oleh Admin untuk akun ini
       return _buildBanner(
-        'Toko belum terdaftar',
-        'Daftarkan toko Anda ke BUMDes untuk mulai berjualan.',
+        'Toko belum dibuat oleh Admin',
+        'Akun Penjual Anda belum memiliki data toko/BUMDes. '
+            'Silakan hubungi Admin BUMDes untuk mengaktifkan toko Anda.',
         Colors.orange,
         Icons.store_outlined,
-        'Daftarkan Toko',
-        () => Navigator.pushNamed(context, StoreFormScreen.routeName),
+        null,
+        null,
       );
     }
 
     if (_isStoreApproved == true) {
-      // Sudah disetujui — tidak perlu tampilkan banner apapun
+      // Toko aktif — tidak perlu tampilkan banner apapun
       return const SizedBox.shrink();
     }
 
-    // _isStoreApproved == false → masih menunggu atau ditolak
-    // Cek lebih lanjut via data yang sudah di-cache di _checkStoreApprovalStatus
-    // Untuk sekarang tampilkan banner "menunggu persetujuan"
+    // _isStoreApproved == false → toko ada tapi dinonaktifkan Admin
     return _buildBanner(
-      'Menunggu persetujuan admin',
-      'Toko Anda sedang ditinjau oleh admin BUMDes. Anda belum bisa menambah produk.',
-      Colors.blue,
-      Icons.hourglass_empty,
+      'Toko dinonaktifkan Admin',
+      'Toko Anda saat ini dinonaktifkan oleh Admin BUMDes. '
+          'Hubungi Admin jika Anda merasa ini keliru.',
+      Colors.red,
+      Icons.pause_circle_outline,
       null,
       null,
     );
@@ -845,14 +847,14 @@ IconButton(
                     return;
                   }
 
-                  // FIX: Blokir tambah produk jika toko belum disetujui
-                  final isApproved = _isStoreApproved ?? false;
-                  if (!isApproved) {
+                  // Blokir tambah produk jika toko belum dibuat/dinonaktifkan Admin
+                  final isActive = _isStoreApproved ?? false;
+                  if (!isActive) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                          'Toko Anda belum disetujui admin. '
-                          'Tunggu persetujuan sebelum menambah produk.',
+                          'Toko Anda belum aktif. Hubungi Admin BUMDes '
+                          'untuk mengaktifkan toko sebelum menambah produk.',
                         ),
                         backgroundColor: Colors.orange,
                         duration: Duration(seconds: 3),
@@ -871,7 +873,7 @@ IconButton(
             ],
           ),
         ),
-        // FIX: Banner warning jika toko belum disetujui
+        // Banner peringatan jika toko belum aktif
         if (_isStoreApproved == false)
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -887,7 +889,7 @@ IconButton(
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Toko belum disetujui. Anda tidak dapat menambah produk.',
+                    'Toko belum aktif. Anda tidak dapat menambah produk.',
                     style: TextStyle(color: Colors.orange, fontSize: 12),
                   ),
                 ),
@@ -1409,7 +1411,7 @@ IconButton(
           ),
           const SizedBox(height: 24),
           _ProfileOptionTile(
-            label: 'Daftarkan / Edit Toko',
+            label: 'Profil Toko',
             onTap: () =>
                 Navigator.pushNamed(context, StoreFormScreen.routeName),
           ),
