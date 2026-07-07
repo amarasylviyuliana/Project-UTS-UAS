@@ -164,7 +164,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final isMobile = MediaQuery.of(context).size.width < 768;
-    final role = auth.user?.role?.toLowerCase() ?? '';
+    final role = auth.user?.role.toLowerCase() ?? '';
 
     if (role != 'admin') {
       return Scaffold(
@@ -183,21 +183,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F6),
-      body: isMobile
-          ? SafeArea(child: Column(children: [
-              _buildHeader(auth),
-              Expanded(child: _buildTabContent()),
-            ]))
-          : SafeArea(child: Row(children: [
-              _buildSidebar(),
-              Expanded(child: Column(children: [
-                _buildHeaderDesktop(auth),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        final popped = await Navigator.maybePop(context);
+        if (!popped && mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            HomeScreen.routeName,
+            (route) => false,
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF6F6F6),
+        body: isMobile
+            ? SafeArea(child: Column(children: [
+                _buildHeader(auth),
                 Expanded(child: _buildTabContent()),
+              ]))
+            : SafeArea(child: Row(children: [
+                _buildSidebar(),
+                Expanded(child: Column(children: [
+                  _buildHeaderDesktop(auth),
+                  Expanded(child: _buildTabContent()),
+                ])),
               ])),
-            ])),
-      bottomNavigationBar: isMobile ? _buildBottomNav() : null,
+        bottomNavigationBar: isMobile ? _buildBottomNav() : null,
+      ),
     );
   }
 
@@ -216,6 +231,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Text(auth.user?.name ?? 'Administrator',
               style: const TextStyle(fontSize: 14, color: Colors.black87)),
         ])),
+        IconButton(
+            onPressed: () => Navigator.pushNamed(context, AdminWalletScreen.routeName),
+            tooltip: 'Saldo & Pajak',
+            icon: const Icon(Icons.account_balance_wallet, color: Color(0xFF2A7F41))),
         IconButton(onPressed: _handleLogout, tooltip: 'Keluar', icon: const Icon(Icons.logout, color: Colors.red)),
       ]),
     );
@@ -232,6 +251,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Text(auth.user?.name ?? 'Administrator',
               style: const TextStyle(fontSize: 14, color: Colors.black54)),
         ]),
+        IconButton(
+            onPressed: () => Navigator.pushNamed(context, AdminWalletScreen.routeName),
+            tooltip: 'Saldo & Pajak',
+            icon: const Icon(Icons.account_balance_wallet, color: Color(0xFF2A7F41), size: 28)),
         IconButton(onPressed: _handleLogout, tooltip: 'Keluar',
             icon: const Icon(Icons.logout, color: Colors.red, size: 28)),
       ]),
