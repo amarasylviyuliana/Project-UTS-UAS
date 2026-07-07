@@ -250,16 +250,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Text(auth.user?.name ?? 'Administrator',
               style: const TextStyle(fontSize: 14, color: Colors.black54)),
         ]),
-        IconButton(
-            onPressed: () => Navigator.pushNamed(context, AdminWalletScreen.routeName),
-            tooltip: 'Saldo & Pajak',
-            icon: const Icon(Icons.account_balance_wallet, color: Color(0xFF2A7F41), size: 28)),
+        // Tombol "Saldo & Pajak" sengaja dihapus dari sini — akses tetap
+        // tersedia lewat tab KEUANGAN (tombol "Tarik Saldo" / "Lihat Detail").
         IconButton(onPressed: _handleLogout, tooltip: 'Keluar',
             icon: const Icon(Icons.logout, color: Colors.red, size: 28)),
       ]),
     );
   }
-
   Widget _buildSidebar() {
     return Container(
       width: 220,
@@ -1116,12 +1113,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           actions: [
             TextButton(onPressed: isSaving ? null : () => Navigator.pop(ctx), child: const Text('Batal')),
             ElevatedButton(
-              onPressed: isSaving ? null : () async {
-                if (!(formKey.currentState?.validate() ?? false)) return;
+  onPressed: isSaving ? null : () async {
+    if (!(formKey.currentState?.validate() ?? false)) {
+      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+        content: Text('Mohon lengkapi semua field yang wajib diisi (termasuk data toko jika Peran = Penjual)'),
+        backgroundColor: Colors.orange,
+      ));
+      return;
+    }
 
-                setDialogState(() => isSaving = true);
-                try {
-                  final data = <String, dynamic>{
+    setDialogState(() => isSaving = true);
+    try {
+      final data = <String, dynamic>{
                     'name': nameCtrl.text.trim(),
                     'email': emailCtrl.text.trim(),
                     'role': selectedRole,
