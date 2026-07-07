@@ -45,94 +45,150 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
-    // Jika pengguna sudah terautentikasi, hindari menampilkan form register
-    // dan langsung arahkan ke dashboard yang sesuai (ganti rute).
-    if (auth.isAuthenticated) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        String route = '/home';
-        if (auth.user?.role == 'admin') {
-          route = '/admin-dashboard';
-        } else if (auth.user?.role == 'seller') {
-          route = '/store-dashboard';
-        }
-        Navigator.pushReplacementNamed(context, route);
-      });
-      return const SizedBox.shrink();
-    }
     return Scaffold(
-      appBar: AppBar(title: const Text('Daftar Akun Baru')),
+      appBar: AppBar(
+        title: const Text('Daftar Akun Baru', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        backgroundColor: const Color(0xFF2D5016),
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      backgroundColor: const Color(0xFFE8F5E9),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20.0),
         child: ListView(
           children: [
             const Text(
               'Buat akun BUMDes Jabar',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D5016)),
             ),
             const SizedBox(height: 8),
-            const Text('Akun yang dibuat akan menjadi akun Pembeli.'),
-            const SizedBox(height: 20),
+            const Text('Akun yang dibuat akan menjadi akun Pembeli.', style: TextStyle(color: Colors.black54)),
+            const SizedBox(height: 24),
             Form(
               key: _formKey,
               child: Column(
                 children: [
                   TextFormField(
                     controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'Nama Lengkap'),
+                    decoration: InputDecoration(
+                      labelText: 'Nama Lengkap',
+                      labelStyle: const TextStyle(color: Color(0xFF2D5016)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
+                      ),
+                    ),
                     validator: (value) => value == null || value.isEmpty
                         ? 'Nama lengkap wajib diisi'
                         : null,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      labelStyle: const TextStyle(color: Color(0xFF2D5016)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
+                      ),
+                    ),
                     validator: (value) {
                       if (value == null || value.isEmpty) return 'Email wajib diisi';
                       if (!value.contains('@')) return 'Email tidak valid';
                       return null;
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Password'),
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      labelStyle: const TextStyle(color: Color(0xFF2D5016)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
+                      ),
+                    ),
                     validator: (value) {
                       if (value == null || value.isEmpty) return 'Password wajib diisi';
                       if (value.length < 8) return 'Password minimal 8 karakter';
                       return null;
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _confirmController,
                     obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Konfirmasi Password'),
+                    decoration: InputDecoration(
+                      labelText: 'Konfirmasi Password',
+                      labelStyle: const TextStyle(color: Color(0xFF2D5016)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
+                      ),
+                    ),
                     validator: (value) {
                       if (value != _passwordController.text) return 'Password tidak sama';
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
-                  // Peran diset otomatis sebagai Pembeli.
                   const SizedBox(height: 24),
+                  // Peran diset otomatis sebagai Pembeli.
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: auth.isLoading ? null : _register,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2D5016),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
                       child: auth.isLoading
-                          ? const CircularProgressIndicator()
-                          : const Text('Daftar'),
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation(Colors.white),
+                              ),
+                            )
+                          : const Text('Daftar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
                     ),
                   ),
                   if (auth.errorMessage != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      auth.errorMessage!,
-                      style: const TextStyle(color: Colors.red),
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Text(
+                        auth.errorMessage!,
+                        style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ],
                 ],

@@ -7,6 +7,7 @@ import '../services/order_service.dart';
 import '../models/order_model.dart';
 import 'order_history_screen.dart';
 import 'payment_gateway_screen.dart';
+import 'home_screen.dart';
 
 class CartScreen extends StatefulWidget {
   static const routeName = '/cart';
@@ -38,41 +39,61 @@ class _CartScreenState extends State<CartScreen> {
     final orderService = OrderService();
 
     if (cart.items.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Pembayaran Pesanan')),
-        body: const Center(child: Text('Keranjang Anda kosong')),
+      return PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) async {
+          if (didPop) return;
+          Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+        },
+        child: Scaffold(
+          appBar: AppBar(title: const Text('Pembayaran Pesanan')),
+          body: const Center(child: Text('Keranjang Anda kosong')),
+        ),
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Pembayaran Pesanan'), elevation: 0),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth > 900) {
-              return SingleChildScrollView(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 7,
-                      child: _buildOrderForm(cart, auth, orderService),
-                    ),
-                    const SizedBox(width: 24),
-                    Expanded(flex: 5, child: _buildOrderSummary(context, cart)),
-                  ],
-                ),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Pembayaran Pesanan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          backgroundColor: const Color(0xFF2D5016),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        backgroundColor: const Color(0xFFFAFAFA),
+        body: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 900) {
+                return SingleChildScrollView(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 7,
+                        child: _buildOrderForm(cart, auth, orderService),
+                      ),
+                      const SizedBox(width: 24),
+                      Expanded(flex: 5, child: _buildOrderSummary(context, cart)),
+                    ],
+                  ),
+                );
+              }
+              return ListView(
+                children: [
+                  _buildOrderSummary(context, cart),
+                  const SizedBox(height: 24),
+                  _buildOrderForm(cart, auth, orderService),
+                ],
               );
-            }
-            return ListView(
-              children: [
-                _buildOrderSummary(context, cart),
-                const SizedBox(height: 24),
-                _buildOrderForm(cart, auth, orderService),
-              ],
-            );
-          },
+            },
+          ),
         ),
       ),
     );
@@ -84,8 +105,8 @@ class _CartScreenState extends State<CartScreen> {
     OrderService orderService,
   ) {
     return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(28.0),
         child: Column(
@@ -93,17 +114,26 @@ class _CartScreenState extends State<CartScreen> {
           children: [
             const Text(
               'Checkout Sekarang',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D5016)),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Form(
               key: _formKey,
               child: Column(
                 children: [
                   TextFormField(
                     controller: _nameController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Nama Penerima',
+                      labelStyle: const TextStyle(color: Color(0xFF2D5016)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
+                      ),
                     ),
                     validator: (value) => value == null || value.isEmpty
                         ? 'Nama penerima wajib diisi'
@@ -113,8 +143,17 @@ class _CartScreenState extends State<CartScreen> {
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'No. HP Penerima',
+                      labelStyle: const TextStyle(color: Color(0xFF2D5016)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
+                      ),
                     ),
                     validator: (value) => value == null || value.isEmpty
                         ? 'Nomor HP wajib diisi'
@@ -123,8 +162,17 @@ class _CartScreenState extends State<CartScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _addressController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Alamat Pengiriman',
+                      labelStyle: const TextStyle(color: Color(0xFF2D5016)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
+                      ),
                     ),
                     maxLines: 4,
                     validator: (value) => value == null || value.isEmpty
@@ -142,7 +190,10 @@ class _CartScreenState extends State<CartScreen> {
                     ? null
                     : () => _placeOrder(context, cart, auth, orderService),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  backgroundColor: const Color(0xFF2D5016),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
                 ),
                 child: _isSubmitting
                     ? const SizedBox(
@@ -150,12 +201,12 @@ class _CartScreenState extends State<CartScreen> {
                         width: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
                         ),
                       )
                     : const Text(
                         'Checkout Sekarang',
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
                       ),
               ),
             ),
@@ -223,7 +274,7 @@ class _CartScreenState extends State<CartScreen> {
 
       if (!mounted) return;
       if (createdOrder != null) {
-        await Navigator.pushReplacement(
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => PaymentGatewayScreen(order: createdOrder),

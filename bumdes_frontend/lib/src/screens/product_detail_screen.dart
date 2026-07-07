@@ -32,38 +32,39 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final available = product.stock > 0;
     return Scaffold(
       appBar: AppBar(
-        title: Text(product.name),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        title: Text(product.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        backgroundColor: const Color(0xFF2D5016),
+        foregroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(
             onPressed: () => Navigator.pushReplacementNamed(context, HomeScreen.routeName),
-            icon: const Icon(Icons.home_outlined, color: Colors.black87),
+            icon: const Icon(Icons.home_outlined, color: Colors.white),
             tooltip: 'Beranda',
           ),
           IconButton(
             onPressed: () => Navigator.pushReplacementNamed(context, HomeScreen.routeName),
-            icon: const Icon(Icons.search_outlined, color: Colors.black87),
+            icon: const Icon(Icons.search_outlined, color: Colors.white),
             tooltip: 'Pencarian',
           ),
           IconButton(
             onPressed: () => Navigator.pushNamed(context, CartScreen.routeName),
-            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black87),
+            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
             tooltip: 'Keranjang',
           ),
           IconButton(
             onPressed: () => Navigator.pushNamed(context, OrderHistoryScreen.routeName),
-            icon: const Icon(Icons.receipt_long_outlined, color: Colors.black87),
+            icon: const Icon(Icons.receipt_long_outlined, color: Colors.white),
             tooltip: 'Pesanan',
           ),
           IconButton(
             onPressed: () => Navigator.pushNamed(context, ProfileScreen.routeName),
-            icon: const Icon(Icons.person_outline, color: Colors.black87),
+            icon: const Icon(Icons.person_outline, color: Colors.white),
             tooltip: 'Profil',
           ),
         ],
       ),
+      backgroundColor: const Color(0xFFFAFAFA),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: LayoutBuilder(

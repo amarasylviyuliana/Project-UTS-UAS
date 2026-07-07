@@ -19,7 +19,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  DateTime? _lastBackPressTime;
 
   @override
   Widget build(BuildContext context) {
@@ -93,27 +92,44 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvoked: (didPop) async {
         if (didPop) return;
-        final now = DateTime.now();
-        final isSecondPress = _lastBackPressTime != null &&
-            now.difference(_lastBackPressTime!) < const Duration(seconds: 2);
-        if (isSecondPress) {
-          SystemNavigator.pop();
-        } else {
-          _lastBackPressTime = now;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Tekan sekali lagi untuk keluar aplikasi'),
-              duration: Duration(seconds: 2),
+        final shouldLogout = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Keluar dari Dashboard'),
+            content: const Text(
+              'Apakah Anda ingin keluar dan kembali ke halaman login?',
             ),
-          );
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Batal'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Ya'),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldLogout == true) {
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          await auth.logout();
+          if (mounted) {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              LoginScreen.routeName,
+              (route) => false,
+            );
+          }
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF6F6F6),
+        backgroundColor: const Color(0xFFFAFAFA),
         appBar: AppBar(
-          backgroundColor: const Color(0xFF1B5E20),
+          backgroundColor: const Color(0xFF2D5016),
           elevation: 0,
           titleSpacing: 12,
           title: Row(
@@ -154,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
               return TextStyle(
                 fontSize: isNarrow ? 11 : 12,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? const Color(0xFF1B5E20) : Colors.black54,
+                color: isSelected ? const Color(0xFF2D5016) : Colors.black54,
               );
             }),
           ),
@@ -163,16 +179,16 @@ class _HomeScreenState extends State<HomeScreen> {
             onDestinationSelected: (index) =>
                 setState(() => _selectedIndex = index),
             backgroundColor: Colors.white,
-            elevation: 8,
+            elevation: 4,
             height: isNarrow ? 62 : 68,
-            indicatorColor: const Color(0xFF1B5E20).withValues(alpha: 0.12),
+            indicatorColor: const Color(0xFF2D5016).withValues(alpha: 0.10),
             labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
             destinations: [
               for (int i = 0; i < menuLabels.length; i++)
                 NavigationDestination(
                   icon: Icon(menuIcons[i], color: Colors.black54),
                   selectedIcon: Icon(menuIconsFilled[i],
-                      color: const Color(0xFF1B5E20)),
+                      color: const Color(0xFF2D5016)),
                   label: menuLabels[i],
                 ),
             ],
@@ -238,13 +254,13 @@ class _HomeTabState extends State<HomeTab> {
     return Container(
       height: 280,
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F0E8),
-        borderRadius: BorderRadius.circular(28),
+        color: const Color(0xFFE8F5E9),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: const [
           BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.15),
-            blurRadius: 24,
-            offset: Offset(0, 10),
+            color: Color.fromRGBO(0, 0, 0, 0.08),
+            blurRadius: 16,
+            offset: Offset(0, 6),
           ),
         ],
       ),
@@ -262,14 +278,14 @@ class _HomeTabState extends State<HomeTab> {
                 children: [
                   Icon(Icons.eco,
                       size: 64,
-                      color: const Color(0xFF1B5E20).withValues(alpha: 0.6)),
+                      color: const Color(0xFF2D5016).withValues(alpha: 0.6)),
                   const SizedBox(height: 8),
                   const Text(
                     'BUMDES JABAR',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1B5E20),
+                      color: Color(0xFF2D5016),
                       letterSpacing: 1.5,
                     ),
                   ),
@@ -287,31 +303,6 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  Widget _buildFeatureIcon(IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1B5E20).withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: const Color(0xFF1B5E20), size: 22),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 11,
-            color: Colors.black54,
-            height: 1.3,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildSearchBar(BuildContext context) {
     final provider = Provider.of<ProductProvider>(context, listen: false);
     return Container(
@@ -320,9 +311,9 @@ class _HomeTabState extends State<HomeTab> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [
           BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.04),
+            color: Color.fromRGBO(0, 0, 0, 0.05),
             blurRadius: 12,
-            offset: Offset(0, 6),
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -330,8 +321,8 @@ class _HomeTabState extends State<HomeTab> {
         decoration: const InputDecoration(
           hintText: 'Cari produk, toko, desa...',
           hintStyle: TextStyle(color: Colors.black45),
-          prefixIcon: Icon(Icons.search, color: Color(0xFF1B5E20)),
-          suffixIcon: Icon(Icons.filter_list, color: Color(0xFF1B5E20)),
+          prefixIcon: Icon(Icons.search, color: Color(0xFF52B788)),
+          suffixIcon: Icon(Icons.filter_list, color: Color(0xFF52B788)),
           border: InputBorder.none,
           contentPadding:
               EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -368,7 +359,7 @@ class _HomeTabState extends State<HomeTab> {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF1B5E20), Color(0xFF388E3C)],
+                  colors: [Color(0xFF2D5016), Color(0xFF52B788)],
                 ),
               ),
               padding:
@@ -508,7 +499,7 @@ class _HomeTabState extends State<HomeTab> {
             // ── Footer ───────────────────────────────────────────────────
             Container(
               width: double.infinity,
-              color: const Color(0xFF1B5E20),
+              color: const Color(0xFF2D5016),
               padding:
                   const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
               child: Column(
@@ -742,12 +733,16 @@ class _SearchTabState extends State<SearchTab> {
                             ],
                           ),
                         )
-                      : ListView.builder(
+                      : GridView.builder(
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.75,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                          ),
                           itemCount: provider.products.length,
-                          itemBuilder: (context, index) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: ProductCard(
-                                product: provider.products[index]),
+                          itemBuilder: (context, index) => ProductCard(
+                            product: provider.products[index],
                           ),
                         ),
             ),
@@ -779,12 +774,12 @@ class ProductCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: const [
             BoxShadow(
-              color: Color.fromRGBO(0, 0, 0, 0.03),
-              blurRadius: 12,
-              offset: Offset(0, 4),
+              color: Color.fromRGBO(0, 0, 0, 0.04),
+              blurRadius: 10,
+              offset: Offset(0, 3),
             ),
           ],
         ),
@@ -793,7 +788,7 @@ class ProductCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(24),
+                top: Radius.circular(16),
               ),
               child: AspectRatio(
                 aspectRatio: 4 / 3,
@@ -840,6 +835,7 @@ class ProductCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: Color(0xFF2D5016),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -847,7 +843,7 @@ class ProductCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     product.storeName,
-                    style: const TextStyle(color: Colors.black54),
+                    style: const TextStyle(color: Colors.black54, fontSize: 13),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -859,7 +855,9 @@ class ProductCard extends StatelessWidget {
                         child: Text(
                           'Rp ${product.price.toStringAsFixed(0)}',
                           style: const TextStyle(
-                              fontWeight: FontWeight.bold),
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2D5016),
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -869,7 +867,7 @@ class ProductCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: product.stock == 0
                               ? Colors.red.withAlpha(20)
-                              : Colors.green.withAlpha(20),
+                              : const Color(0xFF52B788).withAlpha(25),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -877,7 +875,7 @@ class ProductCard extends StatelessWidget {
                           style: TextStyle(
                             color: product.stock == 0
                                 ? Colors.red
-                                : Colors.green,
+                                : const Color(0xFF2D5016),
                             fontWeight: FontWeight.w600,
                             fontSize: 11,
                           ),
