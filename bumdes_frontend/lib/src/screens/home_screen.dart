@@ -184,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ─── HOME TAB ────────────────────────────────────────────────────────────────
+
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -300,6 +300,7 @@ class _HomeTabState extends State<HomeTab> {
 
   Widget _buildFeatureIcon(IconData icon, String label) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           padding: const EdgeInsets.all(10),
