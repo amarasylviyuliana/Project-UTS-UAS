@@ -7,7 +7,6 @@ import '../providers/auth_provider.dart';
 import '../providers/product_provider.dart';
 import '../services/order_service.dart';
 import '../services/product_service.dart';
-import '../services/profile_service.dart';
 import '../services/report_service.dart';
 import '../utils/format_helper.dart';
 import 'home_screen.dart';
@@ -16,7 +15,6 @@ import 'store_form_screen.dart';
 import 'seller_wallet_screen.dart';
 import 'edit_profile_screen.dart';
 import 'settings_screen.dart';
-import 'security_screen.dart';
 import 'help_screen.dart';
 import 'about_screen.dart';
 import 'seller_orders_screen.dart';
@@ -244,17 +242,32 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(auth),
-            Expanded(child: _buildTabContent(auth, filteredProducts)),
-          ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        final popped = await Navigator.maybePop(context);
+        if (!popped && mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            HomeScreen.routeName,
+            (route) => false,
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF6F6F6),
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(auth),
+              Expanded(child: _buildTabContent(auth, filteredProducts)),
+            ],
+          ),
         ),
+        bottomNavigationBar: _buildBottomNavigationBar(),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 

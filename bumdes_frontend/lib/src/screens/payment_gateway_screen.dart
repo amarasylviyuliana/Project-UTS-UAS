@@ -164,17 +164,23 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pembayaran Midtrans'),
-        backgroundColor: const Color(0xFF2A7F41),
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        Navigator.pushReplacementNamed(context, OrderHistoryScreen.routeName);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Pembayaran Midtrans'),
+          backgroundColor: const Color(0xFF2A7F41),
+          elevation: 0,
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(22),
@@ -300,6 +306,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
             const SizedBox(height: 20),
           ],
         ),
+      ),
       ),
     );
   }

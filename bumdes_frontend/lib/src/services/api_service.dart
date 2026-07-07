@@ -20,6 +20,7 @@ class ApiService {
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
     };
     if (token != null && token!.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
