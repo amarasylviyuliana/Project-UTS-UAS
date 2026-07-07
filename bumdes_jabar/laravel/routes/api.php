@@ -163,6 +163,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/users/{id}',         [AdminController::class, 'updateUser']);
         Route::delete('/users/{id}',      [AdminController::class, 'deleteUser']);
 
+
         Route::get('/stores',             [AdminController::class, 'getAllStores']);
         Route::put('/stores/{id}',        [AdminController::class, 'updateStore']);
         Route::delete('/stores/{id}',     [AdminController::class, 'deleteStore']);
@@ -183,6 +184,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/users',          [AdminController::class, 'createUser']);
             Route::put('/users/{id}',      [AdminController::class, 'updateUser']);
             Route::delete('/users/{id}',   [AdminController::class, 'deleteUser']);
+
+            // Pembeli (read-only + hapus). Tidak ada create/update karena
+            // Pembeli daftar sendiri lewat app, bukan dibuatkan Admin.
+            Route::get('/buyers',          [AdminController::class, 'getAllBuyers']);
 
             Route::get('/stores',          [AdminController::class, 'getAllStores']);
             Route::put('/stores/{id}',     [AdminController::class, 'updateStore']);

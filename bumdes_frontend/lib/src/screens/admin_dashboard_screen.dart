@@ -20,20 +20,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _isLoadingStats = false;
   bool _isLoadingOrders = false;
   bool _isLoadingUsers = false;
+  bool _isLoadingBuyers = false;
   bool _isLoadingProducts = false;
   bool _isLoadingStores = false;
 
   String? _statsError;
   String? _ordersError;
   String? _usersError;
+  String? _buyersError;
   String? _productsError;
   String? _storesError;
 
   Map<String, dynamic> _stats = {};
   List<Map<String, dynamic>> _orders = [];
   List<Map<String, dynamic>> _users = [];
+  List<Map<String, dynamic>> _buyers = [];
   List<Map<String, dynamic>> _products = [];
   List<Map<String, dynamic>> _stores = [];
+
+  // Sub-tab di menu PENGGUNA: 0 = Penjual, 1 = Pembeli
+  int _userSubTab = 0;
 
   double _platformBalance = 0;
   double _taxPercentage = 0;
@@ -55,6 +61,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _loadStats();
     _loadOrders();
     _loadUsers();
+    _loadBuyers();
     _loadProducts();
     _loadStores();
     _loadWalletSummary();
@@ -124,6 +131,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (mounted) setState(() => _usersError = 'Gagal memuat pengguna: $e');
     } finally {
       if (mounted) setState(() => _isLoadingUsers = false);
+    }
+  }
+
+  Future<void> _loadBuyers() async {
+    final token = _token;
+    if (token == null) return;
+    setState(() { _isLoadingBuyers = true; _buyersError = null; });
+    try {
+      final data = await _adminService.getAdminBuyers(token);
+      if (mounted) setState(() => _buyers = data);
+    } catch (e) {
+      if (mounted) setState(() => _buyersError = 'Gagal memuat pembeli: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingBuyers = false);
     }
   }
 
@@ -768,11 +789,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ── USERS TAB ────────────────────────────────────────────────────────────────
-  // ALUR BARU: Dashboard Admin sekarang hanya mengelola akun Penjual — tidak
-  // ada lagi tab Semua/Penjual/Pembeli, langsung tampilkan daftar Penjual.
+  // ALUR BARU: menu Pengguna sekarang punya 2 sub-tab: "Penjual" (kelola
+  // penuh — tambah/ubah/hapus, termasuk data toko) dan "Pembeli" (read-only,
+  // cuma bisa dilihat + dihapus, karena Pembeli daftar sendiri lewat app).
 
   Widget _buildUsersTab() {
-    return _buildUserList(_sellerUsers, showStoreInfo: true);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: SegmentedButton<int>(
+            segments: const [
+              ButtonSegment(value: 0, label: Text('Penjual'), icon: Icon(Icons.store, size: 16)),
+              ButtonSegment(value: 1, label: Text('Pembeli'), icon: Icon(Icons.person, size: 16)),
+            ],
+            selected: {_userSubTab},
+            onSelectionChanged: (s) => setState(() => _userSubTab = s.first),
+          ),
+        ),
+        Expanded(
+          child: _userSubTab == 0
+              ? _buildUserList(_sellerUsers, showStoreInfo: true)
+              : _buildBuyerList(),
+        ),
+      ],
+    );
   }
 
   Widget _buildUserList(List<Map<String, dynamic>> userList, {bool showStoreInfo = false}) {
@@ -847,6 +889,58 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             },
           ),
         ),
+      ]),
+    );
+  }
+
+  // Daftar Pembeli — read-only, cuma tombol hapus, tanpa tombol Tambah/Ubah.
+  // Pembeli daftar sendiri lewat app, bukan dibuatkan Admin.
+  Widget _buildBuyerList() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('${_buyers.length} Pembeli', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          IconButton(onPressed: _loadBuyers, icon: const Icon(Icons.refresh)),
+        ]),
+        const SizedBox(height: 12),
+        if (_buyersError != null) _buildErrorBanner(_buyersError!, _loadBuyers),
+        if (_isLoadingBuyers)
+          const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+        else if (_buyers.isEmpty)
+          _buildEmptyState('Belum ada pembeli terdaftar', Icons.person_outline)
+        else
+          Container(
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16),
+                boxShadow: const [BoxShadow(color: Color.fromRGBO(0,0,0,0.05), blurRadius: 12, offset: Offset(0,4))]),
+            child: PaginatedListView<Map<String, dynamic>>(
+              items: _buyers,
+              pageSize: 10,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, buyer, index) {
+                final name = buyer['name'] ?? '-';
+                final id = buyer['id'] as int?;
+                return Padding(padding: const EdgeInsets.all(16), child: Row(children: [
+                  CircleAvatar(backgroundColor: Colors.grey[200],
+                      child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?')),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(buyer['email'] ?? '-', style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                    Text('${buyer['total_orders'] ?? 0} pesanan', style: const TextStyle(color: Colors.black38, fontSize: 12)),
+                  ])),
+                  IconButton(icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                      onPressed: id == null ? null : () async {
+                        final confirm = await _showConfirmDialog('Hapus pembeli $name?');
+                        if (confirm == true && _token != null) {
+                          await _adminService.deleteUser(_token!, id);
+                          _loadBuyers();
+                        }
+                      }),
+                ]));
+              },
+            ),
+          ),
       ]),
     );
   }
@@ -985,7 +1079,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // dipilih dari UI — selalu dikirim "Penjual" ke backend. Data toko/BUMDes
   // WAJIB diisi sekaligus di form ini (nama toko, telepon, desa, kecamatan,
   // kabupaten/kota) — backend membuat User + Store dalam satu transaksi dan
-  // langsung aktif (tidak ada lagi proses approval).
+  // langsung aktif (tidak ada lagi proses approval). Form ini TIDAK dipakai
+  // untuk Pembeli — daftar Pembeli read-only (lihat _buildBuyerList).
   Future<void> _showUserFormDialog({Map<String, dynamic>? user, int? userId}) async {
     final isEditing = user != null;
     final existingStore = user?['store'] as Map<String, dynamic>?;

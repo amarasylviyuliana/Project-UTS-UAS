@@ -54,7 +54,7 @@ class AdminService {
     throw lastError ?? Exception('Gagal memperbarui status pesanan: tidak ada endpoint yang merespons');
   }
 
-  // ── USERS ───────────────────────────────────────────────────────────────────
+  // ── USERS (PENJUAL) ─────────────────────────────────────────────────────────
   Future<List<Map<String, dynamic>>> getAdminUsers(String token, {int perPage = 200}) async {
     final api = ApiService(token: token);
     for (final path in ['/admin/users?per_page=$perPage', '/users']) {
@@ -125,6 +125,20 @@ class AdminService {
       }
     }
     throw lastError ?? Exception('Gagal menghapus pengguna: tidak ada endpoint yang merespons');
+  }
+
+  // ── BUYERS (PEMBELI) ────────────────────────────────────────────────────────
+  // Read-only + hapus saja. Tidak ada createBuyer/updateBuyer karena Pembeli
+  // daftar sendiri lewat app, bukan dibuatkan Admin. Hapus pembeli memakai
+  // deleteUser() di atas (endpoint generic DELETE /admin/users/{id}).
+  Future<List<Map<String, dynamic>>> getAdminBuyers(String token, {int perPage = 200}) async {
+    final api = ApiService(token: token);
+    try {
+      final response = await api.getRaw('/admin/buyers?per_page=$perPage');
+      return _extractList(response);
+    } catch (_) {
+      return [];
+    }
   }
 
   // CATATAN PERUBAHAN ALUR BISNIS:
