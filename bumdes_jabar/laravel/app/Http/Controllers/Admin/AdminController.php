@@ -246,39 +246,39 @@ class AdminController extends Controller
      * Data toko/BUMDes penjual ditampilkan langsung di sini karena dibuat
      * bersamaan dengan akun Penjual. Tidak ada lagi status approval toko.
      */
-    public function getAllUsers(Request $request)
-    {
-        $query = \App\Models\User::with(['store']);
+   public function getAllUsers(Request $request)
+{
+    // Dashboard Admin sekarang HANYA mengelola akun Penjual.
+    $query = \App\Models\User::with(['store'])->where('role', 'Penjual');
 
-        if ($request->role) {
-            $query->where('role', $request->role);
-        }
+    $users = $query->orderBy('created_at', 'desc')
+        ->paginate(15)
+        ->through(function ($user) {
+            return [
+                'id'         => $user->id,
+                'name'       => $user->name,
+                'email'      => $user->email,
+                'role'       => $user->role,
+                'phone'      => $user->phone,
+                'created_at' => $user->created_at,
+                'store' => $user->store ? [
+                    'id'                  => $user->store->id,
+                    'store_name'          => $user->store->store_name,
+                    'description'         => $user->store->description,
+                    'address'             => $user->store->address,
+                    'contact_phone'       => $user->store->contact_phone,
+                    'village'             => $user->store->village,
+                    'district'            => $user->store->district,
+                    'regency'             => $user->store->regency,
+                    'store_photo_url'     => $user->store->store_photo_url,
+                    'is_active'           => $user->store->is_active,
+                    'bank_name'           => $user->store->bank_name,
+                    'bank_account_number' => $user->store->bank_account_number,
+                    'bank_account_holder' => $user->store->bank_account_holder,
+                ] : null,
+            ];
+        });
 
-        $users = $query->orderBy('created_at', 'desc')
-            ->paginate(15)
-            ->through(function ($user) {
-                return [
-                    'id'         => $user->id,
-                    'name'       => $user->name,
-                    'email'      => $user->email,
-                    'role'       => $user->role,
-                    'phone'      => $user->phone,
-                    'address'    => $user->address,
-                    'created_at' => $user->created_at,
-                    // Data toko penjual, null kalau user belum punya toko
-                    'store' => $user->store ? [
-                        'id'               => $user->store->id,
-                        'store_name'       => $user->store->store_name,
-                        'description'      => $user->store->description,
-                        'contact_phone'    => $user->store->contact_phone,
-                        'village'          => $user->store->village,
-                        'district'         => $user->store->district,
-                        'regency'          => $user->store->regency,
-                        'store_photo_url'  => $user->store->store_photo_url,
-                        'is_active'        => $user->store->is_active,
-                    ] : null,
-                ];
-            });
 
         return response()->json([
             'status' => 'success',
@@ -474,96 +474,80 @@ class AdminController extends Controller
      * Store dibuat dalam satu transaksi dan LANGSUNG AKTIF — tidak ada lagi
      * status "Menunggu Persetujuan".
      */
-    public function createUser(Request $request)
-    {
-        $isSeller = strtolower((string) $request->role) === 'penjual';
+   public function createUser(Request $request)
+{
+    // Admin sekarang HANYA membuat akun Penjual — role tidak lagi dari
+    // input frontend, selalu dipaksa "Penjual" di sini.
+    $rules = [
+        'name'     => 'required|string|max:255',
+        'email'    => 'required|email|unique:users',
+        'password' => 'nullable|string|min:8',
+        'phone'    => 'required|string|max:20',
 
-        $rules = [
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users',
-            'role'     => 'required|string',
-            'password' => 'nullable|string|min:8',
-            'phone'    => 'nullable|string|max:20',
-            'address'  => 'nullable|string|max:500',
-        ];
+        'store_name'          => 'required|string|max:255',
+        'description'         => 'nullable|string',
+        'contact_phone'       => 'required|string|max:20',
+        'store_address'       => 'nullable|string|max:500',
+        'village'             => 'required|string|max:100',
+        'district'            => 'required|string|max:100',
+        'regency'             => 'required|string|max:100',
+        'bank_account_number' => 'nullable|string|max:50',
+        'bank_name'           => 'nullable|string|max:100',
+        'bank_account_holder' => 'nullable|string|max:255',
+        'store_photo'         => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
+    ];
 
-        if ($isSeller) {
-            $rules = array_merge($rules, [
-                'store_name'          => 'required|string|max:255',
-                'description'         => 'nullable|string',
-                'village'             => 'required|string|max:100',
-                'district'            => 'required|string|max:100',
-                'regency'             => 'required|string|max:100',
-                'contact_phone'       => 'required|string|max:20',
-                'bank_account_number' => 'nullable|string|max:50',
-                'bank_name'           => 'nullable|string|max:100',
-                'bank_account_holder' => 'nullable|string|max:255',
-                'store_photo'         => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
+    $validated = $request->validate($rules);
+
+    try {
+        $result = \Illuminate\Support\Facades\DB::transaction(function () use ($request, $validated) {
+            $user = \App\Models\User::create([
+                'name'     => $validated['name'],
+                'email'    => $validated['email'],
+                'role'     => 'Penjual', // dipaksa, bukan dari input
+                'phone'    => $validated['phone'],
+                'password' => bcrypt($validated['password'] ?? 'password123'),
+                'email_verified_at' => now(),
             ]);
-        }
 
-        $validated = $request->validate($rules);
+            $storePhotoUrl = null;
+            if ($request->hasFile('store_photo')) {
+                $storePhotoUrl = $request->file('store_photo')->store('store-photos', 'public');
+            }
 
-        try {
-            $result = \Illuminate\Support\Facades\DB::transaction(function () use ($request, $validated, $isSeller) {
-                $user = \App\Models\User::create([
-                    'name'     => $validated['name'],
-                    'email'    => $validated['email'],
-                    'role'     => $validated['role'],
-                    'phone'    => $validated['phone'] ?? null,
-                    'address'  => $validated['address'] ?? null,
-                    'password' => bcrypt($validated['password'] ?? 'password123'),
-                    'email_verified_at' => now(),
-                ]);
+            $store = \App\Models\Store::create([
+                'user_id'             => $user->id,
+                'store_name'          => $validated['store_name'],
+                'description'         => $validated['description'] ?? null,
+                'address'             => $validated['store_address'] ?? null,
+                'village'             => $validated['village'],
+                'district'            => $validated['district'],
+                'regency'             => $validated['regency'],
+                'contact_phone'       => $validated['contact_phone'],
+                'bank_account_number' => $validated['bank_account_number'] ?? null,
+                'bank_name'           => $validated['bank_name'] ?? null,
+                'bank_account_holder' => $validated['bank_account_holder'] ?? $validated['name'],
+                'store_photo_url'     => $storePhotoUrl,
+                'is_active'           => true,
+            ]);
 
-                $store = null;
+            return [$user, $store];
+        });
 
-                if ($isSeller) {
-                    $storePhotoUrl = null;
-                    if ($request->hasFile('store_photo')) {
-                        $storePhotoUrl = $request->file('store_photo')->store('store-photos', 'public');
-                    }
+        [$user, $store] = $result;
 
-                    // Toko dibuat langsung aktif — tidak ada lagi proses
-                    // pendaftaran/approval toko yang terpisah.
-                    $store = \App\Models\Store::create([
-                        'user_id'             => $user->id,
-                        'store_name'          => $validated['store_name'],
-                        'description'         => $validated['description'] ?? null,
-                        'village'             => $validated['village'],
-                        'district'            => $validated['district'],
-                        'regency'             => $validated['regency'],
-                        'contact_phone'       => $validated['contact_phone'],
-                        'bank_account_number' => $validated['bank_account_number'] ?? null,
-                        'bank_name'           => $validated['bank_name'] ?? null,
-                        'bank_account_holder' => $validated['bank_account_holder'] ?? $validated['name'],
-                        'store_photo_url'     => $storePhotoUrl,
-                        'is_active'           => true,
-                    ]);
-                }
-
-                return [$user, $store];
-            });
-
-            [$user, $store] = $result;
-
-            return response()->json([
-                'status'  => 'success',
-                'message' => $isSeller
-                    ? 'Akun Penjual dan Toko/BUMDes berhasil dibuat dan langsung aktif'
-                    : 'Pengguna berhasil dibuat',
-                'data' => array_merge($user->toArray(), [
-                    'store' => $store,
-                ]),
-            ], 201);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Gagal membuat pengguna: ' . $e->getMessage(),
-            ], 500);
-        }
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Akun Penjual dan Toko/BUMDes berhasil dibuat dan langsung aktif',
+            'data' => array_merge($user->toArray(), ['store' => $store]),
+        ], 201);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Gagal membuat pengguna: ' . $e->getMessage(),
+        ], 500);
     }
-
+}
     /**
      * Update user (admin)
      *
@@ -571,30 +555,35 @@ class AdminController extends Controller
      * ikut diperbarui sekaligus (toko tetap satu-satunya milik user itu).
      */
     public function updateUser(Request $request, $id)
-    {
-        $user = \App\Models\User::find($id);
-        if (!$user) {
-            return response()->json(['status' => 'error', 'message' => 'User tidak ditemukan'], 404);
-        }
-
-        $user->update($request->only(['name', 'email', 'role', 'phone', 'address']));
-
-        $storeFields = $request->only([
-            'store_name', 'description', 'village', 'district', 'regency',
-            'contact_phone', 'bank_account_number', 'bank_name', 'bank_account_holder',
-        ]);
-
-        if ($user->isSeller() && !empty($storeFields)) {
-            $store = $user->store ?: new \App\Models\Store(['user_id' => $user->id, 'is_active' => true]);
-            $store->fill($storeFields);
-
-            if ($request->hasFile('store_photo')) {
-                $store->store_photo_url = $request->file('store_photo')->store('store-photos', 'public');
-            }
-
-            $store->save();
-        }
-
-        return response()->json(['status' => 'success', 'data' => $user->fresh()->load('store')]);
+{
+    $user = \App\Models\User::find($id);
+    if (!$user) {
+        return response()->json(['status' => 'error', 'message' => 'User tidak ditemukan'], 404);
     }
+
+    // Role Penjual tidak boleh diubah dari Dashboard Admin — input role
+    // dari frontend diabaikan sepenuhnya.
+    $user->update($request->only(['name', 'email', 'phone']));
+
+    $storeFields = $request->only([
+        'store_name', 'description', 'village', 'district', 'regency',
+        'contact_phone', 'bank_account_number', 'bank_name', 'bank_account_holder',
+    ]);
+    if ($request->has('store_address')) {
+        $storeFields['address'] = $request->input('store_address');
+    }
+
+    if ($user->isSeller() && !empty($storeFields)) {
+        $store = $user->store ?: new \App\Models\Store(['user_id' => $user->id, 'is_active' => true]);
+        $store->fill($storeFields);
+
+        if ($request->hasFile('store_photo')) {
+            $store->store_photo_url = $request->file('store_photo')->store('store-photos', 'public');
+        }
+
+        $store->save();
+    }
+
+    return response()->json(['status' => 'success', 'data' => $user->fresh()->load('store')]);
+}
 }

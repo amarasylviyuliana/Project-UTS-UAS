@@ -257,6 +257,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ]),
     );
   }
+
   Widget _buildSidebar() {
     return Container(
       width: 220,
@@ -767,32 +768,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ── USERS TAB ────────────────────────────────────────────────────────────────
+  // ALUR BARU: Dashboard Admin sekarang hanya mengelola akun Penjual — tidak
+  // ada lagi tab Semua/Penjual/Pembeli, langsung tampilkan daftar Penjual.
 
   Widget _buildUsersTab() {
-    final sellers = _sellerUsers;
-    final buyers = _users.where((u) {
-      final role = (u['role'] ?? '').toString().toLowerCase();
-      return role == 'buyer' || role == 'pembeli';
-    }).toList();
-
-    return DefaultTabController(
-      length: 3,
-      child: Column(children: [
-        Container(color: Colors.white, child: TabBar(
-          labelColor: const Color(0xFF2A7F41),
-          unselectedLabelColor: Colors.black54,
-          indicatorColor: const Color(0xFF2A7F41),
-          tabs: [Tab(text: 'Semua (${_users.length})'),
-            Tab(text: 'Penjual (${sellers.length})'),
-            Tab(text: 'Pembeli (${buyers.length})')],
-        )),
-        Expanded(child: TabBarView(children: [
-          _buildUserList(_users),
-          _buildUserList(sellers, showStoreInfo: true),
-          _buildUserList(buyers),
-        ])),
-      ]),
-    );
+    return _buildUserList(_sellerUsers, showStoreInfo: true);
   }
 
   Widget _buildUserList(List<Map<String, dynamic>> userList, {bool showStoreInfo = false}) {
@@ -800,7 +780,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('${userList.length} Pengguna', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          Text('${userList.length} Penjual', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           Row(children: [
             IconButton(onPressed: _loadUsers, icon: const Icon(Icons.refresh)),
             ElevatedButton.icon(icon: const Icon(Icons.add), label: const Text('Tambah'),
@@ -812,7 +792,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         if (_isLoadingUsers)
           const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
         else if (userList.isEmpty)
-          _buildEmptyState('Belum ada pengguna', Icons.people_outline)
+          _buildEmptyState('Belum ada penjual terdaftar', Icons.people_outline)
         else Container(
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16),
               boxShadow: const [BoxShadow(color: Color.fromRGBO(0,0,0,0.05), blurRadius: 12, offset: Offset(0,4))]),
@@ -1000,11 +980,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     ));
   }
 
-  // ── FORM TAMBAH/EDIT PENGGUNA ──────────────────────────────────────────────
-  // ALUR BARU: kalau role dipilih "Penjual", form ini WAJIB menampilkan &
-  // mengirim data toko/BUMDes sekaligus (nama toko, deskripsi, alamat,
-  // telepon, rekening) — backend membuat User + Store dalam satu transaksi
-  // dan langsung aktif (tidak ada lagi proses approval).
+  // ── FORM TAMBAH/EDIT PENJUAL ───────────────────────────────────────────────
+  // ALUR BARU: Admin hanya membuat/mengelola akun Penjual. Role tidak lagi
+  // dipilih dari UI — selalu dikirim "Penjual" ke backend. Data toko/BUMDes
+  // WAJIB diisi sekaligus di form ini (nama toko, telepon, desa, kecamatan,
+  // kabupaten/kota) — backend membuat User + Store dalam satu transaksi dan
+  // langsung aktif (tidak ada lagi proses approval).
   Future<void> _showUserFormDialog({Map<String, dynamic>? user, int? userId}) async {
     final isEditing = user != null;
     final existingStore = user?['store'] as Map<String, dynamic>?;
@@ -1013,39 +994,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final emailCtrl = TextEditingController(text: user?['email'] ?? '');
     final passwordCtrl = TextEditingController();
     final phoneCtrl = TextEditingController(text: user?['phone'] ?? '');
-    final addressCtrl = TextEditingController(text: user?['address'] ?? '');
 
-    // Field khusus toko/BUMDes (hanya relevan kalau role = Penjual)
+    // Field khusus toko/BUMDes — selalu ditampilkan karena role selalu Penjual.
     final storeNameCtrl = TextEditingController(text: existingStore?['store_name'] ?? '');
     final storeDescCtrl = TextEditingController(text: existingStore?['description'] ?? '');
     final villageCtrl = TextEditingController(text: existingStore?['village'] ?? '');
     final districtCtrl = TextEditingController(text: existingStore?['district'] ?? '');
     final regencyCtrl = TextEditingController(text: existingStore?['regency'] ?? '');
     final storePhoneCtrl = TextEditingController(text: existingStore?['contact_phone'] ?? '');
+    final storeAddressCtrl = TextEditingController(text: existingStore?['address'] ?? '');
     final bankNameCtrl = TextEditingController(text: existingStore?['bank_name'] ?? '');
     final bankNumberCtrl = TextEditingController(text: existingStore?['bank_account_number'] ?? '');
     final bankHolderCtrl = TextEditingController(text: existingStore?['bank_account_holder'] ?? '');
 
-    String selectedRole = user?['role'] ?? 'Pembeli';
     final formKey = GlobalKey<FormState>();
     bool isSaving = false;
 
     await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(
       builder: (ctx, setDialogState) {
-        final isSeller = selectedRole == 'Penjual';
-
         return AlertDialog(
-          title: Text(isEditing ? 'Ubah Pengguna' : 'Tambah Pengguna'),
+          title: Text(isEditing ? 'Ubah Penjual' : 'Tambah Penjual'),
           content: Form(key: formKey, child: SingleChildScrollView(child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const Text('Data Akun', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2A7F41))),
+              const SizedBox(height: 8),
               TextFormField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nama'),
                   validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null),
               TextFormField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email'),
                   validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null),
-              TextFormField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'No. Telepon (opsional)')),
-              TextFormField(controller: addressCtrl, decoration: const InputDecoration(labelText: 'Alamat (opsional)')),
+              TextFormField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Nomor Telepon'),
+                  validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null),
               const SizedBox(height: 12),
               TextFormField(
                 controller: passwordCtrl,
@@ -1054,7 +1034,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   labelText: isEditing ? 'Password Baru (opsional)' : 'Password',
                   helperText: isEditing
                       ? 'Kosongkan jika tidak ingin mengubah password'
-                      : 'Minimal 8 karakter, akan digunakan penjual/pembeli untuk login',
+                      : 'Minimal 8 karakter, digunakan Penjual untuk login',
                 ),
                 validator: (v) {
                   if (!isEditing && (v == null || v.isEmpty)) return 'Wajib diisi';
@@ -1062,90 +1042,84 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(value: selectedRole,
-                  decoration: const InputDecoration(labelText: 'Peran'),
-                  items: const [
-                    DropdownMenuItem(value: 'Admin', child: Text('Admin')),
-                    DropdownMenuItem(value: 'Penjual', child: Text('Penjual')),
-                    DropdownMenuItem(value: 'Pembeli', child: Text('Pembeli')),
-                  ],
-                  onChanged: (v) { if (v != null) setDialogState(() => selectedRole = v); }),
 
-              if (isSeller) ...[
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 8),
-                const Text('Data Toko / BUMDes',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2A7F41))),
-                const Text('Toko akan dibuat dan langsung aktif bersamaan dengan akun ini.',
-                    style: TextStyle(fontSize: 11, color: Colors.black54)),
-                const SizedBox(height: 8),
-                TextFormField(controller: storeNameCtrl,
-                    decoration: const InputDecoration(labelText: 'Nama BUMDes/Toko'),
-                    validator: (v) => isSeller && (v == null || v.isEmpty) ? 'Wajib diisi' : null),
-                TextFormField(controller: storeDescCtrl,
-                    decoration: const InputDecoration(labelText: 'Deskripsi (opsional)'), maxLines: 2),
-                TextFormField(controller: storePhoneCtrl,
-                    decoration: const InputDecoration(labelText: 'No. Telepon Toko'),
-                    validator: (v) => isSeller && (v == null || v.isEmpty) ? 'Wajib diisi' : null),
-                Row(children: [
-                  Expanded(child: TextFormField(controller: villageCtrl,
-                      decoration: const InputDecoration(labelText: 'Desa'),
-                      validator: (v) => isSeller && (v == null || v.isEmpty) ? 'Wajib' : null)),
-                  const SizedBox(width: 8),
-                  Expanded(child: TextFormField(controller: districtCtrl,
-                      decoration: const InputDecoration(labelText: 'Kecamatan'),
-                      validator: (v) => isSeller && (v == null || v.isEmpty) ? 'Wajib' : null)),
-                ]),
-                TextFormField(controller: regencyCtrl,
-                    decoration: const InputDecoration(labelText: 'Kabupaten/Kota'),
-                    validator: (v) => isSeller && (v == null || v.isEmpty) ? 'Wajib diisi' : null),
-                const SizedBox(height: 8),
-                const Text('Rekening Bank (opsional)',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)),
-                TextFormField(controller: bankNameCtrl, decoration: const InputDecoration(labelText: 'Nama Bank')),
-                TextFormField(controller: bankNumberCtrl, decoration: const InputDecoration(labelText: 'No. Rekening')),
-                TextFormField(controller: bankHolderCtrl, decoration: const InputDecoration(labelText: 'Nama Pemilik Rekening')),
-              ],
+              const SizedBox(height: 20),
+              const Divider(),
+              const SizedBox(height: 8),
+              const Text('Data Toko / BUMDes',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2A7F41))),
+              Text(
+                isEditing
+                    ? 'Data toko akan diperbarui bersamaan dengan akun ini.'
+                    : 'Toko akan dibuat otomatis dan langsung aktif bersamaan dengan akun ini.',
+                style: const TextStyle(fontSize: 11, color: Colors.black54),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(controller: storeNameCtrl,
+                  decoration: const InputDecoration(labelText: 'Nama BUMDes/Toko'),
+                  validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null),
+              TextFormField(controller: storeDescCtrl,
+                  decoration: const InputDecoration(labelText: 'Deskripsi (opsional)'), maxLines: 2),
+              TextFormField(controller: storePhoneCtrl,
+                  decoration: const InputDecoration(labelText: 'Nomor Telepon Toko'),
+                  validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null),
+              TextFormField(controller: storeAddressCtrl,
+                  decoration: const InputDecoration(labelText: 'Alamat Toko (opsional)'), maxLines: 2),
+              Row(children: [
+                Expanded(child: TextFormField(controller: villageCtrl,
+                    decoration: const InputDecoration(labelText: 'Desa'),
+                    validator: (v) => v == null || v.isEmpty ? 'Wajib' : null)),
+                const SizedBox(width: 8),
+                Expanded(child: TextFormField(controller: districtCtrl,
+                    decoration: const InputDecoration(labelText: 'Kecamatan'),
+                    validator: (v) => v == null || v.isEmpty ? 'Wajib' : null)),
+              ]),
+              TextFormField(controller: regencyCtrl,
+                  decoration: const InputDecoration(labelText: 'Kabupaten/Kota'),
+                  validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null),
+
+              const SizedBox(height: 20),
+              const Divider(),
+              const SizedBox(height: 8),
+              const Text('Data Rekening (Opsional)',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2A7F41))),
+              const SizedBox(height: 8),
+              TextFormField(controller: bankNameCtrl, decoration: const InputDecoration(labelText: 'Nama Bank')),
+              TextFormField(controller: bankNumberCtrl, decoration: const InputDecoration(labelText: 'No. Rekening')),
+              TextFormField(controller: bankHolderCtrl, decoration: const InputDecoration(labelText: 'Nama Pemilik Rekening')),
             ],
           ))),
           actions: [
             TextButton(onPressed: isSaving ? null : () => Navigator.pop(ctx), child: const Text('Batal')),
             ElevatedButton(
-  onPressed: isSaving ? null : () async {
-    if (!(formKey.currentState?.validate() ?? false)) {
-      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-        content: Text('Mohon lengkapi semua field yang wajib diisi (termasuk data toko jika Peran = Penjual)'),
-        backgroundColor: Colors.orange,
-      ));
-      return;
-    }
+              onPressed: isSaving ? null : () async {
+                if (!(formKey.currentState?.validate() ?? false)) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                    content: Text('Mohon lengkapi semua field yang wajib diisi'),
+                    backgroundColor: Colors.orange,
+                  ));
+                  return;
+                }
 
-    setDialogState(() => isSaving = true);
-    try {
-      final data = <String, dynamic>{
+                setDialogState(() => isSaving = true);
+                try {
+                  final data = <String, dynamic>{
                     'name': nameCtrl.text.trim(),
                     'email': emailCtrl.text.trim(),
-                    'role': selectedRole,
-                    if (phoneCtrl.text.isNotEmpty) 'phone': phoneCtrl.text.trim(),
-                    if (addressCtrl.text.isNotEmpty) 'address': addressCtrl.text.trim(),
+                    'phone': phoneCtrl.text.trim(),
                     if (passwordCtrl.text.isNotEmpty) 'password': passwordCtrl.text,
+                    'role': 'Penjual',
+                    'store_name': storeNameCtrl.text.trim(),
+                    'description': storeDescCtrl.text.trim(),
+                    'contact_phone': storePhoneCtrl.text.trim(),
+                    'store_address': storeAddressCtrl.text.trim(),
+                    'village': villageCtrl.text.trim(),
+                    'district': districtCtrl.text.trim(),
+                    'regency': regencyCtrl.text.trim(),
+                    if (bankNameCtrl.text.isNotEmpty) 'bank_name': bankNameCtrl.text.trim(),
+                    if (bankNumberCtrl.text.isNotEmpty) 'bank_account_number': bankNumberCtrl.text.trim(),
+                    if (bankHolderCtrl.text.isNotEmpty) 'bank_account_holder': bankHolderCtrl.text.trim(),
                   };
-
-                  if (isSeller) {
-                    data.addAll({
-                      'store_name': storeNameCtrl.text.trim(),
-                      'description': storeDescCtrl.text.trim(),
-                      'village': villageCtrl.text.trim(),
-                      'district': districtCtrl.text.trim(),
-                      'regency': regencyCtrl.text.trim(),
-                      'contact_phone': storePhoneCtrl.text.trim(),
-                      if (bankNameCtrl.text.isNotEmpty) 'bank_name': bankNameCtrl.text.trim(),
-                      if (bankNumberCtrl.text.isNotEmpty) 'bank_account_number': bankNumberCtrl.text.trim(),
-                      if (bankHolderCtrl.text.isNotEmpty) 'bank_account_holder': bankHolderCtrl.text.trim(),
-                    });
-                  }
 
                   if (isEditing && userId != null && _token != null) {
                     await _adminService.updateUser(_token!, userId, data);
@@ -1157,13 +1131,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text(isEditing
-                          ? 'Pengguna ${nameCtrl.text.trim()} berhasil diperbarui'
-                          : '$selectedRole ${nameCtrl.text.trim()} berhasil ditambahkan dan langsung aktif'),
+                          ? 'Penjual ${nameCtrl.text.trim()} berhasil diperbarui'
+                          : 'Penjual ${nameCtrl.text.trim()} berhasil ditambahkan dan toko langsung aktif'),
                       backgroundColor: Colors.green,
                     ));
                   }
                   _loadUsers();
-                  if (isSeller) _loadStores();
+                  _loadStores();
                 } catch (e) {
                   setDialogState(() => isSaving = false);
                   if (mounted) {

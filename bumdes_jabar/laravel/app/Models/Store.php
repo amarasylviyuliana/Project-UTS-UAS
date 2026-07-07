@@ -15,6 +15,7 @@ class Store extends Model
         'user_id',
         'store_name',
         'description',
+          'address', 
         'village',
         'district',
         'regency',
