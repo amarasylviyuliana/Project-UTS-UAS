@@ -430,14 +430,45 @@ class AdminController extends Controller
     /**
      * Update order status (admin)
      */
+  /**
+     * Update order status (admin)
+     *
+     * FIX (keamanan alur pembayaran): sebelumnya endpoint ini bisa mengubah
+     * status pesanan apa pun secara bebas, termasuk memaksa pesanan yang
+     * masih "Menunggu Pembayaran" langsung jadi "Dikonfirmasi" — padahal
+     * pembayarannya belum tentu benar-benar diterima/diverifikasi. Sekarang
+     * transisi ke "Dikonfirmasi" hanya diizinkan dari status "Menunggu
+     * Konfirmasi" (bukti pembayaran sudah diunggah), sama seperti alur
+     * konfirmasi pembayaran oleh Penjual. Kalau Admin mengubah status
+     * menjadi "Selesai", saldo Penjual & pajak platform tetap dikreditkan
+     * lewat WalletService seperti pada alur normal, supaya Keuangan konsisten.
+     */
     public function updateOrderStatus(Request $request, $id)
     {
         $order = \App\Models\Order::find($id);
         if (!$order) {
             return response()->json(['status' => 'error', 'message' => 'Pesanan tidak ditemukan'], 404);
         }
-        $request->validate(['status' => 'required|string']);
-        $order->update(['status' => $request->status]);
+
+        $request->validate([
+            'status' => 'required|in:Menunggu Pembayaran,Menunggu Konfirmasi,Dikonfirmasi,Diproses,Dikemas,Dikirim,Estimasi Sampai,Selesai,Dibatalkan',
+        ]);
+
+        $newStatus = $request->status;
+
+        if ($newStatus === 'Dikonfirmasi' && $order->status !== 'Menunggu Konfirmasi') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pesanan hanya bisa dikonfirmasi setelah bukti pembayaran diunggah (status "Menunggu Konfirmasi").',
+            ], 422);
+        }
+
+        $order->update(['status' => $newStatus]);
+
+        if ($newStatus === 'Selesai') {
+            app(\App\Services\WalletService::class)->creditFromCompletedOrder($order);
+        }
+
         return response()->json(['status' => 'success', 'message' => 'Status pesanan diperbarui']);
     }
 

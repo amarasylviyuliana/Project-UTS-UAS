@@ -17,8 +17,8 @@ class Withdrawal extends Model
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
-    ];
+    'amount' => 'float',
+];
 
     public function store(): BelongsTo
     {

@@ -114,11 +114,74 @@ class WalletService
         return (float) (StoreWallet::where('store_id', $storeId)->value('balance') ?? 0);
     }
 
-    /** Total pemasukan Admin/platform dari seluruh pajak (untuk dashboard Admin). */
+    /** Total pemasukan Admin/platform sepanjang waktu dari seluruh pajak (statistik). */
     public function getPlatformIncome(): float
     {
         return (float) WalletTransaction::whereNull('store_id')
             ->where('category', 'tax')
             ->sum('amount');
+    }
+
+    /**
+     * Saldo Admin/platform yang masih tersedia untuk ditarik, yaitu total
+     * pemasukan pajak dikurangi total yang sudah ditarik oleh Admin.
+     */
+    public function getPlatformBalance(): float
+    {
+        $income = WalletTransaction::whereNull('store_id')
+            ->where('category', 'tax')
+            ->where('type', 'credit')
+            ->sum('amount');
+
+        $withdrawn = WalletTransaction::whereNull('store_id')
+            ->where('category', 'withdrawal')
+            ->where('type', 'debit')
+            ->sum('amount');
+
+        return (float) $income - (float) $withdrawn;
+    }
+
+    /**
+     * Ajukan penarikan saldo Admin/platform (dari kumpulan biaya admin/pajak).
+     * Auto-processed sama seperti penarikan Penjual.
+     *
+     * @throws \InvalidArgumentException kalau nominal tidak valid / saldo kurang
+     */
+    public function requestPlatformWithdrawal(float $amount, array $bankDetails): Withdrawal
+    {
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Nominal penarikan tidak valid.');
+        }
+
+        return DB::transaction(function () use ($amount, $bankDetails) {
+            // Lock seluruh mutasi platform agar perhitungan saldo aman dari race condition.
+            WalletTransaction::whereNull('store_id')->lockForUpdate()->get();
+
+            $available = $this->getPlatformBalance();
+
+            if ($amount > $available) {
+                throw new \InvalidArgumentException('Saldo platform tidak mencukupi untuk penarikan ini.');
+            }
+
+            $withdrawal = Withdrawal::create([
+                'store_id' => null,
+                'amount' => $amount,
+                'bank_name' => $bankDetails['bank_name'],
+                'bank_account_number' => $bankDetails['bank_account_number'],
+                'bank_account_name' => $bankDetails['bank_account_name'],
+                'status' => 'Selesai',
+            ]);
+
+            WalletTransaction::create([
+                'store_id' => null,
+                'type' => 'debit',
+                'category' => 'withdrawal',
+                'amount' => $amount,
+                'withdrawal_id' => $withdrawal->id,
+                'description' => "Penarikan saldo platform ke {$bankDetails['bank_name']} a.n. {$bankDetails['bank_account_name']}",
+            ]);
+
+            return $withdrawal;
+        });
     }
 }

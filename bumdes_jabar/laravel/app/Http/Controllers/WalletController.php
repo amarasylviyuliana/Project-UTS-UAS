@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\StoreWallet;
 use App\Models\WalletTransaction;
 use App\Models\Withdrawal;
 use App\Services\WalletService;
@@ -15,17 +14,26 @@ class WalletController extends Controller
     {
     }
 
-    private function storeOrFail(Request $request)
+    /** Ambil store milik user yang sedang login, atau null kalau bukan penjual / belum punya toko. */
+    private function getAuthenticatedStore(Request $request)
     {
-        $store = $request->user()->store;
-        abort_if(!$store, 404, 'Anda belum memiliki toko.');
-        return $store;
+        $user = $request->user();
+
+        if (!$user->isSeller()) {
+            return null;
+        }
+
+        return $user->store;
     }
 
-    /** Saldo saat ini milik Penjual yang sedang login. */
+    /** Saldo toko milik Penjual yang sedang login. */
     public function balance(Request $request): JsonResponse
     {
-        $store = $this->storeOrFail($request);
+        $store = $this->getAuthenticatedStore($request);
+
+        if (!$store) {
+            return response()->json(['message' => 'Anda tidak memiliki toko'], 403);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -35,10 +43,14 @@ class WalletController extends Controller
         ]);
     }
 
-    /** Riwayat mutasi saldo (pemasukan penjualan & penarikan). */
+    /** Riwayat mutasi saldo (transaksi) milik toko Penjual yang sedang login. */
     public function transactions(Request $request): JsonResponse
     {
-        $store = $this->storeOrFail($request);
+        $store = $this->getAuthenticatedStore($request);
+
+        if (!$store) {
+            return response()->json(['message' => 'Anda tidak memiliki toko'], 403);
+        }
 
         $transactions = WalletTransaction::where('store_id', $store->id)
             ->orderByDesc('created_at')
@@ -50,10 +62,14 @@ class WalletController extends Controller
         ]);
     }
 
-    /** Riwayat penarikan saldo milik toko ini. */
+    /** Riwayat penarikan saldo milik toko Penjual yang sedang login. */
     public function withdrawals(Request $request): JsonResponse
     {
-        $store = $this->storeOrFail($request);
+        $store = $this->getAuthenticatedStore($request);
+
+        if (!$store) {
+            return response()->json(['message' => 'Anda tidak memiliki toko'], 403);
+        }
 
         $withdrawals = Withdrawal::where('store_id', $store->id)
             ->orderByDesc('created_at')
@@ -65,10 +81,14 @@ class WalletController extends Controller
         ]);
     }
 
-    /** Ajukan penarikan saldo — langsung diproses (auto-approve). */
+    /** Ajukan penarikan saldo toko Penjual yang sedang login. */
     public function requestWithdrawal(Request $request): JsonResponse
     {
-        $store = $this->storeOrFail($request);
+        $store = $this->getAuthenticatedStore($request);
+
+        if (!$store) {
+            return response()->json(['message' => 'Anda tidak memiliki toko'], 403);
+        }
 
         $validated = $request->validate([
             'amount' => 'required|numeric|min:1',

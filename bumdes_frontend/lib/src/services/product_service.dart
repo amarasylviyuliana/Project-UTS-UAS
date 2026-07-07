@@ -11,6 +11,18 @@ import '../config.dart';
 class ProductService {
   final ApiService api = ApiService();
 
+  /// Ambil persentase biaya admin/pajak platform (endpoint publik).
+  /// Dipakai di form tambah produk agar Penjual tahu dari awal.
+  Future<double> getPlatformFeePercentage() async {
+    try {
+      final response = await api.get('/platform/fee-info');
+      final data = response['data'] ?? {};
+      return (data['tax_percentage'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {
+      return 0.0;
+    }
+  }
+
   Future<List<ProductModel>> fetchProducts() async {
     final response = await api.getRaw('/products');
     final rawProducts = _extractProductList(response);
