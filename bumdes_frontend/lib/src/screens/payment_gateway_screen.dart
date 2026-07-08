@@ -40,7 +40,8 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
     if (!auth.isAuthenticated || auth.token == null) {
       debugPrint('❌ ERROR: User tidak terautentikasi');
       setState(() {
-        _errorMessage = 'Silakan login terlebih dahulu untuk melanjutkan pembayaran.';
+        _errorMessage =
+            'Silakan login terlebih dahulu untuk melanjutkan pembayaran.';
       });
       return;
     }
@@ -68,10 +69,10 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
 
       if (response['success'] == true) {
         final snapToken = response['snap_token'] as String?;
-        
+
         if (snapToken != null && snapToken.isNotEmpty) {
           debugPrint('✅ Snap token received: ${snapToken.substring(0, 30)}...');
-          
+
           final paymentResult = await MidtransService.startPayment(
             snapToken,
             orderId: widget.order.orderNumber,
@@ -96,11 +97,12 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
               debugPrint('WARN: submitPayment success failed: $e');
             }
 
-
             // Redirect ke riwayat dan biarkan status tampil sesuai backend
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Pembayaran berhasil! Terima kasih telah berbelanja.'),
+                content: Text(
+                  'Pembayaran berhasil! Terima kasih telah berbelanja.',
+                ),
                 backgroundColor: Colors.green,
               ),
             );
@@ -110,7 +112,8 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
             try {
               await OrderService().submitPayment(
                 auth.token!,
-                int.tryParse(widget.order.orderNumber.toString()) ?? widget.order.id,
+                int.tryParse(widget.order.orderNumber.toString()) ??
+                    widget.order.id,
                 status: 'pending',
               );
             } catch (e) {
@@ -119,13 +122,16 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
 
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Pembayaran menunggu konfirmasi. Sedang diproses...'),
+                content: Text(
+                  'Pembayaran menunggu konfirmasi. Sedang diproses...',
+                ),
               ),
             );
             Navigator.pushNamed(context, OrderHistoryScreen.routeName);
           } else {
-
-            final message = paymentResult?['message'] as String? ?? 'Pembayaran dibatalkan.';
+            final message =
+                paymentResult?['message'] as String? ??
+                'Pembayaran dibatalkan.';
             debugPrint('❌ Payment failed: $message');
             setState(() {
               _errorMessage = message;
@@ -143,7 +149,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
         final error = response['error'] as String?;
         debugPrint('❌ Backend error: $message');
         debugPrint('❌ Error detail: $error');
-        
+
         setState(() {
           _errorMessage = '$message\n\nDetail: $error';
         });
@@ -159,6 +165,56 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
           _isSubmitting = false;
         });
       }
+    }
+  }
+
+  Future<void> _cancelOrder() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Batalkan Pesanan'),
+        content: const Text('Apakah Anda yakin ingin membatalkan pesanan ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Tidak'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text(
+              'Ya, Batalkan',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      await OrderService().cancelOrder(auth.token!, widget.order.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pesanan berhasil dibatalkan'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      Navigator.pushNamed(context, OrderHistoryScreen.routeName);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Gagal membatalkan pesanan: $e';
+      });
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -196,14 +252,23 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
-                  Text('Order ID', style: TextStyle(color: Colors.grey.shade700)),
+                  Text(
+                    'Order ID',
+                    style: TextStyle(color: Colors.grey.shade700),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     widget.order.orderNumber,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  Text('Total Pembayaran', style: TextStyle(color: Colors.grey.shade700)),
+                  Text(
+                    'Total Pembayaran',
+                    style: TextStyle(color: Colors.grey.shade700),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     'Rp ${widget.order.total.toStringAsFixed(0)}',
@@ -214,11 +279,17 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Text('Nama Penerima', style: TextStyle(color: Colors.grey.shade700)),
+                  Text(
+                    'Nama Penerima',
+                    style: TextStyle(color: Colors.grey.shade700),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     widget.order.recipientName ?? '-',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
@@ -257,27 +328,75 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            if (_errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.redAccent),
-                  ),
-                  child: Text(
-                    _errorMessage!,
-                    style: const TextStyle(
-                      color: Colors.redAccent,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ),
+            Builder(
+              builder: (context) {
+                final orderStatusLower = widget.order.status.toLowerCase();
+                final paymentRejected =
+                    widget.order.paymentStatus != null &&
+                    widget.order.paymentStatus!.toLowerCase().contains(
+                      'ditolak',
+                    );
+                final unpaidOrder =
+                    orderStatusLower.contains('pembayaran') ||
+                    orderStatusLower.contains('pending');
+                final showCancelWidget =
+                    _errorMessage != null || paymentRejected || unpaidOrder;
+
+                return showCancelWidget
+                    ? Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.redAccent),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _errorMessage ??
+                                    (paymentRejected
+                                        ? 'Pembayaran ditolak. Tekan Batalkan untuk membatalkan pesanan.'
+                                        : unpaidOrder
+                                        ? 'Pesanan belum dibayar. Tekan Batalkan jika Anda tidak jadi membeli.'
+                                        : 'Pembayaran dibatalkan.'),
+                                style: const TextStyle(
+                                  color: Colors.redAccent,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: OutlinedButton(
+                                  onPressed: _isSubmitting
+                                      ? null
+                                      : _cancelOrder,
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.red,
+                                    side: const BorderSide(color: Colors.red),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Batalkan Pesanan',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : const SizedBox();
+              },
+            ),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -285,7 +404,9 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2A7F41),
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
                   disabledBackgroundColor: Colors.grey.shade400,
                 ),
                 child: _isSubmitting
@@ -299,7 +420,10 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                       )
                     : const Text(
                         'Bayar Sekarang',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
               ),
             ),

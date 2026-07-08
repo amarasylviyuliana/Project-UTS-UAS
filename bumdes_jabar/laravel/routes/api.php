@@ -97,6 +97,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
+    Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
 
     // Wallet / Saldo (Penjual)
     Route::get('/wallet/balance', [WalletController::class, 'balance']);
@@ -126,8 +127,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders', [OrderController::class, 'createOrder']);
     Route::get('/orders', [OrderController::class, 'getBuyerOrders']);
     Route::get('/orders/buyer/history', [OrderController::class, 'getBuyerOrders']);
+    Route::get('/orders/buyer/sync', [OrderController::class, 'getBuyerOrdersSync']);
     Route::get('/orders/{id}', [OrderController::class, 'show']);
     Route::get('/seller/orders', [OrderController::class, 'getSellerOrders']);
+    Route::get('/seller/orders/sync', [OrderController::class, 'getSellerOrdersSync']);
     Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus']);
     Route::put('/orders/{id}/confirm-receipt', [OrderController::class, 'confirmReceipt']);
     Route::put('/orders/{id}/cancel', [OrderController::class, 'cancelOrder']);
@@ -163,6 +166,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/users/{id}',         [AdminController::class, 'updateUser']);
         Route::delete('/users/{id}',      [AdminController::class, 'deleteUser']);
 
+
         Route::get('/stores',             [AdminController::class, 'getAllStores']);
         Route::put('/stores/{id}',        [AdminController::class, 'updateStore']);
         Route::delete('/stores/{id}',     [AdminController::class, 'deleteStore']);
@@ -183,6 +187,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/users',          [AdminController::class, 'createUser']);
             Route::put('/users/{id}',      [AdminController::class, 'updateUser']);
             Route::delete('/users/{id}',   [AdminController::class, 'deleteUser']);
+
+            // Pembeli (read-only + hapus). Tidak ada create/update karena
+            // Pembeli daftar sendiri lewat app, bukan dibuatkan Admin.
+            Route::get('/buyers',          [AdminController::class, 'getAllBuyers']);
 
             Route::get('/stores',          [AdminController::class, 'getAllStores']);
             Route::put('/stores/{id}',     [AdminController::class, 'updateStore']);

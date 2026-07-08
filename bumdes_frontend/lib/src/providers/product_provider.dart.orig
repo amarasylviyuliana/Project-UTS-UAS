@@ -17,9 +17,13 @@ class ProductProvider extends ChangeNotifier {
 
   List<ProductModel> get products => _filtered;
   List<ProductModel> get featured => _products.take(6).toList();
+<<<<<<< HEAD
   // FIX: kategori diambil dinamis dari data produk asli (sesuai tabel
   // `categories` di backend), bukan daftar hardcoded yang gampang basi
   // kalau admin menambah/mengubah kategori.
+=======
+  // dynamic category list derived from products (used by SearchTab chips)
+>>>>>>> ed6d5788f0499bed8061c29b83c6ffc682715575
   List<String> get categories {
     final names =
         _products

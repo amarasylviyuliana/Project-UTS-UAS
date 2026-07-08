@@ -29,7 +29,28 @@ class ProfileController extends Controller
         $request->user()->update($validated);
         return response()->json(['message' => 'Profil diperbarui', 'user' => $request->user()]);
     }
+public function uploadPhoto(Request $request): JsonResponse
+{
+    $validated = $request->validate([
+        'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120',
+    ]);
 
+    $user = $request->user();
+
+    // Hapus foto lama kalau ada, biar storage tidak numpuk file yatim
+    if ($user->photo_url && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->photo_url)) {
+        \Illuminate\Support\Facades\Storage::disk('public')->delete($user->photo_url);
+    }
+
+    $path = $request->file('photo')->store('profile-photos', 'public');
+    $user->update(['photo_url' => $path]);
+
+    return response()->json([
+        'message'   => 'Foto profil berhasil diperbarui',
+        'photo_url' => $path,
+        'user'      => $user->fresh(),
+    ]);
+}
     public function updatePassword(Request $request): JsonResponse
     {
         $validated = $request->validate([
