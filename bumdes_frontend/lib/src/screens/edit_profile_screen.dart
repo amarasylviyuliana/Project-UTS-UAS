@@ -1,4 +1,6 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/auth_service.dart';
@@ -22,6 +24,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _loading = false;
 
+  // ── FOTO PROFIL ────────────────────────────────────────────────────────────
+  // Sengaja pakai Uint8List (bytes), BUKAN dart:io File, supaya kode ini
+  // aman dikompilasi & dijalankan di Flutter Web maupun mobile sekaligus.
+  final ImagePicker _picker = ImagePicker();
+  Uint8List? _pickedPhotoBytes; // preview lokal sebelum/selama upload
+  String? _pickedPhotoName;
+  bool _uploadingPhoto = false;
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -44,6 +54,71 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _phoneController.text = user.phone ?? '';
       _emailController.text = user.email;
       _telegramChatIdController.text = user.telegramChatId ?? '';
+    }
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Token tidak tersedia. Silakan login ulang.')),
+      );
+      return;
+    }
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Ambil dari Kamera'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Pilih dari Galeri'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final xfile = await _picker.pickImage(
+      source: source,
+      maxWidth: 1024,
+      imageQuality: 85,
+    );
+    if (xfile == null) return;
+
+    final bytes = await xfile.readAsBytes();
+
+    setState(() {
+      _pickedPhotoBytes = bytes;
+      _pickedPhotoName = xfile.name;
+      _uploadingPhoto = true;
+    });
+
+    try {
+      final service = AuthService();
+      await service.uploadProfilePhoto(auth.token!, bytes, xfile.name);
+      await auth.refreshProfile();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Foto profil berhasil diperbarui')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mengunggah foto: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
     }
   }
 
@@ -97,7 +172,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     final dialogFormKey = GlobalKey<FormState>();
 
-    // Show dialog to collect password input; perform network call after dialog closes
     final result = await showDialog<Map<String, String>?>(
       context: context,
       builder: (dialogContext) {
@@ -234,8 +308,70 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  Widget _buildPhotoSection(AuthProvider auth) {
+    final user = auth.user;
+    ImageProvider? backgroundImage;
+    if (_pickedPhotoBytes != null) {
+      backgroundImage = MemoryImage(_pickedPhotoBytes!);
+    } else if (user?.photoUrl != null && user!.photoUrl!.isNotEmpty) {
+      backgroundImage = NetworkImage(user.photoUrl!);
+    }
+
+    return Center(
+      child: Column(
+        children: [
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 48,
+                backgroundColor: const Color(0xFF52B788).withOpacity(0.15),
+                backgroundImage: backgroundImage,
+                child: backgroundImage == null
+                    ? const Icon(Icons.person, size: 48, color: Color(0xFF2D5016))
+                    : null,
+              ),
+              if (_uploadingPhoto)
+                Positioned.fill(
+                  child: CircleAvatar(
+                    radius: 48,
+                    backgroundColor: Colors.black45,
+                    child: const CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: InkWell(
+                  onTap: _uploadingPhoto ? null : _pickAndUploadPhoto,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF2D5016),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _uploadingPhoto ? null : _pickAndUploadPhoto,
+            child: const Text('Ubah Foto Profil', style: TextStyle(color: Color(0xFF2D5016))),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Profil', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
@@ -250,6 +386,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           key: _formKey,
           child: ListView(
             children: [
+              _buildPhotoSection(auth),
+              const SizedBox(height: 24),
               TextFormField(
                 controller: _nameController,
                 decoration: InputDecoration(

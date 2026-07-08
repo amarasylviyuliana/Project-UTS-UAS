@@ -24,7 +24,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _isLoadingBuyers = false;
   bool _isLoadingProducts = false;
   bool _isLoadingStores = false;
-  bool _isLoadingStoreApprovals = false;
 
   String? _statsError;
   String? _ordersError;
@@ -40,12 +39,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   List<Map<String, dynamic>> _products = [];
   List<Map<String, dynamic>> _stores = [];
 
-  // Sub-tab di menu PENGGUNA: 0 = Penjual, 1 = Pembeli
-  int _userSubTab = 0;
-
   double _platformBalance = 0;
   double _taxPercentage = 0;
   bool _isLoadingWallet = false;
+
+  Timer? _autoRefreshTimer;
 
   final _adminService = AdminService();
 
@@ -74,9 +72,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ALUR BARU: toko sekarang dibuat langsung oleh Admin lewat menu Pengguna
-  // dan otomatis aktif — tidak ada lagi proses approval/verifikasi terpisah,
-  // jadi _loadStoreApprovals() dan _loadPendingVerifications() sudah dihapus
-  // dari sini.
+  // dan otomatis aktif — tidak ada lagi proses approval/verifikasi terpisah.
   void _loadAll() {
     _loadStats();
     _loadOrders();
@@ -213,33 +209,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (mounted) setState(() => _isLoadingStores = false);
     }
   }
-
-  Future<void> _loadStoreApprovals() async {
-    final token = _token;
-    if (token == null) return;
-    setState(() {
-      _isLoadingStoreApprovals = true;
-      _storeApprovalsError = null;
-    });
-    try {
-      final data = await _adminService.getStoreApprovals(token);
-      if (mounted) setState(() => _storeApprovals = data);
-    } catch (e) {
-      if (mounted)
-        setState(
-          () => _storeApprovalsError = 'Gagal memuat persetujuan toko: $e',
-        );
-    } finally {
-      if (mounted) setState(() => _isLoadingStoreApprovals = false);
-    }
-  }
-
-  int get _pendingApprovalsCount => _storeApprovals.where((s) {
-    final status = (s['status'] ?? '').toString().toLowerCase();
-    return status.contains('menunggu') ||
-        status.contains('pending') ||
-        status.isEmpty;
-  }).length;
 
   List<Map<String, dynamic>> get _sellerUsers => _users.where((u) {
     final role = (u['role'] ?? '').toString().toLowerCase();
@@ -456,16 +425,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               children: [
                 _sidebarItem(Icons.dashboard_outlined, 'DASHBOARD', 0),
                 _sidebarItem(Icons.shopping_cart_outlined, 'PRODUK', 1),
-                _sidebarItemWithBadge(
-                  Icons.store_outlined,
-                  'BUMDES',
-                  2,
-                  _pendingApprovalsCount,
-                ),
+                _sidebarItem(Icons.store_outlined, 'BUMDES', 2),
                 _sidebarItem(Icons.receipt_outlined, 'PESANAN', 3),
                 _sidebarItem(Icons.attach_money_outlined, 'KEUANGAN', 4),
                 _sidebarItem(Icons.people_outline, 'PENGGUNA', 5),
-                // FIX: Tab Verifikasi dihapus dari sidebar
               ],
             ),
           ),
@@ -508,75 +471,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   letterSpacing: 0.5,
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _sidebarItemWithBadge(
-    IconData icon,
-    String label,
-    int index,
-    int badgeCount,
-  ) {
-    final isSelected = _selectedIndex == index;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => setState(() => _selectedIndex = index),
-        hoverColor: Colors.white10,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white.withAlpha(25) : Colors.transparent,
-            border: isSelected
-                ? const Border(
-                    right: BorderSide(color: Color(0xFF4CAF50), width: 4),
-                  )
-                : null,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                color: isSelected ? Colors.white : Colors.white70,
-                size: 20,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.white70,
-                    fontWeight: isSelected
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    fontSize: 12,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-              if (badgeCount > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '$badgeCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
@@ -680,53 +574,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            if (_pendingApprovalsCount > 0)
-              GestureDetector(
-                onTap: () => setState(() => _selectedIndex = 2),
-                child: Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.teal[50],
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.teal.withAlpha(100)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.store, color: Colors.teal, size: 28),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '$_pendingApprovalsCount toko menunggu persetujuan',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.teal,
-                              ),
-                            ),
-                            const Text(
-                              'Tap untuk review',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.black54,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(
-                        Icons.arrow_forward_ios,
-                        size: 16,
-                        color: Colors.teal,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -797,13 +644,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildRecentActivity() {
     final recentOrders = _orders.take(5).toList();
-    if (_isLoadingOrders)
+    if (_isLoadingOrders) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
           child: CircularProgressIndicator(),
         ),
       );
+    }
     if (recentOrders.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),
@@ -885,61 +733,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ── STORES TAB ───────────────────────────────────────────────────────────────
+  // ALUR BARU: toko selalu aktif sejak dibuat Admin, jadi tab BUMDES cukup
+  // satu daftar "Semua Toko" — tidak ada lagi sub-tab Persetujuan.
 
-  Widget _buildStoresTab() {
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          Container(
-            color: Colors.white,
-            child: TabBar(
-              labelColor: const Color(0xFF2A7F41),
-              unselectedLabelColor: Colors.black54,
-              indicatorColor: const Color(0xFF2A7F41),
-              tabs: [
-                const Tab(text: 'Semua Toko'),
-                Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Persetujuan'),
-                      if (_pendingApprovalsCount > 0) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '$_pendingApprovalsCount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
-              children: [_buildAllStoresTab(), _buildStoreApprovalsTab()],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildStoresTab() => _buildAllStoresTab();
 
   Widget _buildAllStoresTab() {
     return SingleChildScrollView(
@@ -998,13 +795,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final owner = store['user']?['name'] ?? store['owner_name'] ?? '-';
     final ownerEmail = store['user']?['email'] ?? '-';
     final isActive = store['is_active'] == true;
-    final approvalStatus = store['approval_status'] as String?;
-    // Tampilkan approval_status jika ada, kalau tidak pakai is_active
-    final displayStatus = (approvalStatus != null && approvalStatus.isNotEmpty)
-        ? approvalStatus
-        : (isActive ? 'Aktif' : 'Nonaktif');
-    // Tombol aktifkan/nonaktifkan hanya muncul jika sudah disetujui admin
-    final isApproved = approvalStatus == 'Disetujui';
     final revenue = _formatRupiah(
       _parseDouble(store['total_revenue'] ?? store['revenue']),
     );
@@ -1069,54 +859,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ],
                 ),
               ),
-              // FIX: chip berdasarkan approval_status
-              _buildStatusChip(displayStatus),
+              _buildStatusChip(isActive ? 'Aktif' : 'Nonaktif'),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: isApproved
-                    ? OutlinedButton.icon(
-                        icon: Icon(
-                          isActive ? Icons.block : Icons.check_circle,
-                          color: isActive ? Colors.red : Colors.green,
-                          size: 16,
-                        ),
-                        label: Text(
-                          isActive ? 'Nonaktifkan' : 'Aktifkan',
-                          style: TextStyle(
-                            color: isActive ? Colors.red : Colors.green,
-                          ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(
-                            color: isActive ? Colors.red : Colors.green,
-                          ),
-                        ),
-                        onPressed: storeId == null
-                            ? null
-                            : () =>
-                                  _toggleStoreStatus(storeId, !isActive, name),
-                      )
-                    : OutlinedButton.icon(
-                        icon: const Icon(
-                          Icons.hourglass_empty,
-                          color: Colors.orange,
-                          size: 16,
-                        ),
-                        label: Text(
-                          approvalStatus == 'Ditolak'
-                              ? 'Ditolak'
-                              : 'Menunggu Persetujuan',
-                          style: const TextStyle(color: Colors.orange),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.orange),
-                        ),
-                        onPressed: null,
-                      ),
+                child: OutlinedButton.icon(
+                  icon: Icon(
+                    isActive ? Icons.block : Icons.check_circle,
+                    color: isActive ? Colors.red : Colors.green,
+                    size: 16,
+                  ),
+                  label: Text(
+                    isActive ? 'Nonaktifkan' : 'Aktifkan',
+                    style: TextStyle(
+                      color: isActive ? Colors.red : Colors.green,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(
+                      color: isActive ? Colors.red : Colors.green,
+                    ),
+                  ),
+                  onPressed: storeId == null
+                      ? null
+                      : () => _toggleStoreStatus(storeId, !isActive, name),
+                ),
               ),
               const SizedBox(width: 8),
               OutlinedButton.icon(
@@ -1164,368 +934,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _loadStores();
       }
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal: $e')));
-    }
-  }
-
-  // ── STORE APPROVALS TAB ──────────────────────────────────────────────────────
-
-  Widget _buildStoreApprovalsTab() {
-    final pending = _storeApprovals.where((s) {
-      final status = (s['status'] ?? '').toString().toLowerCase();
-      return status.contains('menunggu') ||
-          status.contains('pending') ||
-          status.isEmpty;
-    }).toList();
-
-    final processed = _storeApprovals.where((s) {
-      final status = (s['status'] ?? '').toString().toLowerCase();
-      return status == 'disetujui' || status == 'ditolak';
-    }).toList();
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Persetujuan Toko',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '${pending.length} menunggu persetujuan',
-                    style: const TextStyle(color: Colors.black54, fontSize: 13),
-                  ),
-                ],
-              ),
-              IconButton(
-                onPressed: _loadStoreApprovals,
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (_storeApprovalsError != null)
-            _buildErrorBanner(_storeApprovalsError!, _loadStoreApprovals),
-          if (_isLoadingStoreApprovals)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: CircularProgressIndicator(),
-              ),
-            )
-          else if (pending.isEmpty && processed.isEmpty)
-            _buildEmptyState(
-              'Tidak ada permohonan persetujuan toko',
-              Icons.store_outlined,
-            )
-          else ...[
-            if (pending.isNotEmpty) ...[
-              const Text(
-                'Menunggu Persetujuan',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.orange,
-                ),
-              ),
-              const SizedBox(height: 12),
-              PaginatedListView<Map<String, dynamic>>(
-                items: pending,
-                pageSize: 10,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, item, index) =>
-                    _buildStoreApprovalCard(item),
-              ),
-              const SizedBox(height: 24),
-            ],
-            if (processed.isNotEmpty) ...[
-              const Text(
-                'Sudah Diproses',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black54,
-                ),
-              ),
-              const SizedBox(height: 12),
-              PaginatedListView<Map<String, dynamic>>(
-                items: processed,
-                pageSize: 10,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, item, index) =>
-                    _buildStoreApprovalCard(item, readonly: true),
-              ),
-            ],
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStoreApprovalCard(
-    Map<String, dynamic> approval, {
-    bool readonly = false,
-  }) {
-    final id = approval['id'] as int?;
-    // FIX: Data store ada di approval['store']
-    final store = approval['store'] as Map<String, dynamic>?;
-    final storeName = store?['store_name'] ?? approval['store_name'] ?? '-';
-
-    // FIX: Biodata penjual dari store.user
-    final user = store?['user'] as Map<String, dynamic>?;
-    final ownerName = user?['name'] ?? '-';
-    final ownerEmail = user?['email'] ?? '-';
-
-    // FIX: Info toko dari store object
-    final village = store?['village'] ?? '-';
-    final district = store?['district'] ?? '-';
-    final regency = store?['regency'] ?? '-';
-    final phone = store?['contact_phone'] ?? '-';
-    final bankName = store?['bank_name'] ?? '-';
-    final bankNumber = store?['bank_account_number'] ?? '-';
-    final bankHolder = store?['bank_account_holder'] ?? '-';
-    final description = store?['description'] ?? '';
-
-    final status = approval['status'] ?? 'Menunggu Persetujuan';
-    final rejectedReason = approval['rejected_reason'] ?? '';
-    final createdAt = approval['created_at'] != null
-        ? approval['created_at'].toString().substring(0, 10)
-        : '-';
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.05),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: Colors.teal[100],
-                child: const Icon(Icons.store, color: Colors.teal),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      storeName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    Text(
-                      'Pemilik: $ownerName',
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 12,
-                      ),
-                    ),
-                    Text(
-                      ownerEmail,
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 12,
-                      ),
-                    ),
-                    Text(
-                      'Daftar: $createdAt',
-                      style: const TextStyle(
-                        color: Colors.black38,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _buildStatusChip(status),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // FIX: Tampilkan biodata lengkap toko
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Info Toko',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-                const SizedBox(height: 8),
-                if (description.isNotEmpty)
-                  _infoRow(Icons.description_outlined, description),
-                _infoRow(
-                  Icons.location_on_outlined,
-                  '$village, $district, $regency',
-                ),
-                _infoRow(Icons.phone_outlined, phone),
-                const SizedBox(height: 4),
-                const Text(
-                  'Rekening Bank',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    color: Colors.black54,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                _infoRow(
-                  Icons.account_balance_outlined,
-                  '$bankName — $bankNumber a/n $bankHolder',
-                ),
-              ],
-            ),
-          ),
-          if (rejectedReason.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.red[50],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline, color: Colors.red, size: 16),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Alasan: $rejectedReason',
-                      style: const TextStyle(color: Colors.red, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          if (!readonly) ...[
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.close, color: Colors.red),
-                    label: const Text(
-                      'Tolak',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.red),
-                    ),
-                    onPressed: id == null
-                        ? null
-                        : () => _handleStoreApproval(id, 'Ditolak', storeName),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.check),
-                    label: const Text('Setujui'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2A7F41),
-                    ),
-                    onPressed: id == null
-                        ? null
-                        : () =>
-                              _handleStoreApproval(id, 'Disetujui', storeName),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _infoRow(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 14, color: Colors.black45),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _handleStoreApproval(
-    int approvalId,
-    String status,
-    String storeName,
-  ) async {
-    final token = _token;
-    if (token == null) return;
-
-    String? reason;
-    if (status == 'Ditolak') {
-      reason = await _showRejectReasonDialog();
-      if (reason == null) return;
-    }
-
-    try {
-      await _adminService.approveStore(
-        token,
-        approvalId,
-        status,
-        reason: reason,
-      );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              status == 'Disetujui'
-                  ? 'Toko $storeName telah disetujui'
-                  : 'Toko $storeName ditolak',
-            ),
-            backgroundColor: status == 'Disetujui' ? Colors.green : Colors.red,
-          ),
-        );
-        // FIX: Auto-refresh setelah approve/reject
-        _loadStoreApprovals();
-        _loadStores();
-        _loadStats();
-      }
-    } catch (e) {
-      if (mounted)
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+      }
     }
   }
 
@@ -1868,6 +1281,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             'Saat ini',
             Colors.purple,
           ),
+          const SizedBox(height: 24),
+          const Text(
+            'Saldo & Pajak Platform',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Saldo ini berasal dari akumulasi biaya admin/pajak yang dipotong dari setiap pesanan penjual berstatus Selesai.',
+            style: TextStyle(fontSize: 12, color: Colors.black54),
+          ),
+          const SizedBox(height: 12),
+          _buildPlatformWalletCard(),
         ],
       ),
     );
@@ -2022,9 +1447,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ── USERS TAB ────────────────────────────────────────────────────────────────
-  // ALUR BARU: menu Pengguna sekarang punya 2 sub-tab: "Penjual" (kelola
-  // penuh — tambah/ubah/hapus, termasuk data toko) dan "Pembeli" (read-only,
-  // cuma bisa dilihat + dihapus, karena Pembeli daftar sendiri lewat app).
+  // ALUR BARU: menu Pengguna sekarang punya sub-tab Semua/Penjual/Pembeli.
+  // Pembeli read-only, cuma bisa dilihat + dihapus, karena Pembeli daftar
+  // sendiri lewat app.
 
   Widget _buildUsersTab() {
     final sellers = _sellerUsers;
@@ -2180,10 +1605,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                     ),
                                     const SizedBox(width: 4),
                                     _buildStatusChip(
-                                      store['store_approval']?['status'] ??
-                                          (store['is_active'] == true
-                                              ? 'Aktif'
-                                              : 'Nonaktif'),
+                                      store['is_active'] == true
+                                          ? 'Aktif'
+                                          : 'Nonaktif',
                                     ),
                                   ],
                                 ),
@@ -2394,19 +1818,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         selectedIcon: Icon(Icons.shopping_cart),
         label: 'Produk',
       ),
-      NavigationDestination(
-        icon: Badge(
-          isLabelVisible: _pendingApprovalsCount > 0,
-          smallSize: 8,
-          backgroundColor: Colors.red,
-          child: const Icon(Icons.store_outlined),
-        ),
-        selectedIcon: Badge(
-          isLabelVisible: _pendingApprovalsCount > 0,
-          smallSize: 8,
-          backgroundColor: Colors.red,
-          child: const Icon(Icons.store),
-        ),
+      const NavigationDestination(
+        icon: Icon(Icons.store_outlined),
+        selectedIcon: Icon(Icons.store),
         label: 'BUMDes',
       ),
       const NavigationDestination(
@@ -2501,14 +1915,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case 'aktif':
       case 'selesai':
       case 'dikonfirmasi':
-      case 'terverifikasi':
-      case 'disetujui':
         color = Colors.green;
         break;
       case 'diproses':
       case 'dikirim':
-      case 'menunggu verifikasi':
-      case 'menunggu persetujuan':
       case 'menunggu pembayaran':
       case 'menunggu konfirmasi':
         color = Colors.orange;
@@ -2554,8 +1964,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   double _parseDouble(dynamic value) {
     if (value is double) return value;
     if (value is int) return value.toDouble();
-    if (value is String)
+    if (value is String) {
       return double.tryParse(value.replaceAll(',', '.')) ?? 0;
+    }
     if (value is num) return value.toDouble();
     return 0;
   }
@@ -2581,33 +1992,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Future<String?> _showRejectReasonDialog() {
-    final ctrl = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Alasan Penolakan'),
-        content: TextField(
-          controller: ctrl,
-          decoration: const InputDecoration(
-            hintText: 'Tulis alasan penolakan...',
-          ),
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('Kirim'),
-          ),
-        ],
-      ),
-    );
-  }
-
+  // ── FORM TAMBAH/EDIT PENGGUNA ────────────────────────────────────────────────
+  // ALUR BARU: Admin bisa membuat akun dengan peran Admin, Penjual, atau
+  // Pembeli. Kalau peran Penjual, data toko/BUMDes wajib diisi sekaligus di
+  // form ini — backend membuat User + Store dalam satu transaksi dan
+  // langsung aktif (tidak ada lagi proses approval).
   Future<void> _showUserFormDialog({
     Map<String, dynamic>? user,
     int? userId,
@@ -2620,7 +2009,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final passwordCtrl = TextEditingController();
     final phoneCtrl = TextEditingController(text: user?['phone'] ?? '');
 
-    // Field khusus toko/BUMDes — selalu ditampilkan karena role selalu Penjual.
     final storeNameCtrl = TextEditingController(
       text: existingStore?['store_name'] ?? '',
     );
@@ -2652,75 +2040,331 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       text: existingStore?['bank_account_holder'] ?? '',
     );
 
+    String selectedRole =
+        (user?['role']?.toString().toLowerCase()) ?? 'seller';
     final formKey = GlobalKey<FormState>();
     bool isSaving = false;
 
     await showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(isEditing ? 'Ubah Pengguna' : 'Tambah Pengguna'),
-          content: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Nama'),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Wajib diisi' : null,
-                  ),
-                  TextFormField(
-                    controller: emailCtrl,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Wajib diisi' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: selectedRole,
-                    decoration: const InputDecoration(labelText: 'Peran'),
-                    items: const [
-                      DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                      DropdownMenuItem(value: 'seller', child: Text('Penjual')),
-                      DropdownMenuItem(value: 'buyer', child: Text('Pembeli')),
+        builder: (ctx, setDialogState) {
+          final showStoreFields = selectedRole == 'seller';
+          return AlertDialog(
+            title: Text(isEditing ? 'Ubah Pengguna' : 'Tambah Pengguna'),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Data Akun',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2A7F41),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(labelText: 'Nama'),
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Wajib diisi' : null,
+                    ),
+                    TextFormField(
+                      controller: emailCtrl,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Wajib diisi' : null,
+                    ),
+                    TextFormField(
+                      controller: phoneCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Nomor Telepon',
+                      ),
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Wajib diisi' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: passwordCtrl,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: isEditing
+                            ? 'Password Baru (opsional)'
+                            : 'Password',
+                        helperText: isEditing
+                            ? 'Kosongkan jika tidak ingin mengubah password'
+                            : 'Minimal 8 karakter, digunakan untuk login',
+                      ),
+                      validator: (v) {
+                        if (!isEditing && (v == null || v.isEmpty)) {
+                          return 'Wajib diisi';
+                        }
+                        if (v != null && v.isNotEmpty && v.length < 8) {
+                          return 'Minimal 8 karakter';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedRole,
+                      decoration: const InputDecoration(labelText: 'Peran'),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'admin',
+                          child: Text('Admin'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'seller',
+                          child: Text('Penjual'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'buyer',
+                          child: Text('Pembeli'),
+                        ),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) {
+                          setDialogState(() => selectedRole = v);
+                        }
+                      },
+                    ),
+                    if (showStoreFields) ...[
+                      const SizedBox(height: 20),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Data Toko / BUMDes',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2A7F41),
+                        ),
+                      ),
+                      Text(
+                        isEditing
+                            ? 'Data toko akan diperbarui bersamaan dengan akun ini.'
+                            : 'Toko akan dibuat otomatis dan langsung aktif bersamaan dengan akun ini.',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.black54,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: storeNameCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Nama BUMDes/Toko',
+                        ),
+                        validator: (v) =>
+                            showStoreFields && (v == null || v.isEmpty)
+                                ? 'Wajib diisi'
+                                : null,
+                      ),
+                      TextFormField(
+                        controller: storeDescCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Deskripsi (opsional)',
+                        ),
+                        maxLines: 2,
+                      ),
+                      TextFormField(
+                        controller: storePhoneCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Nomor Telepon Toko',
+                        ),
+                        validator: (v) =>
+                            showStoreFields && (v == null || v.isEmpty)
+                                ? 'Wajib diisi'
+                                : null,
+                      ),
+                      TextFormField(
+                        controller: storeAddressCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Alamat Toko (opsional)',
+                        ),
+                        maxLines: 2,
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: villageCtrl,
+                              decoration: const InputDecoration(
+                                labelText: 'Desa',
+                              ),
+                              validator: (v) =>
+                                  showStoreFields && (v == null || v.isEmpty)
+                                      ? 'Wajib'
+                                      : null,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextFormField(
+                              controller: districtCtrl,
+                              decoration: const InputDecoration(
+                                labelText: 'Kecamatan',
+                              ),
+                              validator: (v) =>
+                                  showStoreFields && (v == null || v.isEmpty)
+                                      ? 'Wajib'
+                                      : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                      TextFormField(
+                        controller: regencyCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Kabupaten/Kota',
+                        ),
+                        validator: (v) =>
+                            showStoreFields && (v == null || v.isEmpty)
+                                ? 'Wajib diisi'
+                                : null,
+                      ),
+                      const SizedBox(height: 20),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Data Rekening (Opsional)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2A7F41),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: bankNameCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Nama Bank',
+                        ),
+                      ),
+                      TextFormField(
+                        controller: bankNumberCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'No. Rekening',
+                        ),
+                      ),
+                      TextFormField(
+                        controller: bankHolderCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Nama Pemilik Rekening',
+                        ),
+                      ),
                     ],
-                    onChanged: (v) {
-                      if (v != null) setDialogState(() => selectedRole = v);
-                    },
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (formKey.currentState?.validate() ?? false) {
-                  final data = {
-                    'name': nameCtrl.text.trim(),
-                    'email': emailCtrl.text.trim(),
-                    'role': selectedRole,
-                  };
-                  if (isEditing && userId != null && _token != null) {
-                    await _adminService.updateUser(_token!, userId, data);
-                  } else if (_token != null) {
-                    await _adminService.createUser(_token!, data);
-                  }
-                  if (mounted) Navigator.pop(ctx);
-                  _loadUsers();
-                }
-              },
-              child: Text(isEditing ? 'Simpan' : 'Tambah'),
-            ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: isSaving ? null : () => Navigator.pop(ctx),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: isSaving
+                    ? null
+                    : () async {
+                        if (!(formKey.currentState?.validate() ?? false)) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Mohon lengkapi semua field yang wajib diisi',
+                              ),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                          return;
+                        }
+
+                        setDialogState(() => isSaving = true);
+                        try {
+                          final data = <String, dynamic>{
+                            'name': nameCtrl.text.trim(),
+                            'email': emailCtrl.text.trim(),
+                            'phone': phoneCtrl.text.trim(),
+                            if (passwordCtrl.text.isNotEmpty)
+                              'password': passwordCtrl.text,
+                            'role': selectedRole == 'seller'
+                                ? 'Penjual'
+                                : selectedRole == 'admin'
+                                    ? 'Admin'
+                                    : 'Pembeli',
+                            if (showStoreFields) ...{
+                              'store_name': storeNameCtrl.text.trim(),
+                              'description': storeDescCtrl.text.trim(),
+                              'contact_phone': storePhoneCtrl.text.trim(),
+                              'store_address': storeAddressCtrl.text.trim(),
+                              'village': villageCtrl.text.trim(),
+                              'district': districtCtrl.text.trim(),
+                              'regency': regencyCtrl.text.trim(),
+                              if (bankNameCtrl.text.isNotEmpty)
+                                'bank_name': bankNameCtrl.text.trim(),
+                              if (bankNumberCtrl.text.isNotEmpty)
+                                'bank_account_number':
+                                    bankNumberCtrl.text.trim(),
+                              if (bankHolderCtrl.text.isNotEmpty)
+                                'bank_account_holder':
+                                    bankHolderCtrl.text.trim(),
+                            },
+                          };
+
+                          if (isEditing && userId != null && _token != null) {
+                            await _adminService.updateUser(
+                              _token!,
+                              userId,
+                              data,
+                            );
+                          } else if (_token != null) {
+                            await _adminService.createUser(_token!, data);
+                          }
+
+                          if (mounted) {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  isEditing
+                                      ? 'Pengguna ${nameCtrl.text.trim()} berhasil diperbarui'
+                                      : 'Pengguna ${nameCtrl.text.trim()} berhasil ditambahkan',
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                          _loadUsers();
+                          _loadStores();
+                        } catch (e) {
+                          setDialogState(() => isSaving = false);
+                          if (mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(
+                                content: Text('Gagal menyimpan pengguna: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                child: isSaving
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(isEditing ? 'Simpan' : 'Tambah'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/product_provider.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/skeleton_loading.dart';
 import 'cart_screen.dart';
 import 'order_history_screen.dart';
 import 'profile_screen.dart';
@@ -28,14 +29,12 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!auth.isAuthenticated) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            LoginScreen.routeName,
-            (r) => false,
-          );
+          Navigator.pushNamedAndRemoveUntil(context, LoginScreen.routeName, (r) => false);
         }
       });
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     final role = auth.user?.role.toLowerCase() ?? '';
@@ -45,7 +44,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Navigator.pushReplacementNamed(context, '/store-dashboard');
         }
       });
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
     if (role == 'admin') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -53,7 +54,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Navigator.pushReplacementNamed(context, '/admin-dashboard');
         }
       });
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     final pages = <Widget>[
@@ -94,8 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onPopInvoked: (didPop) {
         if (didPop) return;
         final now = DateTime.now();
-        final isSecondPress =
-            _lastBackPressTime != null &&
+        final isSecondPress = _lastBackPressTime != null &&
             now.difference(_lastBackPressTime!) < const Duration(seconds: 2);
         if (isSecondPress) {
           SystemNavigator.pop();
@@ -120,11 +122,14 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Image.asset(
                 'assets/logo.jpeg',
-                width: 20,
-                height: 20,
+                width: 28,
+                height: 28,
                 fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.eco, color: Colors.white, size: 18),
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.eco,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 8),
               const Flexible(
@@ -167,10 +172,8 @@ class _HomeScreenState extends State<HomeScreen> {
               for (int i = 0; i < menuLabels.length; i++)
                 NavigationDestination(
                   icon: Icon(menuIcons[i], color: Colors.black54),
-                  selectedIcon: Icon(
-                    menuIconsFilled[i],
-                    color: const Color(0xFF1B5E20),
-                  ),
+                  selectedIcon: Icon(menuIconsFilled[i],
+                      color: const Color(0xFF1B5E20)),
                   label: menuLabels[i],
                 ),
             ],
@@ -253,16 +256,14 @@ class _HomeTabState extends State<HomeTab> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Image.asset(
               'assets/logo.jpeg',
-              height: 120,
+              height: 180,
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) => Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.eco,
-                    size: 64,
-                    color: const Color(0xFF1B5E20).withValues(alpha: 0.6),
-                  ),
+                  Icon(Icons.eco,
+                      size: 64,
+                      color: const Color(0xFF1B5E20).withValues(alpha: 0.6)),
                   const SizedBox(height: 8),
                   const Text(
                     'BUMDES JABAR',
@@ -281,7 +282,17 @@ class _HomeTabState extends State<HomeTab> {
               ),
             ),
           ),
-
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildFeatureIcon(Icons.star_outline, 'Produk\nUnggulan'),
+              _buildFeatureIcon(
+                  Icons.shopping_cart_outlined, 'Keranjang\nBelanja'),
+              _buildFeatureIcon(
+                  Icons.receipt_long_outlined, 'Riwayat\nPesanan'),
+            ],
+          ),
         ],
       ),
     );
@@ -333,7 +344,8 @@ class _HomeTabState extends State<HomeTab> {
           prefixIcon: Icon(Icons.search, color: Color(0xFF1B5E20)),
           suffixIcon: Icon(Icons.filter_list, color: Color(0xFF1B5E20)),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding:
+              EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
         onChanged: (value) {
           provider.search(value);
@@ -369,7 +381,8 @@ class _HomeTabState extends State<HomeTab> {
                   colors: [Color(0xFF1B5E20), Color(0xFF388E3C)],
                 ),
               ),
-              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   if (constraints.maxWidth > 900) {
@@ -446,20 +459,18 @@ class _HomeTabState extends State<HomeTab> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _buildSectionHeader('Semua Produk'),
-                  if (provider.isUsingSampleData &&
-                      AppConfig.showSampleDataBadge)
+                  if (provider.isUsingSampleData)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.orange.shade100,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(
                         'Contoh data',
-                        style: TextStyle(color: Colors.orange, fontSize: 12),
+                        style:
+                            TextStyle(color: Colors.orange, fontSize: 12),
                       ),
                     ),
                 ],
@@ -511,7 +522,8 @@ class _HomeTabState extends State<HomeTab> {
             Container(
               width: double.infinity,
               color: const Color(0xFF1B5E20),
-              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -591,7 +603,10 @@ class _HomeTabState extends State<HomeTab> {
                   const Text(
                     '© 2026 BUMDES Jabar — Koperasi Umat Berdaulat. Hak cipta dilindungi.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white38, fontSize: 11),
+                    style: TextStyle(
+                      color: Colors.white38,
+                      fontSize: 11,
+                    ),
                   ),
                 ],
               ),
@@ -643,10 +658,12 @@ class _SearchTabState extends State<SearchTab> {
               decoration: InputDecoration(
                 hintText: 'Cari produk, toko, desa...',
                 hintStyle: const TextStyle(color: Colors.white60),
-                prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                prefixIcon:
+                    const Icon(Icons.search, color: Colors.white70),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.white70),
+                        icon:
+                            const Icon(Icons.clear, color: Colors.white70),
                         onPressed: () {
                           _searchController.clear();
                           provider.search('');
@@ -660,10 +677,8 @@ class _SearchTabState extends State<SearchTab> {
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: Colors.white70,
-                    width: 0.5,
-                  ),
+                  borderSide:
+                      const BorderSide(color: Colors.white70, width: 0.5),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -692,9 +707,10 @@ class _SearchTabState extends State<SearchTab> {
                                   ? Colors.white
                                   : Colors.black87,
                               fontSize: 12,
-                              fontWeight: provider.selectedCategory == category
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
+                              fontWeight:
+                                  provider.selectedCategory == category
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
                             ),
                           ),
                           backgroundColor: Colors.white,
@@ -725,30 +741,28 @@ class _SearchTabState extends State<SearchTab> {
               child: provider.isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : provider.products.isEmpty
-                  ? const Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.search_off,
-                            size: 64,
-                            color: Colors.white30,
+                      ? const Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.search_off,
+                                  size: 64, color: Colors.white30),
+                              SizedBox(height: 16),
+                              Text(
+                                'Tidak ada produk yang cocok',
+                                style: TextStyle(color: Colors.white60),
+                              ),
+                            ],
                           ),
-                          SizedBox(height: 16),
-                          Text(
-                            'Tidak ada produk yang cocok',
-                            style: TextStyle(color: Colors.white60),
+                        )
+                      : ListView.builder(
+                          itemCount: provider.products.length,
+                          itemBuilder: (context, index) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: ProductCard(
+                                product: provider.products[index]),
                           ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: provider.products.length,
-                      itemBuilder: (context, index) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: ProductCard(product: provider.products[index]),
-                      ),
-                    ),
+                        ),
             ),
           ],
         ),
@@ -765,9 +779,8 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stockLabel = product.stock == 0
-        ? 'Stok Habis'
-        : 'Stok ${product.stock}';
+    final stockLabel =
+        product.stock == 0 ? 'Stok Habis' : 'Stok ${product.stock}';
     return GestureDetector(
       onTap: () => Navigator.pushNamed(
         context,
@@ -806,7 +819,8 @@ class ProductCard extends StatelessWidget {
                           return Container(
                             color: Colors.grey[100],
                             child: const Center(
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2),
                             ),
                           );
                         },
@@ -857,15 +871,14 @@ class ProductCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           'Rp ${product.price.toStringAsFixed(0)}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: product.stock == 0
                               ? Colors.red.withAlpha(20)
@@ -952,7 +965,8 @@ class FeatureTile extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor: const Color(0xFF1B5E20).withValues(alpha: 0.15),
+              backgroundColor:
+                  const Color(0xFF1B5E20).withValues(alpha: 0.15),
               child: Icon(icon, color: const Color(0xFF1B5E20)),
             ),
             const SizedBox(height: 12),

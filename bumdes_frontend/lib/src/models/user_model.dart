@@ -6,6 +6,7 @@ class UserModel {
   final String? phone;
   final String? address;
   final String? telegramChatId;
+  final String? photoUrl;
 
   UserModel({
     this.id,
@@ -15,6 +16,7 @@ class UserModel {
     this.phone,
     this.address,
     this.telegramChatId,
+    this.photoUrl,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class UserModel {
       phone: json['phone'] as String?,
       address: json['address'] as String?,
       telegramChatId: json['telegram_chat_id'] as String?,
+      photoUrl: json['photo_url'] as String?,
     );
   }
 }

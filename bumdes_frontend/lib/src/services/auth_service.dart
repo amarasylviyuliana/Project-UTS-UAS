@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_service.dart';
@@ -128,5 +129,26 @@ class AuthService {
       'password': password,
       'password_confirmation': passwordConfirmation,
     });
+  }
+
+  // ── TAMBAHAN: upload foto profil ────────────────────────────────────────────
+  // Mengirim file gambar ke POST /profile/photo (multipart/form-data).
+  // Sengaja terima [bytes] (Uint8List), BUKAN dart:io File, supaya method
+  // ini aman dipanggil dari platform manapun termasuk Flutter Web.
+  // Backend (ProfileController@uploadPhoto) mengembalikan path foto yang
+  // baru tersimpan lewat key 'photo_url' di response.
+  Future<String> uploadProfilePhoto(
+    String token,
+    Uint8List bytes,
+    String filename,
+  ) async {
+    final api = ApiService(token: token);
+    final result = await api.postMultipartBytes(
+      '/profile/photo',
+      'photo',
+      bytes,
+      filename,
+    );
+    return result['photo_url'] as String? ?? '';
   }
 }

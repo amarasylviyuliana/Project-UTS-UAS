@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../config.dart';
 
@@ -19,6 +20,21 @@ class ApiService {
   Map<String, String> get _headers {
     final headers = <String, String>{
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+    };
+    if (token != null && token!.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
+  }
+
+  // Header untuk multipart request — TIDAK menyertakan Content-Type
+  // karena http.MultipartRequest akan set sendiri (multipart/form-data;
+  // boundary=...). Kalau kita paksa 'application/json' di sini, server
+  // akan gagal parse file yang dikirim.
+  Map<String, String> get _multipartHeaders {
+    final headers = <String, String>{
       'Accept': 'application/json',
       'X-Requested-With': 'XMLHttpRequest',
     };
@@ -75,6 +91,32 @@ class ApiService {
       Uri.parse(apiUrl(path)),
       headers: _headers,
     );
+    return _normalizeResponse(response);
+  }
+
+  // ── TAMBAHAN: upload file (multipart/form-data) ─────────────────────────────
+  // Dipakai untuk endpoint yang menerima file, misal foto profil atau
+  // foto toko/produk. Sengaja pakai bytes (Uint8List), BUKAN dart:io File,
+  // supaya kompatibel di semua platform termasuk Flutter Web — dart:io.File
+  // tidak didukung di web dan akan membuat `flutter build web` gagal total.
+  // [fileField] adalah nama field yang divalidasi backend (contoh: 'photo'
+  // untuk /profile/photo), [fields] adalah data teks tambahan (kalau ada).
+  Future<Map<String, dynamic>> postMultipartBytes(
+    String path,
+    String fileField,
+    Uint8List bytes,
+    String filename, {
+    Map<String, String>? fields,
+  }) async {
+    final request = http.MultipartRequest('POST', Uri.parse(apiUrl(path)));
+    request.headers.addAll(_multipartHeaders);
+    if (fields != null) request.fields.addAll(fields);
+    request.files.add(
+      http.MultipartFile.fromBytes(fileField, bytes, filename: filename),
+    );
+
+    final streamedResponse = await _client.send(request);
+    final response = await http.Response.fromStream(streamedResponse);
     return _normalizeResponse(response);
   }
 
