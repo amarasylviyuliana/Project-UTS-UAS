@@ -59,47 +59,22 @@ class ProductController extends Controller
             'is_active' => $product->is_active,
         ];
     }
-
-    /**
-     * Get all categories
-     * REQ-17
-     */
-    public function getCategories(): JsonResponse
-    {
-        $categories = Category::all();
-        return response()->json($categories);
-    }
-
-    /**
-     * Get all products (public list)
-     * REQ-20
+/**
+     * Get all active products (dipanggil GET /products, dipakai halaman
+     * "Semua Produk" pembeli). Sebelumnya method ini tidak ada sama sekali
+     * -> route /products error 500 "Method ...::index does not exist"
+     * -> Flutter fallback diam-diam ke sample/dummy data.
      */
     public function index(): JsonResponse
     {
         $products = Product::where('is_active', true)
             ->with('store', 'category')
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(fn($product) => $this->mapProductForResponse($product));
-
-        return response()->json($products);
-    }
-
-    /**
-     * Get featured products for homepage
-     * REQ-20
-     */
-    public function getFeatured(): JsonResponse
-    {
-        $products = Product::where('is_active', true)
-            ->with('store', 'category')
             ->latest()
-            ->limit(3)
             ->get()
             ->map(fn($product) => $this->mapProductForResponse($product));
 
         return response()->json([
-            'message' => 'Produk unggulan',
+            'message' => 'Daftar produk',
             'data' => $products,
         ]);
     }
@@ -492,6 +467,32 @@ class ProductController extends Controller
         return response()->json([
             'message' => 'Produk toko',
             'data' => $products,
+        ]);
+    }
+
+    /**
+     * Get all product categories.
+     * Dipakai untuk dropdown kategori di form tambah/edit produk dan filter pencarian.
+     */
+    public function getCategories(): JsonResponse
+    {
+        $categories = Category::all();
+
+        return response()->json($categories);
+    }
+
+    /**
+     * Info persentase biaya admin/pajak platform (publik).
+     * Dipakai di form tambah produk agar Penjual tahu dari awal
+     * bahwa saldo mereka akan dipotong biaya ini saat pesanan Selesai.
+     */
+    public function getPlatformFeeInfo(): JsonResponse
+    {
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'tax_percentage' => (float) config('platform.tax_percentage', 5),
+            ],
         ]);
     }
 }

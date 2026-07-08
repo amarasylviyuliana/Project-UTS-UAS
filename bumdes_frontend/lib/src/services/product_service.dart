@@ -11,6 +11,18 @@ import '../config.dart';
 class ProductService {
   final ApiService api = ApiService();
 
+  /// Ambil persentase biaya admin/pajak platform (endpoint publik).
+  /// Dipakai di form tambah produk agar Penjual tahu dari awal.
+  Future<double> getPlatformFeePercentage() async {
+    try {
+      final response = await api.get('/platform/fee-info');
+      final data = response['data'] ?? {};
+      return (data['tax_percentage'] as num?)?.toDouble() ?? 0.0;
+    } catch (_) {
+      return 0.0;
+    }
+  }
+
   Future<List<ProductModel>> fetchProducts() async {
     final response = await api.getRaw('/products');
     final rawProducts = _extractProductList(response);
@@ -36,9 +48,11 @@ class ProductService {
         .toList();
   }
 
-  // FIX KRITIS: getStore sekarang return {message, data: {store_approval...}}
-  // Sebelumnya baca store langsung dari root response → approval tidak ketemu
-  // null = belum daftar toko, false = menunggu/ditolak, true = disetujui
+  // ALUR BARU: Toko dibuat langsung oleh Admin dan otomatis aktif, jadi
+  // tidak ada lagi status "menunggu persetujuan" / "ditolak".
+  // null  = toko belum dibuat Admin untuk akun ini
+  // true  = toko ada dan aktif
+  // false = toko ada tapi dinonaktifkan Admin
   Future<bool?> isStoreApproved(String token) async {
     try {
       final profileService = ProfileService();
@@ -46,21 +60,12 @@ class ProductService {
 
       final store = storeResponse['data'] ?? storeResponse;
 
-      // Toko tidak ditemukan
+      // Toko belum dibuat oleh Admin
       if (store == null || store['id'] == null) return null;
 
-      // Cek store_approval.status
-      final approval = store['store_approval'];
-      if (approval != null) {
-        final status = (approval['status'] ?? '').toString();
-        if (status == 'Disetujui') return true;
-        return false; // Menunggu atau Ditolak
-      }
-
-      // Fallback: kalau tidak ada approval data, cek is_active
-      return store['is_active'] == true ? true : null;
+      return store['is_active'] == true;
     } catch (e) {
-      // 404 = toko belum terdaftar
+      // 404 = toko belum dibuat oleh Admin untuk akun ini
       if (e.toString().contains('404') || e.toString().contains('not found')) {
         return null;
       }

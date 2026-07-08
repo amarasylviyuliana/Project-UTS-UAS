@@ -52,10 +52,10 @@ class _LoginScreenState extends State<LoginScreen> {
     return Text(
       label,
       style: const TextStyle(
-        color: Colors.white70,
+        color: Color(0xFF2D5016),
         fontSize: 12,
         fontWeight: FontWeight.bold,
-        letterSpacing: 1.2,
+        letterSpacing: 0.8,
       ),
     );
   }
@@ -71,19 +71,19 @@ class _LoginScreenState extends State<LoginScreen> {
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
-      style: const TextStyle(color: Colors.white),
-      cursorColor: Colors.white,
+      style: const TextStyle(color: Color(0xFF2D5016), fontWeight: FontWeight.w500),
+      cursorColor: const Color(0xFF52B788),
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: const TextStyle(color: Colors.white54),
+        hintStyle: const TextStyle(color: Colors.black38),
         enabledBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.white70),
+          borderSide: BorderSide(color: Color(0xFFC8E6C9)),
         ),
         focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.white),
+          borderSide: BorderSide(color: Color(0xFF52B788), width: 2),
         ),
         border: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.white70),
+          borderSide: BorderSide(color: Color(0xFFC8E6C9)),
         ),
       ),
       validator: validator,
@@ -94,24 +94,23 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF4B4B4B),
+      backgroundColor: const Color(0xFFE8F5E9),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
           child: Container(
             width: 420,
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
             decoration: BoxDecoration(
-              color: const Color(0xFF8B8B8B),
-              borderRadius: BorderRadius.circular(24),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 18,
-                  offset: const Offset(0, 12),
+                  color: const Color(0xFF2D5016).withValues(alpha: 0.08),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
                 ),
               ],
-              border: Border.all(color: const Color(0xFF58A8FF), width: 6),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -121,11 +120,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    letterSpacing: 2,
+                    color: Color(0xFF2D5016),
+                    letterSpacing: 1.5,
                   ),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 8),
+                const Text(
+                  'Selamat datang kembali',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF52B788),
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 32),
                 Form(
                   key: _formKey,
                   child: Column(
@@ -167,13 +176,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 36),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
+                          backgroundColor: const Color(0xFF2D5016),
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          elevation: 8,
+                          elevation: 0,
                         ),
                         onPressed: auth.isLoading ? null : _login,
                         child: auth.isLoading
@@ -182,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 width: 24,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.5,
-                                  color: Colors.black,
+                                  valueColor: AlwaysStoppedAnimation(Colors.white),
                                 ),
                               )
                             : const Text(
@@ -190,15 +199,24 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
+                                  letterSpacing: 1,
                                 ),
                               ),
                       ),
                       if (auth.errorMessage != null) ...[
                         const SizedBox(height: 20),
-                        Text(
-                          auth.errorMessage!,
-                          style: const TextStyle(color: Colors.red),
-                          textAlign: TextAlign.center,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Text(
+                            auth.errorMessage!,
+                            style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ],
                     ],
@@ -211,8 +229,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: const Text(
                     'Belum punya akun? Daftar sekarang',
                     style: TextStyle(
-                      color: Colors.white70,
+                      color: Color(0xFF52B788),
                       decoration: TextDecoration.underline,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),

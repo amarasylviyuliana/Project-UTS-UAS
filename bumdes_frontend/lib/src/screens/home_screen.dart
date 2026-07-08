@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/product_provider.dart';
 import '../providers/auth_provider.dart';
-import '../config/app_config.dart';
 import 'cart_screen.dart';
 import 'order_history_screen.dart';
 import 'profile_screen.dart';
@@ -361,7 +360,6 @@ class _HomeTabState extends State<HomeTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Hero Banner ──────────────────────────────────────────────
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -412,10 +410,7 @@ class _HomeTabState extends State<HomeTab> {
             const SizedBox(height: 16),
 
             if (provider.isLoading)
-              const SizedBox(
-                height: 200,
-                child: Center(child: CircularProgressIndicator()),
-              )
+              const ProductRowSkeleton()
             else if (provider.featured.isEmpty)
               const SizedBox(
                 height: 200,
@@ -473,9 +468,16 @@ class _HomeTabState extends State<HomeTab> {
             const SizedBox(height: 16),
 
             if (provider.isLoading)
-              const SizedBox(
-                height: 100,
-                child: Center(child: CircularProgressIndicator()),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: List.generate(
+                    4,
+                    (_) => const ProductCardSkeleton(width: 220),
+                  ),
+                ),
               )
             else if (provider.products.isEmpty)
               const Padding(
@@ -506,7 +508,6 @@ class _HomeTabState extends State<HomeTab> {
 
             const SizedBox(height: 32),
 
-            // ── Footer ───────────────────────────────────────────────────
             Container(
               width: double.infinity,
               color: const Color(0xFF1B5E20),

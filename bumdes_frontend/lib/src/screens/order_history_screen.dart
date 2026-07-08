@@ -173,18 +173,22 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           return Card(
             margin: const EdgeInsets.only(bottom: 14),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(12),
             ),
-            elevation: 1.5,
+            elevation: 0.5,
             child: InkWell(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(12),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => OrderDetailScreen(order: order),
                 ),
               ).then((_) => _refreshOrders()),
-              child: Padding(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200, width: 0.5),
+                ),
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,6 +202,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
+                              color: Color(0xFF2D5016),
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -362,17 +367,21 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Riwayat Pesanan'),
+        title: const Text('Riwayat Pesanan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        backgroundColor: const Color(0xFF2D5016),
+        foregroundColor: Colors.white,
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          labelColor: const Color(0xFF2A7F41),
-          unselectedLabelColor: Colors.black45,
-          indicatorColor: const Color(0xFF2A7F41),
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: const Color(0xFF52B788),
+          indicatorWeight: 3,
           tabs: _tabLabels.map((label) => Tab(text: label)).toList(),
         ),
       ),
+      backgroundColor: const Color(0xFFFAFAFA),
       body: Consumer<AuthProvider>(
         builder: (context, auth, child) {
           if (!auth.isAuthenticated) {
@@ -387,8 +396,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2D5016),
+                    ),
                     onPressed: () => Navigator.pushNamed(context, '/login'),
-                    child: const Text('Login'),
+                    child: const Text('Login', style: TextStyle(color: Colors.white)),
                   ),
                 ],
               ),
@@ -409,8 +421,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                       const Text('Gagal memuat riwayat pesanan.'),
                       const SizedBox(height: 16),
                       ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2D5016),
+                        ),
                         onPressed: _refreshOrders,
-                        child: const Text('Coba lagi'),
+                        child: const Text('Coba lagi', style: TextStyle(color: Colors.white)),
                       ),
                     ],
                   ),

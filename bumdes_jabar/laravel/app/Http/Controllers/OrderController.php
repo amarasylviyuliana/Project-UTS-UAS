@@ -413,15 +413,19 @@ class OrderController extends Controller
      */
     public function cancelOrder(Request $request, $id): JsonResponse
     {
-        $order = Order::with('orderItems.product')->find($id);
+        $order = Order::with('orderItems.product', 'store')->find($id);
+        $user = $request->user();
 
-        if (!$order || $order->buyer_id !== $request->user()->id) {
+        $isBuyer = $order && $order->buyer_id === $user->id;
+        $isSeller = $order && $order->store && $order->store->user_id === $user->id;
+
+        if (!$order || !($isBuyer || $isSeller || $user->role === 'admin')) {
             return response()->json([
                 'message' => 'Pesanan tidak ditemukan atau anda tidak punya akses',
             ], 404);
         }
 
-        if ($order->status !== 'Menunggu Pembayaran') {
+        if (!in_array($order->status, ['Menunggu Pembayaran', 'Menunggu Konfirmasi'])) {
             return response()->json([
                 'message' => 'Pesanan tidak dapat dibatalkan karena status sudah berubah',
             ], 422);

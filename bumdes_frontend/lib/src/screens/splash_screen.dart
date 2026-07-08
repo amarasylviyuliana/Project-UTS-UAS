@@ -64,7 +64,7 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     // FIX: Redirect berdasarkan role jika tidak ada fragment
-    final role = authProvider.user?.role?.toLowerCase() ?? '';
+    final role = authProvider.user?.role.toLowerCase() ?? '';
     if (role == 'seller') {
       Navigator.pushReplacementNamed(context, StoreDashboardScreen.routeName);
     } else if (role == 'admin') {

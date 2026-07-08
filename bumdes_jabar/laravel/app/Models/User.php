@@ -96,11 +96,6 @@ class User extends Authenticatable
         return $this->hasOne(Admin::class);
     }
 
-    public function sellerVerification(): HasOne
-    {
-        return $this->hasOne(SellerVerification::class);
-    }
-
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class, 'buyer_id');
@@ -116,10 +111,4 @@ class User extends Authenticatable
         return $this->hasMany(Review::class, 'buyer_id');
     }
 
-    // Helper methods
-    public function isVerifiedSeller(): bool
-    {
-        if (!$this->isSeller()) return false;
-        return $this->sellerVerification?->status === 'Terverifikasi';
-    }
 }

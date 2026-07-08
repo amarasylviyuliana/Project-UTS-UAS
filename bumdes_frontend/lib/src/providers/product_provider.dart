@@ -10,6 +10,9 @@ class ProductProvider extends ChangeNotifier {
   List<ProductModel> _filtered = [];
   bool isLoading = false;
   bool isUsingSampleData = false;
+  // last search query to allow combined search + category filtering
+  String _lastQuery = '';
+  // selected category for SearchTab filtering
   String selectedCategory = 'Semua';
 
   List<ProductModel> get products => _filtered;
@@ -64,6 +67,7 @@ class ProductProvider extends ChangeNotifier {
   }
 
   void search(String query) {
+    _lastQuery = query;
     final lower = query.toLowerCase();
     List<ProductModel> base = List.of(_products);
     if (selectedCategory != 'Semua') {
@@ -83,12 +87,8 @@ class ProductProvider extends ChangeNotifier {
 
   void filterByCategory(String category) {
     selectedCategory = category;
-    if (category == 'Semua') {
-      _filtered = List.of(_products);
-    } else {
-      _filtered = _products.where((p) => p.category == category).toList();
-    }
-    notifyListeners();
+    // reuse last query so selecting category doesn't clear user's search
+    search(_lastQuery);
   }
 
   ProductModel? findById(int id) {
@@ -103,7 +103,7 @@ class ProductProvider extends ChangeNotifier {
 
   void addProduct(ProductModel product) {
     _products.insert(0, product);
-    filterByCategory(selectedCategory);
+    _filtered = List.of(_products);
     notifyListeners();
   }
 
@@ -134,7 +134,7 @@ class ProductProvider extends ChangeNotifier {
       imageBytes: imageBytes,
     );
     _products.insert(0, product);
-    filterByCategory(selectedCategory);
+    _filtered = List.of(_products);
     notifyListeners();
     return product;
   }
@@ -143,13 +143,13 @@ class ProductProvider extends ChangeNotifier {
     final index = _products.indexWhere((item) => item.id == product.id);
     if (index >= 0) {
       _products[index] = product;
-      filterByCategory(selectedCategory);
+      _filtered = List.of(_products);
       notifyListeners();
     }
   }
 
-  // FIX: sama seperti createProductOnServer — imageFile (XFile?) bukan
-  // String path. imageFile == null artinya foto lama dipertahankan di server.
+  // FIX: sama seperti createProductOnServer — imageFile (String path) diganti XFile?
+  // imageFile == null artinya foto lama dipertahankan di server.
   Future<void> updateProductOnServer(
     String token,
     int productId,
@@ -177,7 +177,7 @@ class ProductProvider extends ChangeNotifier {
     final index = _products.indexWhere((item) => item.id == productId);
     if (index >= 0) {
       _products[index] = product;
-      filterByCategory(selectedCategory);
+      _filtered = List.of(_products);
       notifyListeners();
     }
   }
@@ -186,7 +186,7 @@ class ProductProvider extends ChangeNotifier {
   Future<void> deleteProduct(String token, int id) async {
     await _productService.deleteProduct(token, id);
     _products.removeWhere((product) => product.id == id);
-    filterByCategory(selectedCategory);
+    _filtered = List.of(_products);
     notifyListeners();
   }
 }

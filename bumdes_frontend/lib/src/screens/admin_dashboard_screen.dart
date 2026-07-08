@@ -21,24 +21,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _isLoadingStats = false;
   bool _isLoadingOrders = false;
   bool _isLoadingUsers = false;
+  bool _isLoadingBuyers = false;
   bool _isLoadingProducts = false;
   bool _isLoadingStores = false;
   bool _isLoadingStoreApprovals = false;
-  Timer? _autoRefreshTimer;
 
   String? _statsError;
   String? _ordersError;
   String? _usersError;
+  String? _buyersError;
   String? _productsError;
   String? _storesError;
-  String? _storeApprovalsError;
 
   Map<String, dynamic> _stats = {};
   List<Map<String, dynamic>> _orders = [];
   List<Map<String, dynamic>> _users = [];
+  List<Map<String, dynamic>> _buyers = [];
   List<Map<String, dynamic>> _products = [];
   List<Map<String, dynamic>> _stores = [];
-  List<Map<String, dynamic>> _storeApprovals = [];
+
+  // Sub-tab di menu PENGGUNA: 0 = Penjual, 1 = Pembeli
+  int _userSubTab = 0;
+
+  double _platformBalance = 0;
+  double _taxPercentage = 0;
+  bool _isLoadingWallet = false;
 
   final _adminService = AdminService();
 
@@ -66,13 +73,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     });
   }
 
+  // ALUR BARU: toko sekarang dibuat langsung oleh Admin lewat menu Pengguna
+  // dan otomatis aktif — tidak ada lagi proses approval/verifikasi terpisah,
+  // jadi _loadStoreApprovals() dan _loadPendingVerifications() sudah dihapus
+  // dari sini.
   void _loadAll() {
     _loadStats();
     _loadOrders();
     _loadUsers();
+    _loadBuyers();
     _loadProducts();
     _loadStores();
-    _loadStoreApprovals();
+    _loadWalletSummary();
+  }
+
+  Future<void> _loadWalletSummary() async {
+    final token = _token;
+    if (token == null) return;
+    setState(() => _isLoadingWallet = true);
+    try {
+      final summary = await _adminService.getWalletSummary(token);
+      if (!mounted) return;
+      setState(() {
+        final income = (summary['platform_income'] as num?)?.toDouble() ?? 0;
+        _platformBalance =
+            (summary['platform_balance'] as num?)?.toDouble() ?? income;
+        _taxPercentage = (summary['tax_percentage'] as num?)?.toDouble() ?? 0;
+      });
+    } catch (_) {
+      // Diamkan — kartu saldo cukup tampilkan 0 kalau gagal, tab Keuangan tetap terbuka.
+    } finally {
+      if (mounted) setState(() => _isLoadingWallet = false);
+    }
   }
 
   String? get _token {
@@ -128,6 +160,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (mounted) setState(() => _usersError = 'Gagal memuat pengguna: $e');
     } finally {
       if (mounted) setState(() => _isLoadingUsers = false);
+    }
+  }
+
+  Future<void> _loadBuyers() async {
+    final token = _token;
+    if (token == null) return;
+    setState(() {
+      _isLoadingBuyers = true;
+      _buyersError = null;
+    });
+    try {
+      final data = await _adminService.getAdminBuyers(token);
+      if (mounted) setState(() => _buyers = data);
+    } catch (e) {
+      if (mounted) setState(() => _buyersError = 'Gagal memuat pembeli: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingBuyers = false);
     }
   }
 
@@ -201,7 +250,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final isMobile = MediaQuery.of(context).size.width < 768;
-    final role = auth.user?.role?.toLowerCase() ?? '';
+    final role = auth.user?.role.toLowerCase() ?? '';
 
     if (role != 'admin') {
       return Scaffold(
@@ -1824,6 +1873,95 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildPlatformWalletCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Saldo Platform Tersedia',
+            style: TextStyle(color: Colors.white70),
+          ),
+          const SizedBox(height: 8),
+          _isLoadingWallet
+              ? const SizedBox(
+                  height: 26,
+                  width: 26,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  _formatRupiah(_platformBalance),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+          const SizedBox(height: 6),
+          Text(
+            'Tarif biaya admin saat ini: ${_taxPercentage.toStringAsFixed(0)}% dari tiap transaksi Selesai',
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    await Navigator.pushNamed(
+                      context,
+                      AdminWalletScreen.routeName,
+                    );
+                    _loadWalletSummary();
+                  },
+                  icon: const Icon(Icons.arrow_upward),
+                  label: const Text('Tarik Saldo'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF1565C0),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await Navigator.pushNamed(
+                      context,
+                      AdminWalletScreen.routeName,
+                    );
+                    _loadWalletSummary();
+                  },
+                  icon: const Icon(Icons.receipt_long, color: Colors.white),
+                  label: const Text(
+                    'Lihat Detail',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildReportCard(
     String title,
     String value,
@@ -1884,6 +2022,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ── USERS TAB ────────────────────────────────────────────────────────────────
+  // ALUR BARU: menu Pengguna sekarang punya 2 sub-tab: "Penjual" (kelola
+  // penuh — tambah/ubah/hapus, termasuk data toko) dan "Pembeli" (read-only,
+  // cuma bisa dilihat + dihapus, karena Pembeli daftar sendiri lewat app).
 
   Widget _buildUsersTab() {
     final sellers = _sellerUsers;
@@ -2113,7 +2254,133 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // ── BOTTOM NAV (FIX: hapus tab Verifikasi) ────────────────────────────────────
+  // Daftar Pembeli — read-only, cuma tombol hapus, tanpa tombol Tambah/Ubah.
+  // Pembeli daftar sendiri lewat app, bukan dibuatkan Admin.
+  Widget _buildBuyerList() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${_buyers.length} Pembeli',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              IconButton(
+                onPressed: _loadBuyers,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_buyersError != null)
+            _buildErrorBanner(_buyersError!, _loadBuyers),
+          if (_isLoadingBuyers)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_buyers.isEmpty)
+            _buildEmptyState(
+              'Belum ada pembeli terdaftar',
+              Icons.person_outline,
+            )
+          else
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color.fromRGBO(0, 0, 0, 0.05),
+                    blurRadius: 12,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: PaginatedListView<Map<String, dynamic>>(
+                items: _buyers,
+                pageSize: 10,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, buyer, index) {
+                  final name = buyer['name'] ?? '-';
+                  final id = buyer['id'] as int?;
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Colors.grey[200],
+                          child: Text(
+                            name.isNotEmpty ? name[0].toUpperCase() : '?',
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                buyer['email'] ?? '-',
+                                style: const TextStyle(
+                                  color: Colors.black54,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Text(
+                                '${buyer['total_orders'] ?? 0} pesanan',
+                                style: const TextStyle(
+                                  color: Colors.black38,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete,
+                            color: Colors.red,
+                            size: 20,
+                          ),
+                          onPressed: id == null
+                              ? null
+                              : () async {
+                                  final confirm = await _showConfirmDialog(
+                                    'Hapus pembeli $name?',
+                                  );
+                                  if (confirm == true && _token != null) {
+                                    await _adminService.deleteUser(_token!, id);
+                                    _loadBuyers();
+                                  }
+                                },
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ── BOTTOM NAV ─────────────────────────────────────────────────────────────
 
   Widget _buildBottomNav() {
     final destinations = [
@@ -2346,10 +2613,47 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     int? userId,
   }) async {
     final isEditing = user != null;
+    final existingStore = user?['store'] as Map<String, dynamic>?;
+
     final nameCtrl = TextEditingController(text: user?['name'] ?? '');
     final emailCtrl = TextEditingController(text: user?['email'] ?? '');
-    String selectedRole = user?['role'] ?? 'pembeli';
+    final passwordCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController(text: user?['phone'] ?? '');
+
+    // Field khusus toko/BUMDes — selalu ditampilkan karena role selalu Penjual.
+    final storeNameCtrl = TextEditingController(
+      text: existingStore?['store_name'] ?? '',
+    );
+    final storeDescCtrl = TextEditingController(
+      text: existingStore?['description'] ?? '',
+    );
+    final villageCtrl = TextEditingController(
+      text: existingStore?['village'] ?? '',
+    );
+    final districtCtrl = TextEditingController(
+      text: existingStore?['district'] ?? '',
+    );
+    final regencyCtrl = TextEditingController(
+      text: existingStore?['regency'] ?? '',
+    );
+    final storePhoneCtrl = TextEditingController(
+      text: existingStore?['contact_phone'] ?? '',
+    );
+    final storeAddressCtrl = TextEditingController(
+      text: existingStore?['address'] ?? '',
+    );
+    final bankNameCtrl = TextEditingController(
+      text: existingStore?['bank_name'] ?? '',
+    );
+    final bankNumberCtrl = TextEditingController(
+      text: existingStore?['bank_account_number'] ?? '',
+    );
+    final bankHolderCtrl = TextEditingController(
+      text: existingStore?['bank_account_holder'] ?? '',
+    );
+
     final formKey = GlobalKey<FormState>();
+    bool isSaving = false;
 
     await showDialog<void>(
       context: context,

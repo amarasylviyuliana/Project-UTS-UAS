@@ -4,6 +4,7 @@ import '../models/order_model.dart';
 import '../providers/auth_provider.dart';
 import '../services/order_service.dart';
 import 'payment_gateway_screen.dart';
+import 'order_history_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   static const routeName = '/order-detail';
@@ -269,33 +270,49 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   Widget build(BuildContext context) {
     if (_order == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Detail Pesanan'), elevation: 0),
-        body: Center(
-          child: _isLoadingOrder
-              ? const CircularProgressIndicator()
-              : Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _loadError ?? 'Detail pesanan tidak tersedia.',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.black54,
+      return PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) async {
+          if (didPop) return;
+          Navigator.pushReplacementNamed(context, OrderHistoryScreen.routeName);
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Detail Pesanan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            backgroundColor: const Color(0xFF2D5016),
+            foregroundColor: Colors.white,
+            elevation: 0,
+          ),
+          backgroundColor: const Color(0xFFFAFAFA),
+          body: Center(
+            child: _isLoadingOrder
+                ? const CircularProgressIndicator()
+                : Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _loadError ?? 'Detail pesanan tidak tersedia.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.black54,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      if (_loadError != null)
-                        ElevatedButton(
-                          onPressed: _loadOrder,
-                          child: const Text('Coba lagi'),
-                        ),
-                    ],
+                        const SizedBox(height: 16),
+                        if (_loadError != null)
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2D5016),
+                            ),
+                            onPressed: _loadOrder,
+                            child: const Text('Coba lagi', style: TextStyle(color: Colors.white)),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
+          ),
         ),
       );
     }
@@ -303,9 +320,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final order = _order!;
     final statusColor = _getStatusColor(order.status);
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        Navigator.pushReplacementNamed(context, OrderHistoryScreen.routeName);
+      },
+      child: Scaffold(
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        title: const Text('Detail Pesanan'),
+        title: const Text('Detail Pesanan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        backgroundColor: const Color(0xFF2D5016),
+        foregroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(
@@ -334,8 +360,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5FBF6),
-                  borderRadius: BorderRadius.circular(24),
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFC8E6C9), width: 1),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,6 +372,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D5016),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -535,8 +563,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
 
               const SizedBox(height: 20),
-              if (order.status.toLowerCase().contains('pembayaran') ||
-                  order.status.toLowerCase().contains('pending'))
+              if ((order.status.toLowerCase().contains('pembayaran') ||
+                      order.status.toLowerCase().contains('pending')) &&
+                  Provider.of<AuthProvider>(context, listen: false).user?.role != 'seller' &&
+                  Provider.of<AuthProvider>(context, listen: false).user?.role != 'admin')
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -772,6 +802,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

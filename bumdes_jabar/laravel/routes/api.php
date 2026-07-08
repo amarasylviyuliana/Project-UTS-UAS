@@ -14,7 +14,6 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ApprovalController;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Controllers\Admin\VerificationController;
 use App\Models\Product;
 use App\Http\Controllers\ProductAISearchController;
 use App\Http\Controllers\WalletController;
@@ -58,6 +57,7 @@ Route::match(['get', 'put', 'delete', 'patch'], '/auth/register', function () {
 
 // Product routes (public)
 Route::get('/categories', [ProductController::class, 'getCategories']);
+Route::get('/platform/fee-info', [ProductController::class, 'getPlatformFeeInfo']);
 Route::get('/debug/products', function () {
     return response()->json([
         'message' => 'Debug product list',
@@ -165,6 +165,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/users/{id}',         [AdminController::class, 'updateUser']);
         Route::delete('/users/{id}',      [AdminController::class, 'deleteUser']);
 
+
         Route::get('/stores',             [AdminController::class, 'getAllStores']);
         Route::put('/stores/{id}',        [AdminController::class, 'updateStore']);
         Route::delete('/stores/{id}',     [AdminController::class, 'deleteStore']);
@@ -186,6 +187,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::put('/users/{id}',      [AdminController::class, 'updateUser']);
             Route::delete('/users/{id}',   [AdminController::class, 'deleteUser']);
 
+            // Pembeli (read-only + hapus). Tidak ada create/update karena
+            // Pembeli daftar sendiri lewat app, bukan dibuatkan Admin.
+            Route::get('/buyers',          [AdminController::class, 'getAllBuyers']);
+
             Route::get('/stores',          [AdminController::class, 'getAllStores']);
             Route::put('/stores/{id}',     [AdminController::class, 'updateStore']);
             Route::delete('/stores/{id}',  [AdminController::class, 'deleteStore']);
@@ -200,23 +205,16 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::put('/orders/{id}/status',  [AdminController::class, 'updateOrderStatus']);
 
             Route::get('/approvals/stats',         [ApprovalController::class, 'getApprovalStats']);
-            Route::get('/store-approvals',         [ApprovalController::class, 'getPendingStoreApprovals']);
-            Route::get('/store-approvals/{id}',    [ApprovalController::class, 'getStoreApprovalDetail']);
-            Route::put('/store-approvals/{id}',    [ApprovalController::class, 'approveStore']);
             Route::get('/product-approvals',       [ApprovalController::class, 'getPendingProductApprovals']);
             Route::get('/product-approvals/{id}',  [ApprovalController::class, 'getProductApprovalDetail']);
             Route::put('/product-approvals/{id}',  [ApprovalController::class, 'approveProduct']);
 
-            Route::get('/verifications',                        [VerificationController::class, 'getPendingVerifications']);
-            Route::get('/verifications/{id}',                   [VerificationController::class, 'getVerificationDetail']);
-            Route::put('/verifications/{id}',                   [VerificationController::class, 'verifySeller']);
-            Route::get('/seller/{userId}/verification-history', [VerificationController::class, 'getSellerVerificationHistory']);
-
-            // Saldo & Pajak (Admin)
-            Route::get('/wallet/summary',      [\App\Http\Controllers\Admin\WalletController::class, 'summary']);
-            Route::get('/wallet/transactions', [\App\Http\Controllers\Admin\WalletController::class, 'transactions']);
-            Route::get('/wallet/store-wallets', [\App\Http\Controllers\Admin\WalletController::class, 'storeWallets']);
-            Route::get('/withdrawals',         [\App\Http\Controllers\Admin\WalletController::class, 'withdrawals']);
+           // Saldo & Pajak (Admin)
+Route::get('/wallet/summary',      [\App\Http\Controllers\Admin\WalletController::class, 'summary']);
+Route::get('/wallet/transactions', [\App\Http\Controllers\Admin\WalletController::class, 'transactions']);
+Route::get('/wallet/store-wallets', [\App\Http\Controllers\Admin\WalletController::class, 'storeWallets']);
+Route::post('/wallet/withdrawals', [\App\Http\Controllers\Admin\WalletController::class, 'requestWithdrawal']);
+Route::get('/withdrawals',         [\App\Http\Controllers\Admin\WalletController::class, 'withdrawals']);
 
             Route::get('/audit-logs',                 [AdminController::class, 'getAllAuditLogs']);
             Route::get('/audit-logs/admin/{adminId}', [AdminController::class, 'getAdminAuditLogs']);

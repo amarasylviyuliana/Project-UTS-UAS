@@ -33,11 +33,6 @@ class Admin extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function storeApprovals(): HasMany
-    {
-        return $this->hasMany(StoreApproval::class, 'admin_id');
-    }
-
     public function productApprovals(): HasMany
     {
         return $this->hasMany(ProductApproval::class, 'admin_id');
@@ -46,10 +41,5 @@ class Admin extends Model
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class, 'admin_id');
-    }
-
-    public function sellerVerifications(): HasMany
-    {
-        return $this->hasMany(SellerVerification::class, 'verified_by');
     }
 }

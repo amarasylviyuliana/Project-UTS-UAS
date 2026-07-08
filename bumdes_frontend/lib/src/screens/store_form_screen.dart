@@ -25,6 +25,7 @@ class _StoreFormScreenState extends State<StoreFormScreen> {
 
   bool _isSubmitting = false;
   bool _isLoading = true;
+  bool _storeNotFound = false;
 
   Map<String, dynamic>? _existingStore;
   bool get _isEditing =>
@@ -74,9 +75,13 @@ class _StoreFormScreenState extends State<StoreFormScreen> {
         _bankNameCtrl.text = store['bank_name'] ?? '';
         _bankNumberCtrl.text = store['bank_account_number'] ?? '';
         _bankHolderCtrl.text = store['bank_account_holder'] ?? '';
+      } else {
+        _storeNotFound = true;
       }
     } catch (e) {
       debugPrint('Load store error: $e');
+      // 404 = toko memang belum dibuat oleh Admin untuk akun ini
+      _storeNotFound = true;
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -117,9 +122,7 @@ class _StoreFormScreenState extends State<StoreFormScreen> {
 
       if (!mounted) return;
 
-      final message = _isEditing
-          ? 'Toko berhasil diperbarui'
-          : 'Toko berhasil didaftarkan, menunggu persetujuan admin';
+      final message = 'Toko berhasil diperbarui';
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message), backgroundColor: Colors.green),
@@ -143,19 +146,21 @@ class _StoreFormScreenState extends State<StoreFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Toko' : 'Daftarkan Toko'),
+        title: const Text('Profil Toko'),
         backgroundColor: const Color(0xFF2A7F41),
         foregroundColor: Colors.white,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
+          : _storeNotFound
+              ? _buildStoreNotFoundState()
+              : Padding(
               padding: const EdgeInsets.all(16.0),
               child: Form(
                 key: _formKey,
                 child: ListView(
                   children: [
-                    if (_isEditing) _buildStatusBanner(),
+                    _buildStatusBanner(),
 
                     _buildSectionTitle('Informasi Toko'),
 
@@ -264,9 +269,9 @@ class _StoreFormScreenState extends State<StoreFormScreen> {
                                   strokeWidth: 2.5,
                                 ),
                               )
-                            : Text(
-                                _isEditing ? 'Perbarui Toko' : 'Daftarkan Toko',
-                                style: const TextStyle(
+                            : const Text(
+                                'Perbarui Toko',
+                                style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -281,31 +286,43 @@ class _StoreFormScreenState extends State<StoreFormScreen> {
     );
   }
 
+  Widget _buildStoreNotFoundState() {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.store_mall_directory_outlined,
+                size: 72, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text(
+              'Toko Anda belum dibuat oleh Admin',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Akun Penjual dan data toko/BUMDes sekarang dibuat langsung '
+              'oleh Admin. Silakan hubungi Admin BUMDes untuk mengaktifkan '
+              'toko Anda.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.black54),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildStatusBanner() {
-    final approval = _existingStore?['store_approval'];
-    final status = approval?['status'] as String? ?? '';
     final isActive = _existingStore?['is_active'] == true;
 
-    Color color;
-    IconData icon;
-    String message;
-
-    if (status == 'Disetujui' || isActive) {
-      color = Colors.green;
-      icon = Icons.check_circle_outline;
-      message = 'Toko Anda sudah aktif dan disetujui admin';
-    } else if (status == 'Ditolak') {
-      final reason = approval?['rejected_reason'] as String?;
-      color = Colors.red;
-      icon = Icons.cancel_outlined;
-      message = reason != null && reason.isNotEmpty
-          ? 'Ditolak: $reason'
-          : 'Toko Anda ditolak oleh admin';
-    } else {
-      color = Colors.orange;
-      icon = Icons.hourglass_empty;
-      message = 'Toko sedang menunggu persetujuan admin';
-    }
+    final color = isActive ? Colors.green : Colors.red;
+    final icon = isActive ? Icons.check_circle_outline : Icons.pause_circle_outline;
+    final message = isActive
+        ? 'Toko Anda aktif dan dapat berjualan'
+        : 'Toko Anda dinonaktifkan oleh Admin. Hubungi Admin BUMDes jika ini keliru.';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),

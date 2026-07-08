@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Store extends Model
@@ -16,6 +15,7 @@ class Store extends Model
         'user_id',
         'store_name',
         'description',
+          'address', 
         'village',
         'district',
         'regency',
@@ -37,16 +37,6 @@ class Store extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function storeApproval(): HasOne
-    {
-        return $this->hasOne(StoreApproval::class);
-    }
-
-    public function sellerVerification(): HasOne
-    {
-        return $this->hasOne(SellerVerification::class);
-    }
-
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);
@@ -57,19 +47,8 @@ class Store extends Model
         return $this->hasMany(Order::class);
     }
 
-    // Helper methods
-    public function isApproved(): bool
-    {
-        return $this->storeApproval?->status === 'Disetujui';
-    }
-
-    public function isPendingApproval(): bool
-    {
-        return $this->storeApproval?->status === 'Menunggu Persetujuan';
-    }
-
-    public function isVerified(): bool
-    {
-        return $this->sellerVerification?->status === 'Terverifikasi';
-    }
+    // Catatan: toko sekarang dibuat langsung aktif oleh Admin (lihat
+    // AdminController@createUser), jadi tidak ada lagi konsep approval
+    // pending/ditolak untuk toko. Status aktif/nonaktif cukup pakai
+    // kolom is_active.
 }

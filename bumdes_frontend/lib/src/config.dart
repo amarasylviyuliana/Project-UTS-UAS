@@ -5,7 +5,17 @@ String get backendUrl {
   const String apiUrlDefine = String.fromEnvironment('API_URL');
   if (apiUrlDefine.isNotEmpty) return apiUrlDefine;
 
-  // FIX: Hardcode Railway URL sebagai fallback — sama untuk web & mobile
+  // Untuk Flutter Web, gunakan backend produksi jika API_URL tidak di-set.
+  // Ini mencegah browser mencoba fetch ke localhost saat server lokal tidak aktif.
+  if (kIsWeb) {
+    return 'https://project-uts-uas-production.up.railway.app';
+  }
+
+  // Ketika debug di device/mobile, gunakan backend lokal jika tersedia.
+  if (kDebugMode) {
+    return 'http://127.0.0.1:8000';
+  }
+
   return 'https://project-uts-uas-production.up.railway.app';
 }
 
