@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/product_provider.dart';
 import '../providers/auth_provider.dart';
+import '../config/app_config.dart';
 import '../widgets/skeleton_loading.dart';
 import 'cart_screen.dart';
 import 'order_history_screen.dart';
@@ -184,7 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ─── HOME TAB ────────────────────────────────────────────────────────────────
+
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -282,17 +283,6 @@ class _HomeTabState extends State<HomeTab> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildFeatureIcon(Icons.star_outline, 'Produk\nUnggulan'),
-              _buildFeatureIcon(
-                  Icons.shopping_cart_outlined, 'Keranjang\nBelanja'),
-              _buildFeatureIcon(
-                  Icons.receipt_long_outlined, 'Riwayat\nPesanan'),
-            ],
-          ),
         ],
       ),
     );
@@ -300,6 +290,7 @@ class _HomeTabState extends State<HomeTab> {
 
   Widget _buildFeatureIcon(IconData icon, String label) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           padding: const EdgeInsets.all(10),
