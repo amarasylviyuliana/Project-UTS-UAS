@@ -9,6 +9,9 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Services\XenditService;
 use App\Services\N8nNotificationService;
+use App\Events\OrderCancelled;
+use App\Events\OrderStatusUpdated;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -347,6 +350,8 @@ class OrderController extends Controller
             'status' => 'required|in:Menunggu Pembayaran,Menunggu Konfirmasi,Dikonfirmasi,Diproses,Dikemas,Dikirim,Estimasi Sampai,Selesai,Dibatalkan',
         ]);
 
+        $previousStatus = $order->status;
+
         if ($validated['status'] === 'Dikirim') {
             $order->delivered_at = now();
         } elseif ($validated['status'] === 'Selesai') {
@@ -355,6 +360,9 @@ class OrderController extends Controller
 
         $order->status = $validated['status'];
         $order->save();
+
+        // Dispatch event untuk real-time sync
+        event(new OrderStatusUpdated($order, $previousStatus));
 
         if ($validated['status'] === 'Selesai') {
             app(\App\Services\WalletService::class)->creditFromCompletedOrder($order);
@@ -434,16 +442,129 @@ class OrderController extends Controller
 
             // Pastikan tidak ada proses pembayaran yang masih aktif setelah dibatalkan
             if ($order->payment) {
-                $order->payment->update([
-                    'status' => 'Cancelled',
-                    'payment_status' => 'CANCELLED',
-                ]);
+                try {
+                    // Preferred state for modern schema: mark the payment itself as cancelled.
+                    $order->payment->update([
+                        'status' => 'Cancelled',
+                        'payment_status' => 'Cancelled',
+                    ]);
+                } catch (QueryException $e) {
+                    $errorMessage = $e->getMessage();
+                    if (str_contains($errorMessage, 'Data truncated')
+                        || str_contains($errorMessage, 'Incorrect enum value')
+                        || str_contains($errorMessage, '1265')) {
+                        Log::warning('Payment status enum does not support Cancelled; falling back to Rejected.', [
+                            'order_id' => $order->id,
+                            'payment_id' => $order->payment->id,
+                            'exception' => $errorMessage,
+                        ]);
+
+                        // Fallback for older schema where `status` enum is still limited.
+                        $order->payment->update([
+                            'status' => 'Rejected',
+                            'payment_status' => 'Cancelled',
+                        ]);
+                    } else {
+                        throw $e;
+                    }
+                }
             }
+
+            // Dispatch event untuk real-time sync ke pembeli, penjual, dan admin
+            event(new OrderCancelled($order));
         });
+
+        $order->refresh();
+        $order->load('payment');
 
         return response()->json([
             'message' => 'Pesanan berhasil dibatalkan',
             'data' => $order,
+        ]);
+    }
+
+    /**
+     * Get buyer orders with sync support
+     * Supports efficient polling-based real-time updates
+     */
+    public function getBuyerOrdersSync(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'last_sync' => 'sometimes|date_format:Y-m-d H:i:s',
+            'limit' => 'sometimes|integer|min:1|max:100',
+        ]);
+
+        $user = $request->user();
+        $query = $user->orders()->with(['store', 'payment', 'orderItems.product']);
+
+        // Filter by last sync time for efficient updates
+        if (!empty($validated['last_sync'])) {
+            $query->where('updated_at', '>', $validated['last_sync']);
+        }
+
+        $limit = $validated['limit'] ?? 10;
+        $orders = $query->latest()->paginate($limit);
+
+        return response()->json([
+            'message' => 'Riwayat pesanan pembeli (sync)',
+            'data' => $orders->items(),
+            'pagination' => [
+                'total' => $orders->total(),
+                'per_page' => $orders->perPage(),
+                'current_page' => $orders->currentPage(),
+                'last_page' => $orders->lastPage(),
+            ],
+            'sync_timestamp' => now()->format('Y-m-d H:i:s'),
+        ]);
+    }
+
+    /**
+     * Get seller orders with sync support
+     * Supports efficient polling-based real-time updates
+     */
+    public function getSellerOrdersSync(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user->isSeller()) {
+            return response()->json([
+                'message' => 'Hanya penjual yang dapat melihat pesanan masuk',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'last_sync' => 'sometimes|date_format:Y-m-d H:i:s',
+            'limit' => 'sometimes|integer|min:1|max:100',
+        ]);
+
+        $store = $user->store;
+        if (!$store) {
+            return response()->json([
+                'message' => 'Toko tidak ditemukan',
+                'data' => [],
+            ], 200);
+        }
+
+        $query = $store->orders()->with(['buyer', 'payment', 'orderItems.product']);
+
+        // Filter by last sync time for efficient updates
+        if (!empty($validated['last_sync'])) {
+            $query->where('updated_at', '>', $validated['last_sync']);
+        }
+
+        $limit = $validated['limit'] ?? 10;
+        $orders = $query->latest()->paginate($limit);
+
+        return response()->json([
+            'message' => 'Pesanan masuk toko (sync)',
+            'data' => $orders->items(),
+            'pagination' => [
+                'total' => $orders->total(),
+                'per_page' => $orders->perPage(),
+                'current_page' => $orders->currentPage(),
+                'last_page' => $orders->lastPage(),
+            ],
+            'sync_timestamp' => now()->format('Y-m-d H:i:s'),
         ]);
     }
 }

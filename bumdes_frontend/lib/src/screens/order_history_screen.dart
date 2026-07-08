@@ -4,6 +4,7 @@ import '../app.dart';
 import '../models/order_model.dart';
 import '../providers/auth_provider.dart';
 import '../services/order_service.dart';
+import '../services/order_sync_service.dart';
 import 'order_detail_screen.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
@@ -20,6 +21,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   late Future<List<OrderModel>> _ordersFuture;
   bool _isInitialized = false;
   bool _isRouteObserverSubscribed = false;
+  late OrderSyncService _syncService;
 
   final List<String> _tabLabels = [
     'Semua',
@@ -45,6 +47,25 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabLabels.length, vsync: this);
+    _syncService = OrderSyncService();
+
+    // Setup sync callbacks
+    _syncService.onOrderUpdated = (order) {
+      _refreshOrders();
+    };
+    _syncService.onOrderCancelled = (order) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pesanan ${order.orderNumber} telah dibatalkan'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      _refreshOrders();
+    };
+    _syncService.onStatusChanged = (order) {
+      _refreshOrders();
+    };
   }
 
   @override
@@ -53,6 +74,15 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     if (!_isInitialized) {
       _loadOrders();
       _isInitialized = true;
+
+      // Start sync service
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      if (auth.isAuthenticated && auth.token != null) {
+        _syncService.startPolling(
+          auth.token!,
+          fetchOrders: (token) => OrderService().fetchOrders(token),
+        );
+      }
     }
     if (!_isRouteObserverSubscribed) {
       final modalRoute = ModalRoute.of(context);
@@ -87,6 +117,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   void dispose() {
     routeObserver.unsubscribe(this);
     _tabController.dispose();
+    _syncService.stopPolling();
+    _syncService.dispose();
     super.dispose();
   }
 
@@ -217,7 +249,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                                           child: SizedBox(
                                             width: 16,
                                             height: 16,
-                                            child: CircularProgressIndicator(strokeWidth: 2),
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
                                           ),
                                         ),
                                       );
@@ -226,14 +260,22 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                                       width: 48,
                                       height: 48,
                                       color: Colors.grey[200],
-                                      child: const Icon(Icons.image_not_supported, size: 20, color: Colors.grey),
+                                      child: const Icon(
+                                        Icons.image_not_supported,
+                                        size: 20,
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                   )
                                 : Container(
                                     width: 48,
                                     height: 48,
                                     color: Colors.grey[200],
-                                    child: const Icon(Icons.image_not_supported, size: 20, color: Colors.grey),
+                                    child: const Icon(
+                                      Icons.image_not_supported,
+                                      size: 20,
+                                      color: Colors.grey,
+                                    ),
                                   ),
                           ),
                           const SizedBox(width: 10),
@@ -283,8 +325,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                                 color: order.paymentStatus == 'Lunas'
                                     ? const Color(0xFF2A7F41)
                                     : order.paymentStatus == 'Ditolak'
-                                        ? Colors.red
-                                        : Colors.orange,
+                                    ? Colors.red
+                                    : Colors.orange,
                               ),
                             ),
                           ],

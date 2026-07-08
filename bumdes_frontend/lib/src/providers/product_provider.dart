@@ -17,16 +17,20 @@ class ProductProvider extends ChangeNotifier {
 
   List<ProductModel> get products => _filtered;
   List<ProductModel> get featured => _products.take(6).toList();
-  // dynamic category list derived from products (used by SearchTab chips)
+  // FIX: kategori diambil dinamis dari data produk asli (sesuai tabel
+  // `categories` di backend), bukan daftar hardcoded yang gampang basi
+  // kalau admin menambah/mengubah kategori.
   List<String> get categories {
-    final names = _products
-        .map((p) => p.category.trim())
-        .where((c) => c.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+    final names =
+        _products
+            .map((p) => p.category.trim())
+            .where((c) => c.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
     return ['Semua', ...names];
   }
+
   ProductProvider() {
     _loadProducts();
   }
@@ -59,51 +63,7 @@ class ProductProvider extends ChangeNotifier {
 
   void _loadSampleProducts() {
     _products.clear();
-    isUsingSampleData = true;
-    _products.addAll([
-      ProductModel(
-        id: 1,
-        name: 'Kerupuk Kulit dari BUMDes Garut',
-        storeName: 'BUMDes Garut',
-        location: 'Garut',
-        category: 'Kuliner Desa',
-        price: 25000,
-        stock: 15,
-        description:
-            'Kerupuk kulit khas Garut dengan cita rasa gurih, renyah, dan siap dipasarkan.',
-        imageUrl: 'https://picsum.photos/seed/kerupuk/400/300',
-        isService: false,
-        isSample: true,
-      ),
-      ProductModel(
-        id: 2,
-        name: 'Sayuran Segar dari BUMDes Ciwdey',
-        storeName: 'BUMDes Ciwdey',
-        location: 'Ciwdey',
-        category: 'Pertanian & Perkebunan',
-        price: 18000,
-        stock: 25,
-        description:
-            'Sayuran segar hasil panen lokal dari BUMDes Ciwdey untuk kebutuhan harian.',
-        imageUrl: 'https://picsum.photos/seed/sayur/400/300',
-        isService: false,
-        isSample: true,
-      ),
-      ProductModel(
-        id: 3,
-        name: 'Sus Lezat dari BUMDes Pangalengan',
-        storeName: 'BUMDes Pangalengan',
-        location: 'Pangalengan',
-        category: 'Kuliner Desa',
-        price: 30000,
-        stock: 12,
-        description:
-            'Sus lembut dan nikmat khas Pangalengan, cocok untuk camilan keluarga.',
-        imageUrl: 'https://picsum.photos/seed/sus/400/300',
-        isService: false,
-        isSample: true,
-      ),
-    ]);
+    isUsingSampleData = false;
   }
 
   void search(String query) {
