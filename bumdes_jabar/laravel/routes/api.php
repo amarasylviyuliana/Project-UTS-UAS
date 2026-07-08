@@ -126,8 +126,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders', [OrderController::class, 'createOrder']);
     Route::get('/orders', [OrderController::class, 'getBuyerOrders']);
     Route::get('/orders/buyer/history', [OrderController::class, 'getBuyerOrders']);
+    Route::get('/orders/buyer/sync', [OrderController::class, 'getBuyerOrdersSync']);
     Route::get('/orders/{id}', [OrderController::class, 'show']);
     Route::get('/seller/orders', [OrderController::class, 'getSellerOrders']);
+    Route::get('/seller/orders/sync', [OrderController::class, 'getSellerOrdersSync']);
     Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus']);
     Route::put('/orders/{id}/confirm-receipt', [OrderController::class, 'confirmReceipt']);
     Route::put('/orders/{id}/cancel', [OrderController::class, 'cancelOrder']);

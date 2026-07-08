@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/order_service.dart';
@@ -22,6 +23,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen>
   bool _loading = true;
   String? _errorMessage;
   late TabController _tabController;
+  Timer? _autoRefreshTimer;
 
   final List<String> _tabLabels = [
     'Semua',
@@ -56,8 +58,18 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen>
 
   @override
   void dispose() {
+    _autoRefreshTimer?.cancel();
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _startAutoRefresh(String token) {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) {
+        _load();
+      }
+    });
   }
 
   Future<void> _load() async {
@@ -75,6 +87,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen>
         });
         return;
       }
+      _startAutoRefresh(token);
       final res = await _service.getSellerOrders(token);
       if (mounted) {
         setState(() {
@@ -126,7 +139,8 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen>
 
     // Fallback: nilai mentah dari backend (jika model belum normalisasi)
     if (normalized == 'paid' || normalized == 'confirmed') return 'Lunas';
-    if (normalized == 'pending' || normalized == 'pending_payment') return 'Belum Lunas';
+    if (normalized == 'pending' || normalized == 'pending_payment')
+      return 'Belum Lunas';
     if (normalized == 'rejected' || normalized == 'failed') return 'Ditolak';
 
     return paymentStatus; // tampilkan apa adanya
@@ -156,10 +170,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen>
               style: const TextStyle(color: Colors.black45, fontSize: 15),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _load,
-              child: const Text('Segarkan'),
-            ),
+            ElevatedButton(onPressed: _load, child: const Text('Segarkan')),
           ],
         ),
       );
@@ -285,8 +296,8 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen>
                                 color: paymentLabel == 'Lunas'
                                     ? Colors.green.withOpacity(0.1)
                                     : paymentLabel == 'Ditolak'
-                                        ? Colors.red.withOpacity(0.1)
-                                        : Colors.orange.withOpacity(0.1),
+                                    ? Colors.red.withOpacity(0.1)
+                                    : Colors.orange.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -297,8 +308,8 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen>
                                   color: paymentLabel == 'Lunas'
                                       ? Colors.green
                                       : paymentLabel == 'Ditolak'
-                                          ? Colors.red
-                                          : Colors.orange,
+                                      ? Colors.red
+                                      : Colors.orange,
                                 ),
                               ),
                             ),
@@ -378,23 +389,26 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen>
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : _errorMessage != null
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error_outline,
-                            size: 48, color: Colors.red),
-                        const SizedBox(height: 16),
-                        Text(_errorMessage!, textAlign: TextAlign.center),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: _load,
-                          child: const Text('Coba Lagi'),
-                        ),
-                      ],
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
                     ),
-                  )
-                : _buildOrderList(_orders, null),
+                    const SizedBox(height: 16),
+                    Text(_errorMessage!, textAlign: TextAlign.center),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: _load,
+                      child: const Text('Coba Lagi'),
+                    ),
+                  ],
+                ),
+              )
+            : _buildOrderList(_orders, null),
       );
     }
 
@@ -412,10 +426,11 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen>
             final count = label == 'Semua'
                 ? _orders.length
                 : _orders
-                    .where((o) =>
-                        o.status ==
-                        _tabFilters[_tabLabels.indexOf(label)])
-                    .length;
+                      .where(
+                        (o) =>
+                            o.status == _tabFilters[_tabLabels.indexOf(label)],
+                      )
+                      .length;
             return Tab(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -425,7 +440,9 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen>
                     const SizedBox(width: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 1),
+                        horizontal: 6,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF2A7F41),
                         borderRadius: BorderRadius.circular(10),
@@ -433,7 +450,9 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen>
                       child: Text(
                         '$count',
                         style: const TextStyle(
-                            color: Colors.white, fontSize: 10),
+                          color: Colors.white,
+                          fontSize: 10,
+                        ),
                       ),
                     ),
                   ],
@@ -446,29 +465,28 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen>
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline,
-                          size: 48, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(_errorMessage!, textAlign: TextAlign.center),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: _load,
-                        child: const Text('Coba Lagi'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(_errorMessage!, textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _load,
+                    child: const Text('Coba Lagi'),
                   ),
-                )
-              : TabBarView(
-                  controller: _tabController,
-                  children: List.generate(
-                    _tabFilters.length,
-                    (i) => _buildOrderList(_orders, _tabFilters[i]),
-                  ),
-                ),
+                ],
+              ),
+            )
+          : TabBarView(
+              controller: _tabController,
+              children: List.generate(
+                _tabFilters.length,
+                (i) => _buildOrderList(_orders, _tabFilters[i]),
+              ),
+            ),
     );
   }
 }

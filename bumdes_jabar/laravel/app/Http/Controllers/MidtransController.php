@@ -99,11 +99,16 @@ class MidtransController extends Controller
                 case 'deny':
                 case 'expire':
                 case 'cancel':
-                    $order->status = 'Dibatalkan';
+                    // Do NOT auto-cancel the order when the external payment flow is cancelled/expired/denied.
+                    // Mark the payment as rejected so the UI can show 'Pembayaran dibatalkan',
+                    // but keep the order in 'Menunggu Pembayaran' so the user can explicitly
+                    // press the "Batalkan Pesanan" button if they really want to cancel.
                     $payment->status = 'Rejected';
                     $payment->payment_status = 'Rejected';
                     $payment->rejection_reason = 'Midtrans status: ' . ($transactionStatus ?? 'unknown');
                     $payment->rejected_at = now();
+                    // Ensure the order remains in an unpaid state (buyer can cancel explicitly)
+                    $order->status = 'Menunggu Pembayaran';
                     break;
                 default:
                     break;
