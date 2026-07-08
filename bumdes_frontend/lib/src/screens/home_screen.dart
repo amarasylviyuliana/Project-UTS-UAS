@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/product_provider.dart';
 import '../providers/auth_provider.dart';
+import '../config/app_config.dart';
+import '../widgets/skeleton_loading.dart';
 import 'cart_screen.dart';
 import 'order_history_screen.dart';
 import 'profile_screen.dart';
@@ -281,7 +283,6 @@ class _HomeTabState extends State<HomeTab> {
               ),
             ),
           ),
-
         ],
       ),
     );
