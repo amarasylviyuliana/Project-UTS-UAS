@@ -19,6 +19,13 @@ class AdminService {
   }
 
   // ── ORDERS ──────────────────────────────────────────────────────────────────
+  // ALUR BARU: Admin hanya MEMANTAU pesanan (read-only). Mengubah status
+  // pesanan (konfirmasi/kirim/selesai/batal) sepenuhnya tanggung jawab
+  // Penjual lewat aplikasinya sendiri, jadi method updateOrderStatus() yang
+  // dulu ada di sini sudah DIHAPUS. Kalau backend endpoint
+  // PUT /admin/orders/{id}/status masih aktif, pastikan endpoint itu juga
+  // ditolak/dibatasi di sisi server untuk role Admin, supaya tidak bisa
+  // dipanggil langsung lewat API di luar aplikasi ini.
   Future<List<Map<String, dynamic>>> getAdminOrders(
     String token, {
     int perPage = 200,
@@ -38,30 +45,6 @@ class AdminService {
       }
     }
     return [];
-  }
-
-  Future<Map<String, dynamic>> updateOrderStatus(
-    String token,
-    int orderId,
-    String status,
-  ) async {
-    final api = ApiService(token: token);
-    Object? lastError;
-    for (final path in [
-      '/admin/orders/$orderId/status',
-      '/orders/$orderId/status',
-    ]) {
-      try {
-        return await api.put(path, {'status': status});
-      } catch (e) {
-        lastError = e;
-        continue;
-      }
-    }
-    throw lastError ??
-        Exception(
-          'Gagal memperbarui status pesanan: tidak ada endpoint yang merespons',
-        );
   }
 
   // ── USERS (PENJUAL) ─────────────────────────────────────────────────────────

@@ -1094,6 +1094,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ── ORDERS TAB ───────────────────────────────────────────────────────────────
+  // ALUR BARU: Admin hanya MEMANTAU pesanan (read-only). Perubahan status
+  // pesanan (konfirmasi, kirim, selesai, batal) sepenuhnya menjadi tanggung
+  // jawab Penjual lewat aplikasinya sendiri, jadi tombol "Konfirmasi" yang
+  // dulu ada di sini sudah dihapus.
 
   Widget _buildOrdersTab() {
     return SingleChildScrollView(
@@ -1151,7 +1155,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         pageSize: 10,
         separatorBuilder: (_, __) => const Divider(height: 1),
         itemBuilder: (context, order, index) {
-          final id = order['id'] as int?;
           final status = order['status'] ?? '-';
           return Padding(
             padding: const EdgeInsets.all(12),
@@ -1185,30 +1188,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ),
                 Expanded(child: _buildStatusChip(status)),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (status != 'Dikonfirmasi' &&
-                        status != 'Selesai' &&
-                        status != 'Dibatalkan')
-                      TextButton(
-                        onPressed: id == null || _token == null
-                            ? null
-                            : () async {
-                                await _adminService.updateOrderStatus(
-                                  _token!,
-                                  id,
-                                  'Dikonfirmasi',
-                                );
-                                _loadOrders();
-                              },
-                        child: const Text(
-                          'Konfirmasi',
-                          style: TextStyle(fontSize: 11),
-                        ),
-                      ),
-                  ],
-                ),
               ],
             ),
           );
