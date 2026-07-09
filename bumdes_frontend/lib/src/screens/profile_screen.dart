@@ -7,6 +7,55 @@ class ProfileScreen extends StatelessWidget {
   static const routeName = '/profile';
   const ProfileScreen({super.key});
 
+  // ── AVATAR DENGAN FALLBACK YANG BENAR ───────────────────────────────────
+  // Sebelumnya pakai CircleAvatar(backgroundImage: NetworkImage(...)): kalau
+  // gambar gagal dimuat, Flutter TIDAK otomatis balik ke icon person, jadi
+  // yang muncul cuma warna background polos (bulatan hijau tanpa icon).
+  //
+  // Sekarang pakai Image.network + errorBuilder supaya kalau gagal load,
+  // otomatis fallback ke icon, dan errornya di-print ke console supaya
+  // kelihatan penyebab aslinya (CORS / URL salah / dll).
+  Widget _buildAvatar(String? photoUrl) {
+    const double radius = 40;
+    const double diameter = radius * 2;
+
+    Widget content;
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      content = ClipOval(
+        child: Image.network(
+          photoUrl,
+          width: diameter,
+          height: diameter,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            debugPrint('Gagal load foto profil dari "$photoUrl": $error');
+            return const Icon(Icons.person, size: radius, color: Color(0xFF2D5016));
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const SizedBox(
+              width: diameter,
+              height: diameter,
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            );
+          },
+        ),
+      );
+    } else {
+      content = const Icon(Icons.person, size: radius, color: Color(0xFF2D5016));
+    }
+
+    return Container(
+      width: diameter,
+      height: diameter,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFF2D5016).withValues(alpha: 0.1),
+      ),
+      child: content,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
@@ -20,18 +69,7 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 const Text('Profil Saya', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D5016))),
                 const SizedBox(height: 20),
-                Center(
-                  child: CircleAvatar(
-                    radius: 40,
-                    backgroundColor: const Color(0xFF2D5016).withValues(alpha: 0.1),
-                    backgroundImage: (user.photoUrl != null && user.photoUrl!.isNotEmpty)
-                        ? NetworkImage(user.photoUrl!)
-                        : null,
-                    child: (user.photoUrl == null || user.photoUrl!.isEmpty)
-                        ? const Icon(Icons.person, size: 40, color: Color(0xFF2D5016))
-                        : null,
-                  ),
-                ),
+                Center(child: _buildAvatar(user.photoUrl)),
                 const SizedBox(height: 20),
                 Card(
                   elevation: 1,

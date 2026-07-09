@@ -25,8 +25,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _loading = false;
 
   // ── FOTO PROFIL ────────────────────────────────────────────────────────────
-  // Sengaja pakai Uint8List (bytes), BUKAN dart:io File, supaya kode ini
-  // aman dikompilasi & dijalankan di Flutter Web maupun mobile sekaligus.
   final ImagePicker _picker = ImagePicker();
   Uint8List? _pickedPhotoBytes; // preview lokal sebelum/selama upload
   String? _pickedPhotoName;
@@ -104,21 +102,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     try {
       final service = AuthService();
-      await service.uploadProfilePhoto(auth.token!, bytes, xfile.name);
+      final result = await service.uploadProfilePhoto(auth.token!, bytes, xfile.name);
+      // Debug: cek apa yang sebenarnya dikembalikan backend setelah upload.
+      debugPrint('uploadProfilePhoto response: $result');
       await auth.refreshProfile();
+      debugPrint('photoUrl setelah refreshProfile: ${auth.user?.photoUrl}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Foto profil berhasil diperbarui')),
         );
       }
     } catch (e) {
+      debugPrint('Gagal upload foto profil: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Gagal mengunggah foto: $e')),
         );
       }
     } finally {
-      if (mounted) setState(() => _uploadingPhoto = false);
+      if (mounted) {
+        setState(() {
+          _uploadingPhoto = false;
+          // Setelah upload sukses & refreshProfile jalan, kita pakai
+          // photoUrl dari server, bukan preview lokal lagi.
+          _pickedPhotoBytes = null;
+        });
+      }
     }
   }
 
@@ -308,33 +317,85 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  // ── AVATAR DENGAN FALLBACK YANG BENAR ───────────────────────────────────
+  // Sebelumnya pakai CircleAvatar(backgroundImage: NetworkImage(...)):
+  // kalau gambar gagal dimuat (404 / CORS / URL salah), Flutter TIDAK
+  // otomatis balik ke icon, jadi yang muncul cuma warna background polos
+  // (itulah "gambar ijo doang" yang kamu lihat).
+  //
+  // Solusinya: pakai Image.network dengan errorBuilder, supaya kalau gagal
+  // load, otomatis fallback ke icon Icons.person + errornya di-print ke
+  // console supaya kelihatan penyebab aslinya (CORS / URL salah / dll).
+  Widget _buildAvatarContent(String? photoUrl, double radius) {
+    final double diameter = radius * 2;
+
+    if (_pickedPhotoBytes != null) {
+      return ClipOval(
+        child: Image.memory(
+          _pickedPhotoBytes!,
+          width: diameter,
+          height: diameter,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      return ClipOval(
+        child: Image.network(
+          photoUrl,
+          width: diameter,
+          height: diameter,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            // Lihat log ini di console (F12 di browser / flutter run log)
+            // untuk tahu kenapa gambar gagal dimuat.
+            debugPrint('Gagal load foto profil dari "$photoUrl": $error');
+            return Icon(Icons.person, size: radius, color: const Color(0xFF2D5016));
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return SizedBox(
+              width: diameter,
+              height: diameter,
+              child: const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    return Icon(Icons.person, size: radius, color: const Color(0xFF2D5016));
+  }
+
   Widget _buildPhotoSection(AuthProvider auth) {
     final user = auth.user;
-    ImageProvider? backgroundImage;
-    if (_pickedPhotoBytes != null) {
-      backgroundImage = MemoryImage(_pickedPhotoBytes!);
-    } else if (user?.photoUrl != null && user!.photoUrl!.isNotEmpty) {
-      backgroundImage = NetworkImage(user.photoUrl!);
-    }
+    const double radius = 48;
+    const double diameter = radius * 2;
 
     return Center(
       child: Column(
         children: [
           Stack(
             children: [
-              CircleAvatar(
-                radius: 48,
-                backgroundColor: const Color(0xFF52B788).withOpacity(0.15),
-                backgroundImage: backgroundImage,
-                child: backgroundImage == null
-                    ? const Icon(Icons.person, size: 48, color: Color(0xFF2D5016))
-                    : null,
+              Container(
+                width: diameter,
+                height: diameter,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF52B788).withOpacity(0.15),
+                ),
+                child: _buildAvatarContent(user?.photoUrl, radius),
               ),
               if (_uploadingPhoto)
                 Positioned.fill(
-                  child: CircleAvatar(
-                    radius: 48,
-                    backgroundColor: Colors.black45,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black45,
+                    ),
                     child: const CircularProgressIndicator(
                       color: Colors.white,
                       strokeWidth: 2,
