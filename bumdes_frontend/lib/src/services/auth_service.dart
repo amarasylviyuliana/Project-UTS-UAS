@@ -151,4 +151,14 @@ class AuthService {
     );
     return result['photo_url'] as String? ?? '';
   }
+
+  // ── TAMBAHAN: hapus foto profil ─────────────────────────────────────────────
+  // Memanggil DELETE /profile/photo. Backend akan menghapus file fisik di
+  // storage dan mengosongkan kolom photo_url user. Setelah ini dipanggil,
+  // caller WAJIB memanggil auth.refreshProfile() supaya UI ikut update
+  // (photoUrl jadi null dan avatar otomatis fallback ke icon default).
+  Future<void> deleteProfilePhoto(String token) async {
+    final api = ApiService(token: token);
+    await api.delete('/profile/photo');
+  }
 }

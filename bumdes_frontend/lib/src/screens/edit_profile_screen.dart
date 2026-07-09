@@ -55,6 +55,61 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  // ── TAMBAHAN: hapus foto profil ─────────────────────────────────────────
+  Future<void> _deletePhoto() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Token tidak tersedia. Silakan login ulang.')),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Hapus Foto Profil', style: TextStyle(color: Color(0xFF2D5016))),
+        content: const Text('Yakin mau hapus foto profil? Foto akan kembali ke default.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Batal', style: TextStyle(color: Color(0xFF52B788))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _uploadingPhoto = true);
+    try {
+      final service = AuthService();
+      await service.deleteProfilePhoto(auth.token!);
+      await auth.refreshProfile();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Foto profil berhasil dihapus')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menghapus foto: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _uploadingPhoto = false;
+          _pickedPhotoBytes = null;
+        });
+      }
+    }
+  }
+
   Future<void> _pickAndUploadPhoto() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.token == null) {
@@ -63,6 +118,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
       return;
     }
+
+    final hasPhoto = _pickedPhotoBytes != null ||
+        (auth.user?.photoUrl != null && auth.user!.photoUrl!.isNotEmpty);
 
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
@@ -79,6 +137,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               title: const Text('Pilih dari Galeri'),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
             ),
+            if (hasPhoto)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text('Hapus Foto Profil', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _deletePhoto();
+                },
+              ),
           ],
         ),
       ),
