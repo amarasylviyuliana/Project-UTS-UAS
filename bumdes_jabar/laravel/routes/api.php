@@ -31,6 +31,19 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 // FIX CORS: Image proxy — serve file storage melalui PHP agar CORS header bisa diset
 // Browser tidak bisa load langsung dari Railway /storage karena CORS tidak terset di nginx
 // Solusi: semua gambar dimuat lewat /api/image/{path} yang di-handle Laravel (CORS header otomatis terset)
+//
+// FIX 401: Flutter Web mengirim header Authorization ke SEMUA request (termasuk gambar),
+// yang membuat browser mengirim CORS preflight (OPTIONS) lebih dulu. Kalau OPTIONS tidak
+// direspons dengan header CORS yang benar, request GET asli tidak pernah terkirim dan
+// muncul sebagai error 401/gagal di Flutter. Route OPTIONS di bawah ini menangani itu.
+Route::options('/image/{path}', function () {
+    return response('', 200)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        ->header('Access-Control-Max-Age', '7200');
+})->where('path', '.*');
+
 Route::get('/image/{path}', function (string $path) {
     // Keamanan: hanya boleh akses file di direktori storage/app/public
     $decodedPath = urldecode($path);
@@ -45,7 +58,8 @@ Route::get('/image/{path}', function (string $path) {
     $mime    = Storage::disk('public')->mimeType($decodedPath);
     return response($file, 200)
         ->header('Content-Type', $mime)
-        ->header('Cache-Control', 'public, max-age=86400');
+        ->header('Cache-Control', 'public, max-age=86400')
+        ->header('Access-Control-Allow-Origin', '*');
 })->where('path', '.*');
 Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->name('verification.verify');
 
@@ -99,9 +113,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
     Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
-
-    Route::get('/image/{path}', [ImageProxyController::class, 'show'])
-    ->where('path', '.*');
 
     // Wallet / Saldo (Penjual)
     Route::get('/wallet/balance', [WalletController::class, 'balance']);
