@@ -411,22 +411,28 @@ class AdminController extends Controller
     /**
      * Delete user (admin)
      *
-     * FIX — INI PENYEBAB UTAMA "hapus pembeli tidak bisa, tanpa keterangan":
-     * Sebelumnya di sini cuma `$user->delete()` tanpa try/catch. Kalau user
-     * yang mau dihapus masih punya baris terkait di tabel lain lewat foreign
-     * key (paling sering: tabel `orders`, lewat kolom `buyer_id` — berlaku
-     * untuk pesanan apapun statusnya, bukan cuma yang "Selesai"), MySQL
-     * menolak DELETE itu dengan error constraint (SQLSTATE 23000). Error itu
-     * sebelumnya menyebar sebagai exception PHP mentah / response 500 yang
-     * tidak informatif, dan di sisi Flutter juga tidak pernah tertangkap
-     * (lihat perbaikan di admin_dashboard_screen.dart & admin_service.dart) —
-     * jadi kelihatannya "tidak terjadi apa-apa".
+     * ATURAN BISNIS UNTUK PEMBELI:
+     * - Kalau Pembeli ini masih punya pesanan yang statusnya BELUM final
+     *   (bukan "Selesai", "Dibatalkan", atau "Ditolak" — misalnya masih
+     *   "Menunggu Pembayaran", "Menunggu Konfirmasi", "Diproses", atau
+     *   "Dikirim"), akun TIDAK BOLEH dihapus. Endpoint mengembalikan 409
+     *   dengan `code: 'has_active_orders'` dan pesan yang jelas, supaya
+     *   Flutter bisa menampilkannya sebagai info biasa (bukan error teknis).
+     * - Kalau SEMUA pesanan Pembeli itu sudah final, akun BOLEH dihapus.
+     *   Supaya tidak kena constraint foreign key dari tabel `orders`,
+     *   kolom `buyer_id` pada pesanan-pesanan lama itu di-NULL-kan dulu
+     *   (riwayat pesanan tetap tersimpan lewat recipient_name/
+     *   recipient_phone yang sudah snapshot di tabel orders), baru user-nya
+     *   dihapus.
      *
-     * Sekarang: kalau memang ada constraint yang menghalangi, endpoint ini
-     * mengembalikan response 409 dengan pesan yang jelas, supaya Admin tahu
-     * persis kenapa dan bisa mengambil keputusan (mis. minta pesanan itu
-     * diselesaikan/dihapus dulu, atau nonaktifkan saja akunnya kalau model
-     * User punya kolom is_active).
+     * CATATAN: kolom `orders.buyer_id` wajib nullable supaya langkah di
+     * atas berjalan. Kalau kolomnya masih NOT NULL, jalankan migration
+     * `make_buyer_id_nullable_in_orders_table` (lihat berkas migration
+     * terpisah) sebelum fitur ini dipakai.
+     *
+     * Untuk role lain (Penjual/Admin), perilaku lama dipertahankan: DELETE
+     * langsung dicoba, dan kalau masih ada data terkait (toko, produk, dst)
+     * yang menghalangi, endpoint mengembalikan 409 dengan pesan yang jelas.
      */
     public function deleteUser($id)
     {
@@ -435,17 +441,46 @@ class AdminController extends Controller
             return response()->json(['status' => 'error', 'message' => 'User tidak ditemukan'], 404);
         }
 
+        // Status pesanan yang dianggap "final" alias sudah tidak berjalan
+        // lagi. Selama status pesanan Pembeli belum masuk daftar ini,
+        // akunnya tidak boleh dihapus.
+        $finalOrderStatuses = ['Selesai', 'Dibatalkan', 'Ditolak'];
+
+        if ($user->role === 'Pembeli') {
+            $activeOrdersCount = \App\Models\Order::where('buyer_id', $user->id)
+                ->whereNotIn('status', $finalOrderStatuses)
+                ->count();
+
+            if ($activeOrdersCount > 0) {
+                return response()->json([
+                    'status'  => 'error',
+                    'code'    => 'has_active_orders',
+                    'message' => "Pengguna ini masih memiliki {$activeOrdersCount} pesanan yang sedang berjalan (belum selesai, belum dibatalkan, atau belum ditolak). Tunggu sampai semua pesanannya selesai atau dibatalkan terlebih dahulu sebelum menghapus akun ini.",
+                ], 409);
+            }
+
+            // Semua pesanan Pembeli ini sudah final → aman untuk dihapus.
+            // Lepaskan dulu relasi buyer_id dari pesanan-pesanan lama itu
+            // supaya penghapusan user tidak terhalang foreign key
+            // constraint. Baris pesanannya sendiri TIDAK dihapus, jadi
+            // riwayat/laporan transaksi toko tetap utuh.
+            \App\Models\Order::where('buyer_id', $user->id)
+                ->whereIn('status', $finalOrderStatuses)
+                ->update(['buyer_id' => null]);
+        }
+
         try {
             $user->delete();
             return response()->json(['status' => 'success', 'message' => 'User berhasil dihapus']);
         } catch (\Illuminate\Database\QueryException $e) {
             // SQLSTATE 23000 = integrity constraint violation (foreign key).
-            // Paling umum: user ini masih jadi buyer_id di tabel `orders`,
-            // atau (kalau Penjual) masih punya `store`/`products` terkait.
+            // Untuk Penjual, biasanya karena masih punya `store`/`products`
+            // terkait yang belum dihapus/dinonaktifkan.
             if ($e->getCode() === '23000') {
                 return response()->json([
                     'status'  => 'error',
-                    'message' => 'Pengguna ini tidak bisa dihapus karena masih memiliki riwayat data terkait (mis. pesanan, toko, atau produk) yang tersimpan di sistem. Data itu perlu diselesaikan/dipindahkan dulu sebelum akun ini bisa dihapus permanen.',
+                    'code'    => 'has_related_data',
+                    'message' => 'Pengguna ini tidak bisa dihapus karena masih memiliki data terkait (mis. toko atau produk) yang tersimpan di sistem. Data itu perlu diselesaikan/dihapus dulu sebelum akun ini bisa dihapus permanen.',
                 ], 409);
             }
 

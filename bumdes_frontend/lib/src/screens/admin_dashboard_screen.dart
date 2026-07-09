@@ -907,11 +907,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             _loadStores();
                           } catch (e) {
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Gagal menghapus toko: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
+                              _showDeleteFailedDialog(
+                                'Tidak Bisa Menghapus Toko',
+                                e,
                               );
                             }
                           }
@@ -1120,15 +1118,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                     _loadProducts();
                                   } catch (e) {
                                     if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Gagal menghapus produk: $e',
-                                          ),
-                                          backgroundColor: Colors.red,
-                                        ),
+                                      _showDeleteFailedDialog(
+                                        'Tidak Bisa Menghapus Produk',
+                                        e,
                                       );
                                     }
                                   }
@@ -1696,15 +1688,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                           _loadUsers();
                                         } catch (e) {
                                           if (mounted) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'Gagal menghapus $name: $e',
-                                                ),
-                                                backgroundColor: Colors.red,
-                                              ),
+                                            _showDeleteFailedDialog(
+                                              'Tidak Bisa Menghapus Pengguna',
+                                              e,
                                             );
                                           }
                                         }
@@ -1821,15 +1807,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ],
                           ),
                         ),
-                        // FIX UTAMA: sebelumnya tidak ada try/catch — kalau
-                        // pembeli ini masih punya baris di tabel `orders`
-                        // (foreign key), backend menolak hapus, tapi error-nya
-                        // hilang begitu saja dan nama pembeli kelihatan
-                        // "tidak kehapus" tanpa keterangan apapun.
-                        // Sekarang errornya ditangkap dan ditampilkan lewat
-                        // SnackBar merah berisi alasan sebenarnya dari server
-                        // (lihat AdminController@deleteUser yang sudah
-                        // dibenarkan juga supaya pesannya jelas).
+                        // FIX UTAMA: dulu error 409 dari backend (mis.
+                        // "Pengguna ini masih memiliki N pesanan yang
+                        // sedang berjalan...") ditampilkan APA ADANYA lewat
+                        // e.toString(), termasuk prefix teknis semacam
+                        // "ApiException(409): ...". Sekarang pesannya
+                        // dibersihkan dulu lewat _cleanErrorMessage() dan
+                        // ditampilkan sebagai dialog yang rapi lewat
+                        // _showDeleteFailedDialog(), bukan SnackBar merah
+                        // berisi detail teknis.
                         IconButton(
                           icon: const Icon(
                             Icons.delete,
@@ -1862,15 +1848,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                       _loadBuyers();
                                     } catch (e) {
                                       if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Gagal menghapus $name: $e',
-                                            ),
-                                            backgroundColor: Colors.red,
-                                          ),
+                                        _showDeleteFailedDialog(
+                                          'Tidak Bisa Menghapus Pembeli',
+                                          e,
                                         );
                                       }
                                     }
@@ -2070,6 +2050,60 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Ambil pesan error yang "bersih" dari sebuah Exception, tanpa embel-embel
+  /// nama class teknis seperti "ApiException(409): " di depannya — supaya
+  /// yang tampil ke Admin cuma kalimat penjelasannya saja, bukan detail
+  /// implementasi (nama class exception, kode status, dsb).
+  String _cleanErrorMessage(Object error) {
+    final raw = error.toString();
+    // Pola umum exception di project ini: "NamaClass(kode): pesan".
+    final match = RegExp(
+      r'^[A-Za-z_]+\(\d+\):\s*(.*)$',
+      dotAll: true,
+    ).firstMatch(raw);
+    if (match != null &&
+        match.group(1) != null &&
+        match.group(1)!.trim().isNotEmpty) {
+      return match.group(1)!.trim();
+    }
+    // Fallback: buang prefix generik "Exception: " kalau ada.
+    return raw.replaceFirst('Exception: ', '').trim();
+  }
+
+  /// Tampilkan dialog rapi saat suatu penghapusan gagal, alih-alih SnackBar
+  /// merah berisi detail teknis (nama class exception, kode status, dsb).
+  ///
+  /// - Kalau pesannya adalah aturan bisnis yang wajar (mis. "masih ada
+  ///   pesanan yang sedang berjalan" / "masih ada data terkait"), dialog
+  ///   dipakaikan ikon info berwarna oranye — ini bukan bug, cuma aturan.
+  /// - Selain itu, dipakaikan ikon error merah seperti biasa.
+  Future<void> _showDeleteFailedDialog(String title, Object error) {
+    final message = _cleanErrorMessage(error);
+    final isBusinessRule =
+        message.contains('pesanan yang sedang berjalan') ||
+        message.contains('data terkait') ||
+        message.contains('riwayat pesanan');
+
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: Icon(
+          isBusinessRule ? Icons.info_outline : Icons.error_outline,
+          color: isBusinessRule ? Colors.orange : Colors.red,
+          size: 36,
+        ),
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Mengerti'),
           ),
         ],
       ),
@@ -2383,7 +2417,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           if (mounted) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
                               SnackBar(
-                                content: Text('Gagal menyimpan pengguna: $e'),
+                                content: Text(
+                                  'Gagal menyimpan pengguna: ${_cleanErrorMessage(e)}',
+                                ),
                                 backgroundColor: Colors.red,
                               ),
                             );
