@@ -316,22 +316,22 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
               ],
             ),
           ),
-          
-IconButton(
-  onPressed: () {
-    _loadSellerOrders();
-    _loadSellerProducts();
-    _checkStoreApprovalStatus();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Data diperbarui'),
-        duration: Duration(seconds: 1),
-      ),
-    );
-  },
-  icon: const Icon(Icons.refresh, color: Colors.black54),
-  tooltip: 'Refresh',
-),
+
+          IconButton(
+            onPressed: () {
+              _loadSellerOrders();
+              _loadSellerProducts();
+              _checkStoreApprovalStatus();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Data diperbarui'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+            icon: const Icon(Icons.refresh, color: Colors.black54),
+            tooltip: 'Refresh',
+          ),
           IconButton(
             onPressed: () => _showHeaderOptions(context),
             tooltip: 'Menu Lainnya',
@@ -435,13 +435,16 @@ IconButton(
     final processingOrders = _sellerOrders
         .where((o) => o.status == 'Dikonfirmasi' || o.status == 'Diproses')
         .length;
-    final shippingOrders =
-        _sellerOrders.where((o) => o.status == 'Dikirim').length;
-    final completedOrders =
-        _sellerOrders.where((o) => o.status == 'Selesai').length;
+    final shippingOrders = _sellerOrders
+        .where((o) => o.status == 'Dikirim')
+        .length;
+    final completedOrders = _sellerOrders
+        .where((o) => o.status == 'Selesai')
+        .length;
     final totalOrders = _sellerOrders.length;
-    final cancelledOrders =
-        _sellerOrders.where((o) => o.status == 'Dibatalkan').length;
+    final cancelledOrders = _sellerOrders
+        .where((o) => o.status == 'Dibatalkan')
+        .length;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -518,13 +521,14 @@ IconButton(
                                   topRight: Radius.circular(16),
                                 ),
                                 child: _buildProductImage(
-                                    product.imageUrl, 100),
+                                  product.imageUrl,
+                                  100,
+                                ),
                               ),
                               Padding(
                                 padding: const EdgeInsets.all(8),
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       product.name,
@@ -599,17 +603,35 @@ IconButton(
                 runSpacing: 14,
                 children: [
                   _buildSummaryCard(
-                      'Total Pesanan', '$totalOrders', Colors.green),
-                  _buildSummaryCard('Menunggu Konfirmasi',
-                      '$waitingConfirmation', Colors.orange),
-                  _buildSummaryCard('Sedang Diproses', '$processingOrders',
-                      const Color(0xFFFFC107)),
+                    'Total Pesanan',
+                    '$totalOrders',
+                    Colors.green,
+                  ),
                   _buildSummaryCard(
-                      'Sedang Dikirim', '$shippingOrders', Colors.blue),
+                    'Menunggu Konfirmasi',
+                    '$waitingConfirmation',
+                    Colors.orange,
+                  ),
                   _buildSummaryCard(
-                      'Selesai', '$completedOrders', Colors.purple),
+                    'Sedang Diproses',
+                    '$processingOrders',
+                    const Color(0xFFFFC107),
+                  ),
                   _buildSummaryCard(
-                      'Dibatalkan', '$cancelledOrders', Colors.red),
+                    'Sedang Dikirim',
+                    '$shippingOrders',
+                    Colors.blue,
+                  ),
+                  _buildSummaryCard(
+                    'Selesai',
+                    '$completedOrders',
+                    Colors.purple,
+                  ),
+                  _buildSummaryCard(
+                    'Dibatalkan',
+                    '$cancelledOrders',
+                    Colors.red,
+                  ),
                 ],
               ),
             const SizedBox(height: 24),
@@ -631,8 +653,7 @@ IconButton(
                 children: [
                   const Text(
                     'Aktivitas Terbaru',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   _buildTaskCard(
@@ -732,13 +753,15 @@ IconButton(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: color)),
+                Text(
+                  title,
+                  style: TextStyle(fontWeight: FontWeight.bold, color: color),
+                ),
                 const SizedBox(height: 4),
-                Text(subtitle,
-                    style: const TextStyle(
-                        fontSize: 12, color: Colors.black54)),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
               ],
             ),
           ),
@@ -748,11 +771,12 @@ IconButton(
               onPressed: onTap,
               style: ElevatedButton.styleFrom(
                 backgroundColor: color,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
-              child: Text(buttonLabel,
-                  style: const TextStyle(fontSize: 12)),
+              child: Text(buttonLabel, style: const TextStyle(fontSize: 12)),
             ),
           ],
         ],
@@ -811,15 +835,19 @@ IconButton(
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       'Dalam proses: Rp ${pendingRevenue.toStringAsFixed(0)}',
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -861,7 +889,8 @@ IconButton(
                   if (auth.token == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                          content: Text('Silakan login terlebih dahulu')),
+                        content: Text('Silakan login terlebih dahulu'),
+                      ),
                     );
                     return;
                   }
@@ -883,7 +912,9 @@ IconButton(
                   }
 
                   final result = await Navigator.pushNamed(
-                      context, ProductFormScreen.routeName);
+                    context,
+                    ProductFormScreen.routeName,
+                  );
                   if (result == true && mounted) {
                     await _loadSellerProducts();
                   }
@@ -934,15 +965,20 @@ IconButton(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.shopping_bag_outlined,
-                          size: 64, color: Colors.grey[300]),
+                      Icon(
+                        Icons.shopping_bag_outlined,
+                        size: 64,
+                        color: Colors.grey[300],
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         _sellerProducts.isEmpty
                             ? 'Belum ada produk'
                             : 'Tidak ada produk sesuai pencarian',
                         style: const TextStyle(
-                            color: Colors.black45, fontSize: 16),
+                          color: Colors.black45,
+                          fontSize: 16,
+                        ),
                       ),
                     ],
                   ),
@@ -965,9 +1001,10 @@ IconButton(
                           : 2;
                       return GridView.builder(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 8),
-                        gridDelegate:
-                            SliverGridDelegateWithFixedCrossAxisCount(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
@@ -978,22 +1015,28 @@ IconButton(
                           final product = filteredProducts[index];
                           return _ProductCard(
                             product: product,
-                        onEdit: () {
-                          final ctx = context;
-                          WidgetsBinding.instance.addPostFrameCallback((_) async {
-                            if (!mounted) return;
-                            final updated = await Navigator.of(ctx).pushNamed(
-                              ProductFormScreen.routeName,
-                              arguments: {'product': product},
-                            );
-                            if (updated == true && mounted) {
-                              await _loadSellerProducts();
-                            }
-                          });
-                        },
-                        onDelete: () => _confirmDeleteProduct(
-                            context, product, provider),
-                      );
+                            onEdit: () {
+                              final ctx = context;
+                              WidgetsBinding.instance.addPostFrameCallback((
+                                _,
+                              ) async {
+                                if (!mounted) return;
+                                final updated = await Navigator.of(ctx)
+                                    .pushNamed(
+                                      ProductFormScreen.routeName,
+                                      arguments: {'product': product},
+                                    );
+                                if (updated == true && mounted) {
+                                  await _loadSellerProducts();
+                                }
+                              });
+                            },
+                            onDelete: () => _confirmDeleteProduct(
+                              context,
+                              product,
+                              provider,
+                            ),
+                          );
                         },
                       );
                     },
@@ -1036,17 +1079,15 @@ IconButton(
         await provider.deleteProduct(auth.token!, product.id);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content:
-                    Text('Produk ${product.name} berhasil dihapus.')),
+            SnackBar(content: Text('Produk ${product.name} berhasil dihapus.')),
           );
           await _loadSellerProducts();
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal menghapus produk: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Gagal menghapus produk: $e')));
         }
       }
     }
@@ -1065,12 +1106,15 @@ IconButton(
     final processingCount = _sellerOrders
         .where((o) => o.status == 'Dikonfirmasi' || o.status == 'Diproses')
         .length;
-    final shippingCount =
-        _sellerOrders.where((o) => o.status == 'Dikirim').length;
-    final completedCount =
-        _sellerOrders.where((o) => o.status == 'Selesai').length;
-    final cancelledCount =
-        _sellerOrders.where((o) => o.status == 'Dibatalkan').length;
+    final shippingCount = _sellerOrders
+        .where((o) => o.status == 'Dikirim')
+        .length;
+    final completedCount = _sellerOrders
+        .where((o) => o.status == 'Selesai')
+        .length;
+    final cancelledCount = _sellerOrders
+        .where((o) => o.status == 'Dibatalkan')
+        .length;
 
     return RefreshIndicator(
       onRefresh: _loadSellerOrders,
@@ -1085,25 +1129,40 @@ IconButton(
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            _buildOrderStatusCard('Menunggu Konfirmasi',
-                '$pendingCount Pesanan', Colors.orange,
-                ['Menunggu Pembayaran', 'Menunggu Konfirmasi']),
-            const SizedBox(height: 12),
-            _buildOrderStatusCard('Sedang Diproses',
-                '$processingCount Pesanan', const Color(0xFFFFC107),
-                ['Dikonfirmasi', 'Diproses']),
+            _buildOrderStatusCard(
+              'Menunggu Konfirmasi',
+              '$pendingCount Pesanan',
+              Colors.orange,
+              ['Menunggu Pembayaran', 'Menunggu Konfirmasi'],
+            ),
             const SizedBox(height: 12),
             _buildOrderStatusCard(
-                'Sedang Dikirim', '$shippingCount Pesanan', Colors.blue,
-                ['Dikirim']),
+              'Sedang Diproses',
+              '$processingCount Pesanan',
+              const Color(0xFFFFC107),
+              ['Dikonfirmasi', 'Diproses'],
+            ),
             const SizedBox(height: 12),
             _buildOrderStatusCard(
-                'Selesai', '$completedCount Pesanan', Colors.green,
-                ['Selesai']),
+              'Sedang Dikirim',
+              '$shippingCount Pesanan',
+              Colors.blue,
+              ['Dikirim'],
+            ),
             const SizedBox(height: 12),
             _buildOrderStatusCard(
-                'Dibatalkan', '$cancelledCount Pesanan', Colors.red,
-                ['Dibatalkan']),
+              'Selesai',
+              '$completedCount Pesanan',
+              Colors.green,
+              ['Selesai'],
+            ),
+            const SizedBox(height: 12),
+            _buildOrderStatusCard(
+              'Dibatalkan',
+              '$cancelledCount Pesanan',
+              Colors.red,
+              ['Dibatalkan'],
+            ),
             const SizedBox(height: 24),
             if (_loadingOrders)
               const Center(child: CircularProgressIndicator())
@@ -1112,8 +1171,7 @@ IconButton(
             else ...[
               const Text(
                 'Daftar Pesanan',
-                style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               ListView.separated(
@@ -1123,7 +1181,8 @@ IconButton(
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final order = _sellerOrders[index];
-                  final paymentStatus = order.paymentStatus ??
+                  final paymentStatus =
+                      order.paymentStatus ??
                       (order.status == 'Dikonfirmasi'
                           ? 'Lunas'
                           : 'Belum Lunas');
@@ -1151,30 +1210,37 @@ IconButton(
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color:
-                                Colors.green.withValues(alpha: 0.1),
+                            color: Colors.green.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Icon(Icons.receipt_long,
-                              color: Colors.green),
+                          child: const Icon(
+                            Icons.receipt_long,
+                            color: Colors.green,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(order.orderNumber,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 4),
-                              Text(order.recipientName ?? '',
-                                  style: const TextStyle(
-                                      color: Colors.black54)),
+                              Text(
+                                order.orderNumber,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                               const SizedBox(height: 4),
                               Text(
-                                  'Total: Rp ${order.total.toStringAsFixed(0)}',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600)),
+                                order.recipientName ?? '',
+                                style: const TextStyle(color: Colors.black54),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Total: Rp ${order.total.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -1184,7 +1250,9 @@ IconButton(
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: statusColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
@@ -1199,9 +1267,13 @@ IconButton(
                               ),
                             ),
                             const SizedBox(height: 6),
-                            Text(paymentStatus,
-                                style: const TextStyle(
-                                    color: Colors.black54, fontSize: 12)),
+                            Text(
+                              paymentStatus,
+                              style: const TextStyle(
+                                color: Colors.black54,
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -1249,9 +1321,10 @@ IconButton(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Laporan Keuangan',
-                style:
-                    TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              'Laporan Keuangan',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
             Text(
               'Periode: ${FormatHelper.formatDateRange(report.startDate, report.endDate)}',
@@ -1259,50 +1332,64 @@ IconButton(
             ),
             const SizedBox(height: 20),
             _buildClickableReportCard(
-                'Pendapatan',
-                FormatHelper.formatCurrency(report.totalRevenue),
-                Colors.green,
-                Icons.trending_up,
-                () => _navigateToDetailReport()),
+              'Pendapatan',
+              FormatHelper.formatCurrency(report.totalRevenue),
+              Colors.green,
+              Icons.trending_up,
+              () => _navigateToDetailReport(),
+            ),
             const SizedBox(height: 12),
             _buildClickableReportCard(
-                'Pengeluaran (Estimasi)',
-                FormatHelper.formatCurrency(report.totalExpense),
-                Colors.red,
-                Icons.trending_down,
-                () => _navigateToDetailReport()),
+              'Pengeluaran (Estimasi)',
+              FormatHelper.formatCurrency(report.totalExpense),
+              Colors.red,
+              Icons.trending_down,
+              () => _navigateToDetailReport(),
+            ),
             const SizedBox(height: 12),
             _buildClickableReportCard(
-                'Laba Bersih',
-                FormatHelper.formatCurrency(report.netProfit),
-                const Color(0xFF2A7F41),
-                Icons.attach_money,
-                () => _navigateToDetailReport()),
+              'Laba Bersih',
+              FormatHelper.formatCurrency(report.netProfit),
+              const Color(0xFF2A7F41),
+              Icons.attach_money,
+              () => _navigateToDetailReport(),
+            ),
             const SizedBox(height: 24),
-            const Text('Ringkasan Metrik',
-                style:
-                    TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text(
+              'Ringkasan Metrik',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
-                    child: _buildMetricBox('Total Pesanan',
-                        '${report.totalOrders}', Colors.purple)),
+                  child: _buildMetricBox(
+                    'Total Pesanan',
+                    '${report.totalOrders}',
+                    Colors.purple,
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
-                    child: _buildMetricBox('Pesanan Selesai',
-                        '${report.completedOrders}', Colors.green)),
+                  child: _buildMetricBox(
+                    'Pesanan Selesai',
+                    '${report.completedOrders}',
+                    Colors.green,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
             _buildMetricBox(
-                'Margin Laba',
-                '${report.profitMargin.toStringAsFixed(1)}%',
-                Colors.blue),
+              'Margin Laba',
+              '${report.profitMargin.toStringAsFixed(1)}%',
+              Colors.blue,
+            ),
             const SizedBox(height: 24),
-            const Text('Grafik Penjualan Bulanan',
-                style:
-                    TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text(
+              'Grafik Penjualan Bulanan',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
@@ -1312,16 +1399,19 @@ IconButton(
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: const [
                   BoxShadow(
-                      color: Color.fromRGBO(0, 0, 0, 0.05),
-                      blurRadius: 16,
-                      offset: Offset(0, 8))
+                    color: Color.fromRGBO(0, 0, 0, 0.05),
+                    blurRadius: 16,
+                    offset: Offset(0, 8),
+                  ),
                 ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Tren Penjualan',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Tren Penjualan',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 16),
                   _buildMonthlySalesChart(),
                 ],
@@ -1338,15 +1428,19 @@ IconButton(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Lihat Laporan Lengkap',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Lihat Laporan Lengkap',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   const Text(
-                      'Akses analisis detail, transaksi, dan wawasan keuangan lengkap',
-                      style: TextStyle(color: Colors.white70)),
+                    'Akses analisis detail, transaksi, dan wawasan keuangan lengkap',
+                    style: TextStyle(color: Colors.white70),
+                  ),
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
@@ -1372,8 +1466,7 @@ IconButton(
   void _navigateToDetailReport() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-          builder: (_) => const FinancialReportDetailScreen()),
+      MaterialPageRoute(builder: (_) => const FinancialReportDetailScreen()),
     );
   }
 
@@ -1389,8 +1482,10 @@ IconButton(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Profil Saya',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Profil Saya',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(20),
@@ -1399,9 +1494,10 @@ IconButton(
               borderRadius: BorderRadius.circular(22),
               boxShadow: const [
                 BoxShadow(
-                    color: Color.fromRGBO(0, 0, 0, 0.04),
-                    blurRadius: 16,
-                    offset: Offset(0, 8))
+                  color: Color.fromRGBO(0, 0, 0, 0.04),
+                  blurRadius: 16,
+                  offset: Offset(0, 8),
+                ),
               ],
             ),
             child: Row(
@@ -1419,15 +1515,23 @@ IconButton(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(user?.name ?? 'BUMDes',
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(
+                        user?.name ?? 'BUMDes',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 8),
-                      Text(user?.phone ?? '-',
-                          style: const TextStyle(color: Colors.black54)),
+                      Text(
+                        user?.phone ?? '-',
+                        style: const TextStyle(color: Colors.black54),
+                      ),
                       const SizedBox(height: 4),
-                      Text(user?.email ?? '-',
-                          style: const TextStyle(color: Colors.black54)),
+                      Text(
+                        user?.email ?? '-',
+                        style: const TextStyle(color: Colors.black54),
+                      ),
                     ],
                   ),
                 ),
@@ -1452,8 +1556,7 @@ IconButton(
           ),
           _ProfileOptionTile(
             label: 'Pengaturan',
-            onTap: () =>
-                Navigator.pushNamed(context, SettingsScreen.routeName),
+            onTap: () => Navigator.pushNamed(context, SettingsScreen.routeName),
           ),
           _ProfileOptionTile(
             label: 'Bantuan & FAQ',
@@ -1461,8 +1564,7 @@ IconButton(
           ),
           _ProfileOptionTile(
             label: 'Tentang Aplikasi',
-            onTap: () =>
-                Navigator.pushNamed(context, AboutScreen.routeName),
+            onTap: () => Navigator.pushNamed(context, AboutScreen.routeName),
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -1490,8 +1592,11 @@ IconButton(
         height: height,
         width: double.infinity,
         color: Colors.grey[200],
-        child: const Icon(Icons.image_not_supported,
-            color: Colors.grey, size: 36),
+        child: const Icon(
+          Icons.image_not_supported,
+          color: Colors.grey,
+          size: 36,
+        ),
       );
     }
     return Image.network(
@@ -1506,16 +1611,18 @@ IconButton(
           height: height,
           width: double.infinity,
           color: Colors.grey[100],
-          child: const Center(
-              child: CircularProgressIndicator(strokeWidth: 2)),
+          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
         );
       },
       errorBuilder: (_, __, ___) => Container(
         height: height,
         width: double.infinity,
         color: Colors.grey[200],
-        child: const Icon(Icons.image_not_supported,
-            color: Colors.grey, size: 36),
+        child: const Icon(
+          Icons.image_not_supported,
+          color: Colors.grey,
+          size: 36,
+        ),
       ),
     );
   }
@@ -1528,20 +1635,28 @@ IconButton(
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(
-              color: Color.fromRGBO(0, 0, 0, 0.05),
-              blurRadius: 20,
-              offset: Offset(0, 10))
+            color: Color.fromRGBO(0, 0, 0, 0.05),
+            blurRadius: 20,
+            offset: Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(color: Colors.black54, fontSize: 12)),
+          Text(
+            title,
+            style: const TextStyle(color: Colors.black54, fontSize: 12),
+          ),
           const SizedBox(height: 8),
-          Text(value,
-              style: TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
@@ -1561,9 +1676,10 @@ IconButton(
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(
-              color: Color.fromRGBO(0, 0, 0, 0.05),
-              blurRadius: 20,
-              offset: Offset(0, 10))
+            color: Color.fromRGBO(0, 0, 0, 0.05),
+            blurRadius: 20,
+            offset: Offset(0, 10),
+          ),
         ],
       ),
       child: Row(
@@ -1577,12 +1693,15 @@ IconButton(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 4),
-                Text(subtitle,
-                    style: const TextStyle(
-                        color: Colors.black54, fontSize: 12)),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: Colors.black54, fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -1612,8 +1731,8 @@ IconButton(
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => SellerOrdersScreen(
-                statusFilters: filters, screenTitle: title),
+            builder: (_) =>
+                SellerOrdersScreen(statusFilters: filters, screenTitle: title),
           ),
         );
       },
@@ -1626,9 +1745,10 @@ IconButton(
           borderRadius: BorderRadius.circular(20),
           boxShadow: const [
             BoxShadow(
-                color: Color.fromRGBO(0, 0, 0, 0.05),
-                blurRadius: 16,
-                offset: Offset(0, 8))
+              color: Color.fromRGBO(0, 0, 0, 0.05),
+              blurRadius: 16,
+              offset: Offset(0, 8),
+            ),
           ],
         ),
         child: Row(
@@ -1646,13 +1766,18 @@ IconButton(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.bold)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(subtitle,
-                      style: const TextStyle(
-                          color: Colors.black54, fontSize: 13)),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.black54, fontSize: 13),
+                  ),
                 ],
               ),
             ),
@@ -1681,9 +1806,10 @@ IconButton(
           borderRadius: BorderRadius.circular(20),
           boxShadow: const [
             BoxShadow(
-                color: Color.fromRGBO(0, 0, 0, 0.05),
-                blurRadius: 20,
-                offset: Offset(0, 10))
+              color: Color.fromRGBO(0, 0, 0, 0.05),
+              blurRadius: 20,
+              offset: Offset(0, 10),
+            ),
           ],
         ),
         child: Row(
@@ -1701,15 +1827,22 @@ IconButton(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text(amount,
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: color)),
+                  Text(
+                    amount,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1729,20 +1862,28 @@ IconButton(
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
-              color: Color.fromRGBO(0, 0, 0, 0.05),
-              blurRadius: 16,
-              offset: Offset(0, 4))
+            color: Color.fromRGBO(0, 0, 0, 0.05),
+            blurRadius: 16,
+            offset: Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: const TextStyle(color: Colors.black54, fontSize: 12)),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.black54, fontSize: 12),
+          ),
           const SizedBox(height: 8),
-          Text(value,
-              style: TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
@@ -1752,19 +1893,20 @@ IconButton(
     final monthlySales = _reportService.getMonthlySalesData(_sellerOrders);
 
     if (monthlySales.isEmpty) {
-      return const Text('Belum ada data penjualan bulanan',
-          style: TextStyle(color: Colors.black54));
+      return const Text(
+        'Belum ada data penjualan bulanan',
+        style: TextStyle(color: Colors.black54),
+      );
     }
 
     final maxSales = monthlySales.fold(
-        0.0,
-        (prev, current) =>
-            current.sales > prev ? current.sales : prev);
+      0.0,
+      (prev, current) => current.sales > prev ? current.sales : prev,
+    );
 
     return Column(
       children: monthlySales.take(6).map((month) {
-        final percentage =
-            maxSales > 0 ? (month.sales / maxSales) : 0.0;
+        final percentage = maxSales > 0 ? (month.sales / maxSales) : 0.0;
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Column(
@@ -1773,14 +1915,18 @@ IconButton(
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(month.month,
-                      style: const TextStyle(fontSize: 12)),
-                  Text('${month.orders} order',
-                      style:
-                          const TextStyle(fontSize: 12, color: Colors.grey)),
-                  Text(FormatHelper.formatCurrency(month.sales),
-                      style: const TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text(month.month, style: const TextStyle(fontSize: 12)),
+                  Text(
+                    '${month.orders} order',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  Text(
+                    FormatHelper.formatCurrency(month.sales),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 6),
@@ -1791,7 +1937,8 @@ IconButton(
                   minHeight: 8,
                   backgroundColor: Colors.grey.withAlpha(50),
                   valueColor: const AlwaysStoppedAnimation<Color>(
-                      Color(0xFF2A7F41)),
+                    Color(0xFF2A7F41),
+                  ),
                 ),
               ),
             ],
@@ -1836,12 +1983,12 @@ IconButton(
             child: ChoiceChip(
               label: Text(category),
               selected: isSelected,
-              onSelected: (_) =>
-                  setState(() => _selectedCategory = category),
+              onSelected: (_) => setState(() => _selectedCategory = category),
               selectedColor: const Color(0xFF2A7F41),
               backgroundColor: Colors.white,
               labelStyle: TextStyle(
-                  color: isSelected ? Colors.white : Colors.black87),
+                color: isSelected ? Colors.white : Colors.black87,
+              ),
               elevation: 2,
             ),
           );
@@ -1851,40 +1998,85 @@ IconButton(
   }
 
   Widget _buildBottomNavigationBar() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = screenWidth < 360;
+    final labelFontSize = isCompact ? 10.0 : 11.5;
+
     const items = [
-      _NavItem(label: 'Dashboard', icon: Icons.dashboard_outlined, iconFilled: Icons.dashboard),
-      _NavItem(label: 'Produk', icon: Icons.shopping_bag_outlined, iconFilled: Icons.shopping_bag),
-      _NavItem(label: 'Pesanan', icon: Icons.receipt_long_outlined, iconFilled: Icons.receipt_long),
-      _NavItem(label: 'Laporan', icon: Icons.bar_chart_outlined, iconFilled: Icons.bar_chart),
-      _NavItem(label: 'Akun', icon: Icons.person_outline, iconFilled: Icons.person),
+      _NavItem(
+        label: 'Dashboard',
+        icon: Icons.dashboard_outlined,
+        iconFilled: Icons.dashboard,
+      ),
+      _NavItem(
+        label: 'Produk',
+        icon: Icons.shopping_bag_outlined,
+        iconFilled: Icons.shopping_bag,
+      ),
+      _NavItem(
+        label: 'Pesanan',
+        icon: Icons.receipt_long_outlined,
+        iconFilled: Icons.receipt_long,
+      ),
+      _NavItem(
+        label: 'Laporan',
+        icon: Icons.bar_chart_outlined,
+        iconFilled: Icons.bar_chart,
+      ),
+      _NavItem(
+        label: 'Akun',
+        icon: Icons.person_outline,
+        iconFilled: Icons.person,
+      ),
     ];
 
-    return NavigationBarTheme(
-      data: NavigationBarThemeData(
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          final isSelected = states.contains(WidgetState.selected);
-          return TextStyle(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: isSelected ? const Color(0xFF2A7F41) : Colors.black54,
-          );
-        }),
-      ),
-      child: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
-        backgroundColor: Colors.white,
-        elevation: 8,
-        height: 68,
-        indicatorColor: const Color(0xFF2A7F41).withValues(alpha: 0.12),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: items
-            .map((item) => NavigationDestination(
-                  icon: Icon(item.icon, color: Colors.black54),
-                  selectedIcon: Icon(item.iconFilled, color: const Color(0xFF2A7F41)),
+    return SafeArea(
+      top: false,
+      child: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          indicatorColor: const Color(0xFF2A7F41).withValues(alpha: 0.16),
+          indicatorShape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            final isSelected = states.contains(WidgetState.selected);
+            return TextStyle(
+              fontSize: labelFontSize,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+              color: isSelected
+                  ? const Color(0xFF2A7F41)
+                  : const Color(0xFF64748B),
+              letterSpacing: 0.1,
+            );
+          }),
+          iconTheme: WidgetStateProperty.resolveWith((states) {
+            final isSelected = states.contains(WidgetState.selected);
+            return IconThemeData(
+              size: isCompact ? 22 : 24,
+              color: isSelected
+                  ? const Color(0xFF2A7F41)
+                  : const Color(0xFF64748B),
+            );
+          }),
+        ),
+        child: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: (index) =>
+              setState(() => _selectedIndex = index),
+          elevation: 8,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: items
+              .map(
+                (item) => NavigationDestination(
+                  icon: Icon(item.icon),
+                  selectedIcon: Icon(item.iconFilled),
                   label: item.label,
-                ))
-            .toList(),
+                ),
+              )
+              .toList(),
+        ),
       ),
     );
   }
@@ -1907,21 +2099,20 @@ class _ProfileOptionTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(
-              color: Color.fromRGBO(0, 0, 0, 0.04),
-              blurRadius: 16,
-              offset: Offset(0, 8))
+            color: Color.fromRGBO(0, 0, 0, 0.04),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
         ],
       ),
       child: ListTile(
-        title: Text(label,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: onTap ??
+        onTap:
+            onTap ??
             () {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content:
-                        Text('$label - Fitur sedang dikembangkan')),
+                SnackBar(content: Text('$label - Fitur sedang dikembangkan')),
               );
             },
       ),
@@ -1950,9 +2141,10 @@ class _ProductCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: const [
           BoxShadow(
-              color: Color.fromRGBO(0, 0, 0, 0.04),
-              blurRadius: 20,
-              offset: Offset(0, 10))
+            color: Color.fromRGBO(0, 0, 0, 0.04),
+            blurRadius: 20,
+            offset: Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
@@ -1977,24 +2169,30 @@ class _ProductCard extends StatelessWidget {
                         width: double.infinity,
                         color: Colors.grey[100],
                         child: const Center(
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2)),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
                       );
                     },
                     errorBuilder: (_, __, ___) => Container(
                       height: 110,
                       width: double.infinity,
                       color: Colors.grey[200],
-                      child: const Icon(Icons.image_not_supported,
-                          size: 40, color: Colors.grey),
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        size: 40,
+                        color: Colors.grey,
+                      ),
                     ),
                   )
                 : Container(
                     height: 110,
                     width: double.infinity,
                     color: Colors.grey[200],
-                    child: const Icon(Icons.image_not_supported,
-                        size: 40, color: Colors.grey),
+                    child: const Icon(
+                      Icons.image_not_supported,
+                      size: 40,
+                      color: Colors.grey,
+                    ),
                   ),
           ),
           Padding(
@@ -2002,23 +2200,31 @@ class _ProductCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(product.name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 12),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis),
+                Text(
+                  product.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 4),
-                Text('Rp ${product.price.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                        color: Colors.green,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11)),
+                Text(
+                  'Rp ${product.price.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(product.category,
-                    style: const TextStyle(
-                        color: Colors.black54, fontSize: 10),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
+                Text(
+                  product.category,
+                  style: const TextStyle(color: Colors.black54, fontSize: 10),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
@@ -2034,9 +2240,10 @@ class _ProductCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       side: const BorderSide(color: Color(0xFF2A7F41)),
                     ),
-                    child: const Text('Ubah',
-                        style: TextStyle(
-                            color: Color(0xFF2A7F41), fontSize: 11)),
+                    child: const Text(
+                      'Ubah',
+                      style: TextStyle(color: Color(0xFF2A7F41), fontSize: 11),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -2047,9 +2254,10 @@ class _ProductCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       side: const BorderSide(color: Colors.red),
                     ),
-                    child: const Text('Hapus',
-                        style:
-                            TextStyle(color: Colors.red, fontSize: 11)),
+                    child: const Text(
+                      'Hapus',
+                      style: TextStyle(color: Colors.red, fontSize: 11),
+                    ),
                   ),
                 ),
               ],
@@ -2066,6 +2274,9 @@ class _NavItem {
   final IconData icon;
   final IconData iconFilled;
 
-  const _NavItem({required this.label, required this.icon, IconData? iconFilled})
-      : iconFilled = iconFilled ?? icon;
+  const _NavItem({
+    required this.label,
+    required this.icon,
+    IconData? iconFilled,
+  }) : iconFilled = iconFilled ?? icon;
 }

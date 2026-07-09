@@ -29,7 +29,11 @@ class ProfileScreen extends StatelessWidget {
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) {
             debugPrint('Gagal load foto profil dari "$photoUrl": $error');
-            return const Icon(Icons.person, size: radius, color: Color(0xFF2D5016));
+            return const Icon(
+              Icons.person,
+              size: radius,
+              color: Color(0xFF2D5016),
+            );
           },
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
@@ -42,7 +46,11 @@ class ProfileScreen extends StatelessWidget {
         ),
       );
     } else {
-      content = const Icon(Icons.person, size: radius, color: Color(0xFF2D5016));
+      content = const Icon(
+        Icons.person,
+        size: radius,
+        color: Color(0xFF2D5016),
+      );
     }
 
     return Container(
@@ -67,15 +75,25 @@ class ProfileScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Profil Saya', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D5016))),
+                const Text(
+                  'Profil Saya',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D5016),
+                  ),
+                ),
                 const SizedBox(height: 20),
                 Center(child: _buildAvatar(user.photoUrl)),
                 const SizedBox(height: 20),
                 Card(
                   elevation: 1,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: ListTile(
-                    leading: (user.photoUrl != null && user.photoUrl!.isNotEmpty)
+                    leading:
+                        (user.photoUrl != null && user.photoUrl!.isNotEmpty)
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.network(
@@ -87,10 +105,15 @@ class ProfileScreen extends StatelessWidget {
                                 return Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF2D5016).withValues(alpha: 0.1),
+                                    color: const Color(
+                                      0xFF2D5016,
+                                    ).withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(Icons.person, color: Color(0xFF2D5016)),
+                                  child: const Icon(
+                                    Icons.person,
+                                    color: Color(0xFF2D5016),
+                                  ),
                                 );
                               },
                             ),
@@ -98,20 +121,39 @@ class ProfileScreen extends StatelessWidget {
                         : Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF2D5016).withValues(alpha: 0.1),
+                              color: const Color(
+                                0xFF2D5016,
+                              ).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(Icons.person, color: Color(0xFF2D5016)),
+                            child: const Icon(
+                              Icons.person,
+                              color: Color(0xFF2D5016),
+                            ),
                           ),
-                    title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2D5016))),
-                    subtitle: Text(user.email, style: const TextStyle(color: Colors.black54)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    title: Text(
+                      user.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2D5016),
+                      ),
+                    ),
+                    subtitle: Text(
+                      user.email,
+                      style: const TextStyle(color: Colors.black54),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 Card(
                   elevation: 1,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: ListTile(
                     leading: Container(
                       padding: const EdgeInsets.all(8),
@@ -121,63 +163,102 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       child: const Icon(Icons.badge, color: Color(0xFF52B788)),
                     ),
-                    title: const Text('Peran', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2D5016))),
-                    subtitle: Text(user.role == 'seller' ? 'Penjual BUMDes' : 'Pembeli Umum', style: const TextStyle(color: Colors.black54)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    title: const Text(
+                      'Peran',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2D5016),
+                      ),
+                    ),
+                    subtitle: Text(
+                      user.role == 'seller' ? 'Penjual BUMDes' : 'Pembeli Umum',
+                      style: const TextStyle(color: Colors.black54),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 28),
                 if (user.role == 'seller') ...[
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.store),
-                    label: const Text('Kelola Toko BUMDes'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF52B788),
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      elevation: 0,
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.store),
+                      label: const Text('Kelola Toko BUMDes'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF52B788),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        Navigator.pushNamed(
+                          context,
+                          StoreDashboardScreen.routeName,
+                        );
+                      },
                     ),
-                    onPressed: () {
-                      Navigator.pushNamed(context, StoreDashboardScreen.routeName);
-                    },
                   ),
                   const SizedBox(height: 12),
                 ],
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.edit),
-                  label: const Text('Edit Profil'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2D5016),
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    elevation: 0,
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Edit Profil'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2D5016),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/edit-profile');
+                    },
                   ),
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/edit-profile');
-                  },
                 ),
                 const SizedBox(height: 12),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Keluar'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade500,
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    elevation: 0,
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.logout),
+                    label: const Text('Keluar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade500,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      auth.logout();
+                      Navigator.pushReplacementNamed(context, '/login');
+                    },
                   ),
-                  onPressed: () {
-                    auth.logout();
-                    Navigator.pushReplacementNamed(context, '/login');
-                  },
                 ),
               ],
             ),
           );
 
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: profileContent,
-    );
+    return Padding(padding: const EdgeInsets.all(20.0), child: profileContent);
   }
 }

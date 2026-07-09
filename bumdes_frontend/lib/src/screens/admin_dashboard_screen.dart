@@ -527,9 +527,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Expanded(
                   child: _buildStatCard(
                     'Saldo Admin',
-                    _isLoadingWallet
-                        ? 'Memuat...'
-                        : _formatRupiah(balance),
+                    _isLoadingWallet ? 'Memuat...' : _formatRupiah(balance),
                     Colors.green,
                     Icons.account_balance_wallet,
                   ),
@@ -1549,7 +1547,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             )
           else if (userList.isEmpty)
-            _buildEmptyState('Belum ada penjual terdaftar', Icons.people_outline)
+            _buildEmptyState(
+              'Belum ada penjual terdaftar',
+              Icons.people_outline,
+            )
           else
             Container(
               decoration: BoxDecoration(
@@ -1892,6 +1893,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // ── BOTTOM NAV ─────────────────────────────────────────────────────────────
 
   Widget _buildBottomNav() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = screenWidth < 360;
+    final labelFontSize = isCompact ? 10.0 : 11.5;
+
     final destinations = [
       const NavigationDestination(
         icon: Icon(Icons.dashboard_outlined),
@@ -1925,27 +1930,45 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
     ];
 
-    return NavigationBarTheme(
-      data: NavigationBarThemeData(
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          final isSelected = states.contains(WidgetState.selected);
-          return TextStyle(
-            fontSize: 11,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: isSelected ? const Color(0xFF2A7F41) : Colors.black54,
-          );
-        }),
-      ),
-      child: NavigationBar(
-        selectedIndex: _selectedIndex > 5 ? 0 : _selectedIndex,
-        onDestinationSelected: (index) =>
-            setState(() => _selectedIndex = index),
-        backgroundColor: Colors.white,
-        elevation: 8,
-        height: 68,
-        indicatorColor: const Color(0xFF2A7F41).withValues(alpha: 0.12),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: destinations,
+    return SafeArea(
+      top: false,
+      child: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          indicatorColor: const Color(0xFF2A7F41).withValues(alpha: 0.16),
+          indicatorShape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            final isSelected = states.contains(WidgetState.selected);
+            return TextStyle(
+              fontSize: labelFontSize,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+              color: isSelected
+                  ? const Color(0xFF2A7F41)
+                  : const Color(0xFF64748B),
+              letterSpacing: 0.1,
+            );
+          }),
+          iconTheme: WidgetStateProperty.resolveWith((states) {
+            final isSelected = states.contains(WidgetState.selected);
+            return IconThemeData(
+              size: isCompact ? 22 : 24,
+              color: isSelected
+                  ? const Color(0xFF2A7F41)
+                  : const Color(0xFF64748B),
+            );
+          }),
+        ),
+        child: NavigationBar(
+          selectedIndex: _selectedIndex > 5 ? 0 : _selectedIndex,
+          onDestinationSelected: (index) =>
+              setState(() => _selectedIndex = index),
+          elevation: 8,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: destinations,
+        ),
       ),
     );
   }
@@ -2410,9 +2433,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: bankNameCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Nama Bank',
-                      ),
+                      decoration: const InputDecoration(labelText: 'Nama Bank'),
                     ),
                     TextFormField(
                       controller: bankNumberCtrl,
@@ -2470,11 +2491,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             if (bankNameCtrl.text.isNotEmpty)
                               'bank_name': bankNameCtrl.text.trim(),
                             if (bankNumberCtrl.text.isNotEmpty)
-                              'bank_account_number':
-                                  bankNumberCtrl.text.trim(),
+                              'bank_account_number': bankNumberCtrl.text.trim(),
                             if (bankHolderCtrl.text.isNotEmpty)
-                              'bank_account_holder':
-                                  bankHolderCtrl.text.trim(),
+                              'bank_account_holder': bankHolderCtrl.text.trim(),
                           };
 
                           if (isEditing && userId != null && _token != null) {
