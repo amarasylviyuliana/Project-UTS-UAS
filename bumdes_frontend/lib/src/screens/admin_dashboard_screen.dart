@@ -484,9 +484,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // ── DASHBOARD TAB ────────────────────────────────────────────────────────────
 
   Widget _buildDashboardTab() {
-    final balance = _parseDouble(
-      _stats['total_revenue'] ?? _stats['current_balance'] ?? 0,
-    );
+    // FIX: sebelumnya kartu "Saldo Admin" memakai `total_revenue`, yaitu
+    // TOTAL NILAI SEMUA PESANAN BERSTATUS SELESAI (omzet kotor seluruh
+    // waktu) — bukan saldo platform yang sebenarnya, dan tidak pernah
+    // berkurang meskipun saldo sudah ditarik lewat menu Keuangan. Itu
+    // sebabnya angkanya tetap "Rp 25.000" walau saldo asli di halaman
+    // Keuangan sudah Rp 0 setelah ditarik.
+    // Sekarang kartu ini memakai `_platformBalance`, yaitu saldo platform
+    // yang SUDAH memperhitungkan penarikan — sama seperti yang ditampilkan
+    // di halaman Keuangan (Saldo Platform Tersedia).
+    final balance = _platformBalance;
     final totalTransactions =
         (_stats['total_orders'] ??
                 _stats['total_transactions'] ??
@@ -520,7 +527,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Expanded(
                   child: _buildStatCard(
                     'Saldo Admin',
-                    _formatRupiah(balance),
+                    _isLoadingWallet
+                        ? 'Memuat...'
+                        : _formatRupiah(balance),
                     Colors.green,
                     Icons.account_balance_wallet,
                   ),
@@ -886,8 +895,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           'Hapus toko $name?',
                         );
                         if (confirm == true && _token != null) {
-                          await _adminService.deleteStore(_token!, storeId);
-                          _loadStores();
+                          try {
+                            await _adminService.deleteStore(_token!, storeId);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Toko $name berhasil dihapus'),
+                                ),
+                              );
+                            }
+                            _loadStores();
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Gagal menghapus toko: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
                         }
                       },
               ),
@@ -1074,11 +1101,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   'Hapus produk ${p['name']}?',
                                 );
                                 if (confirm == true && _token != null) {
-                                  await _adminService.deleteProduct(
-                                    _token!,
-                                    productId,
-                                  );
-                                  _loadProducts();
+                                  try {
+                                    await _adminService.deleteProduct(
+                                      _token!,
+                                      productId,
+                                    );
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Produk ${p['name']} berhasil dihapus',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                    _loadProducts();
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Gagal menghapus produk: $e',
+                                          ),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  }
                                 }
                               },
                       ),
@@ -1227,7 +1280,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _buildReportCard(
             'Total Revenue',
             _formatRupiah(totalRevenue),
-            'Seluruh waktu',
+            // Catatan: ini omzet KOTOR seluruh waktu (jumlah total_price
+            // semua pesanan Selesai), sengaja TIDAK berkurang walau saldo
+            // sudah ditarik lewat menu Keuangan — ini metrik historis, bukan
+            // saldo yang bisa ditarik. Untuk saldo yang bisa ditarik, lihat
+            // kartu "Saldo Platform Tersedia" di bawah.
+            'Seluruh waktu (omzet kotor, bukan saldo)',
             Colors.green,
           ),
           const SizedBox(height: 12),
@@ -1251,7 +1309,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Saldo ini berasal dari akumulasi biaya admin/pajak yang dipotong dari setiap pesanan penjual berstatus Selesai.',
+            'Saldo ini berasal dari akumulasi biaya admin/pajak yang dipotong dari setiap pesanan penjual berstatus Selesai, DIKURANGI penarikan yang sudah dilakukan.',
             style: TextStyle(fontSize: 12, color: Colors.black54),
           ),
           const SizedBox(height: 12),
@@ -1607,6 +1665,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 color: Colors.red,
                                 size: 20,
                               ),
+                              // FIX: dulu tidak ada try/catch di sini, jadi
+                              // kalau backend menolak (mis. penjual ini masih
+                              // punya toko/produk/pesanan terkait), error-nya
+                              // hilang begitu saja dan admin tidak tahu
+                              // kenapa data tidak terhapus.
                               onPressed: id == null
                                   ? null
                                   : () async {
@@ -1614,11 +1677,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                         'Hapus pengguna $name?',
                                       );
                                       if (confirm == true && _token != null) {
-                                        await _adminService.deleteUser(
-                                          _token!,
-                                          id,
-                                        );
-                                        _loadUsers();
+                                        try {
+                                          await _adminService.deleteUser(
+                                            _token!,
+                                            id,
+                                          );
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Pengguna $name berhasil dihapus',
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                          _loadUsers();
+                                        } catch (e) {
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Gagal menghapus $name: $e',
+                                                ),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                          }
+                                        }
                                       }
                                     },
                             ),
@@ -1732,6 +1821,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ],
                           ),
                         ),
+                        // FIX UTAMA: sebelumnya tidak ada try/catch — kalau
+                        // pembeli ini masih punya baris di tabel `orders`
+                        // (foreign key), backend menolak hapus, tapi error-nya
+                        // hilang begitu saja dan nama pembeli kelihatan
+                        // "tidak kehapus" tanpa keterangan apapun.
+                        // Sekarang errornya ditangkap dan ditampilkan lewat
+                        // SnackBar merah berisi alasan sebenarnya dari server
+                        // (lihat AdminController@deleteUser yang sudah
+                        // dibenarkan juga supaya pesannya jelas).
                         IconButton(
                           icon: const Icon(
                             Icons.delete,
@@ -1745,8 +1843,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                     'Hapus pembeli $name?',
                                   );
                                   if (confirm == true && _token != null) {
-                                    await _adminService.deleteUser(_token!, id);
-                                    _loadBuyers();
+                                    try {
+                                      await _adminService.deleteUser(
+                                        _token!,
+                                        id,
+                                      );
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Pembeli $name berhasil dihapus',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                      _loadBuyers();
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Gagal menghapus $name: $e',
+                                            ),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
                                   }
                                 },
                         ),

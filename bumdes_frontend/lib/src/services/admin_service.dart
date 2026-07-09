@@ -72,6 +72,15 @@ class AdminService {
   /// district, regency, contact_phone, dst) — lihat
   /// AdminController@createUser di backend. Backend akan membuat User +
   /// Store dalam satu transaksi dan langsung aktif.
+  ///
+  /// FIX: dulu kalau path pertama (`/admin/users`) gagal karena error VALID
+  /// dari server (mis. validasi 422, email sudah dipakai, dsb), kode ini
+  /// tetap lanjut mencoba path kedua (`/users`) dan pesan error yang
+  /// sebenarnya penting jadi ketimpa oleh error dari path kedua yang kurang
+  /// relevan (atau malah membuat user dobel kalau path kedua ternyata juga
+  /// valid). Sekarang hanya lanjut ke path berikutnya kalau errornya benar2
+  /// karena endpoint tidak ditemukan (404) — bukan endpoint valid yang
+  /// menolak request.
   Future<Map<String, dynamic>> createUser(
     String token,
     Map<String, dynamic> data,
@@ -83,6 +92,7 @@ class AdminService {
         return await api.post(path, data);
       } catch (e) {
         lastError = e;
+        if (!_isRouteNotFound(e)) rethrow;
         continue;
       }
     }
@@ -92,6 +102,10 @@ class AdminService {
 
   /// Update pengguna. Kalau user adalah Penjual dan `data` menyertakan field
   /// toko, data toko ikut diperbarui sekaligus (lihat AdminController@updateUser).
+  ///
+  /// FIX: sama seperti createUser — tidak lagi menimpa error asli dengan
+  /// error dari path fallback kalau path pertama sudah merespons (walau
+  /// responsnya berupa error yang valid).
   Future<Map<String, dynamic>> updateUser(
     String token,
     int userId,
@@ -104,6 +118,7 @@ class AdminService {
         return await api.put(path, data);
       } catch (e) {
         lastError = e;
+        if (!_isRouteNotFound(e)) rethrow;
         continue;
       }
     }
@@ -113,6 +128,21 @@ class AdminService {
         );
   }
 
+  /// Hapus pengguna (Penjual/Pembeli/Admin).
+  ///
+  /// PENTING — INI PENYEBAB UTAMA "hapus pembeli tidak bisa tapi tidak ada
+  /// keterangan":
+  /// Backend sekarang akan menolak dengan pesan jelas (status 409) kalau
+  /// pengguna itu masih punya data terkait lewat foreign key (mis. baris di
+  /// tabel `orders`, apapun statusnya — Selesai maupun belum). Sebelumnya,
+  /// begitu request ke `/admin/users/{id}` ditolak server, kode di sini
+  /// tetap mencoba `/users/{id}` sebagai fallback, dan pesan error 409 yang
+  /// jelas itu ketimpa oleh error generik dari path kedua (biasanya 404
+  /// "not found" karena path itu memang tidak dimaksudkan untuk admin).
+  /// Akibatnya UI di atas tidak pernah tahu alasan sebenarnya.
+  /// Sekarang: begitu server merespons (apapun hasilnya) di path pertama,
+  /// error itu langsung dilempar apa adanya ke pemanggil — fallback HANYA
+  /// dicoba kalau errornya murni karena endpoint tidak ditemukan (404).
   Future<Map<String, dynamic>> deleteUser(String token, int userId) async {
     final api = ApiService(token: token);
     Object? lastError;
@@ -121,6 +151,7 @@ class AdminService {
         return await api.delete(path);
       } catch (e) {
         lastError = e;
+        if (!_isRouteNotFound(e)) rethrow;
         continue;
       }
     }
@@ -189,6 +220,7 @@ class AdminService {
         return await api.delete(path);
       } catch (e) {
         lastError = e;
+        if (!_isRouteNotFound(e)) rethrow;
         continue;
       }
     }
@@ -256,6 +288,7 @@ class AdminService {
         return await api.put(path, data);
       } catch (e) {
         lastError = e;
+        if (!_isRouteNotFound(e)) rethrow;
         continue;
       }
     }
@@ -271,6 +304,7 @@ class AdminService {
         return await api.delete(path);
       } catch (e) {
         lastError = e;
+        if (!_isRouteNotFound(e)) rethrow;
         continue;
       }
     }
@@ -307,6 +341,20 @@ class AdminService {
         .whereType<Map<String, dynamic>>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
+  }
+
+  /// Cek apakah sebuah error itu murni karena endpoint tidak ditemukan
+  /// (404 / route not found). Dipakai supaya loop fallback path HANYA
+  /// lanjut mencoba path lain kalau memang path pertama tidak ada,
+  /// bukan setiap kali server menolak request dengan alasan bisnis
+  /// (409 konflik, 422 validasi, dll) — karena kalau tetap lanjut,
+  /// pesan error yang penting dari path pertama akan hilang/ketimpa.
+  bool _isRouteNotFound(Object e) {
+    final msg = e.toString().toLowerCase();
+    return msg.contains('404') ||
+        msg.contains('not found') ||
+        msg.contains('route not found') ||
+        msg.contains('no route');
   }
 
   // ── WALLET / SALDO & PAJAK (Admin) ────────────────────────────────────────────

@@ -170,6 +170,15 @@ class AdminController extends Controller
     /**
      * Get admin dashboard stats
      * FIX: cukup cek role, tidak perlu record di tabel admins
+     *
+     * CATATAN: `total_revenue` di sini adalah OMZET KOTOR seluruh waktu
+     * (jumlah total_price semua pesanan berstatus Selesai). Ini BUKAN saldo
+     * platform yang bisa ditarik, dan sengaja tidak berkurang meskipun admin
+     * sudah menarik saldo lewat menu Keuangan. Untuk saldo yang benar-benar
+     * bisa ditarik (sudah memperhitungkan penarikan), pakai endpoint
+     * GET /admin/wallet/summary (field `platform_balance`), bukan field ini.
+     * Dashboard Flutter sudah diperbaiki supaya kartu "Saldo Admin" memakai
+     * `platform_balance` dari wallet summary, bukan `total_revenue` di sini.
      */
     public function getDashboardStats()
     {
@@ -401,6 +410,23 @@ class AdminController extends Controller
 
     /**
      * Delete user (admin)
+     *
+     * FIX — INI PENYEBAB UTAMA "hapus pembeli tidak bisa, tanpa keterangan":
+     * Sebelumnya di sini cuma `$user->delete()` tanpa try/catch. Kalau user
+     * yang mau dihapus masih punya baris terkait di tabel lain lewat foreign
+     * key (paling sering: tabel `orders`, lewat kolom `buyer_id` — berlaku
+     * untuk pesanan apapun statusnya, bukan cuma yang "Selesai"), MySQL
+     * menolak DELETE itu dengan error constraint (SQLSTATE 23000). Error itu
+     * sebelumnya menyebar sebagai exception PHP mentah / response 500 yang
+     * tidak informatif, dan di sisi Flutter juga tidak pernah tertangkap
+     * (lihat perbaikan di admin_dashboard_screen.dart & admin_service.dart) —
+     * jadi kelihatannya "tidak terjadi apa-apa".
+     *
+     * Sekarang: kalau memang ada constraint yang menghalangi, endpoint ini
+     * mengembalikan response 409 dengan pesan yang jelas, supaya Admin tahu
+     * persis kenapa dan bisa mengambil keputusan (mis. minta pesanan itu
+     * diselesaikan/dihapus dulu, atau nonaktifkan saja akunnya kalau model
+     * User punya kolom is_active).
      */
     public function deleteUser($id)
     {
@@ -408,8 +434,31 @@ class AdminController extends Controller
         if (!$user) {
             return response()->json(['status' => 'error', 'message' => 'User tidak ditemukan'], 404);
         }
-        $user->delete();
-        return response()->json(['status' => 'success', 'message' => 'User berhasil dihapus']);
+
+        try {
+            $user->delete();
+            return response()->json(['status' => 'success', 'message' => 'User berhasil dihapus']);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // SQLSTATE 23000 = integrity constraint violation (foreign key).
+            // Paling umum: user ini masih jadi buyer_id di tabel `orders`,
+            // atau (kalau Penjual) masih punya `store`/`products` terkait.
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Pengguna ini tidak bisa dihapus karena masih memiliki riwayat data terkait (mis. pesanan, toko, atau produk) yang tersimpan di sistem. Data itu perlu diselesaikan/dipindahkan dulu sebelum akun ini bisa dihapus permanen.',
+                ], 409);
+            }
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal menghapus pengguna: ' . $e->getMessage(),
+            ], 500);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal menghapus pengguna: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -439,6 +488,10 @@ class AdminController extends Controller
 
     /**
      * Delete store (admin)
+     *
+     * Sama seperti deleteUser() di atas: dibungkus try/catch supaya kalau
+     * toko masih punya produk/pesanan terkait, Admin dapat pesan error yang
+     * jelas alih-alih 500 mentah.
      */
     public function deleteStore($id)
     {
@@ -446,12 +499,36 @@ class AdminController extends Controller
         if (!$store) {
             return response()->json(['status' => 'error', 'message' => 'Toko tidak ditemukan'], 404);
         }
-        $store->delete();
-        return response()->json(['status' => 'success', 'message' => 'Toko berhasil dihapus']);
+
+        try {
+            $store->delete();
+            return response()->json(['status' => 'success', 'message' => 'Toko berhasil dihapus']);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Toko ini tidak bisa dihapus karena masih memiliki produk atau pesanan terkait. Hapus/nonaktifkan produknya dulu, atau nonaktifkan saja tokonya lewat tombol "Nonaktifkan".',
+                ], 409);
+            }
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal menghapus toko: ' . $e->getMessage(),
+            ], 500);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal menghapus toko: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
      * Delete product (admin)
+     *
+     * Sama seperti deleteUser()/deleteStore(): dibungkus try/catch supaya
+     * kalau produk masih punya item pesanan terkait, Admin dapat pesan error
+     * yang jelas alih-alih 500 mentah.
      */
     public function deleteProduct($id)
     {
@@ -459,8 +536,28 @@ class AdminController extends Controller
         if (!$product) {
             return response()->json(['status' => 'error', 'message' => 'Produk tidak ditemukan'], 404);
         }
-        $product->delete();
-        return response()->json(['status' => 'success', 'message' => 'Produk berhasil dihapus']);
+
+        try {
+            $product->delete();
+            return response()->json(['status' => 'success', 'message' => 'Produk berhasil dihapus']);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Produk ini tidak bisa dihapus karena masih ada di dalam riwayat pesanan. Nonaktifkan saja produknya kalau tidak ingin ditampilkan lagi.',
+                ], 409);
+            }
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal menghapus produk: ' . $e->getMessage(),
+            ], 500);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal menghapus produk: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     // CATATAN PERUBAHAN ALUR BISNIS:
