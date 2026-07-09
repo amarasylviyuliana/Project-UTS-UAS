@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\Product;
 use App\Http\Controllers\ProductAISearchController;
 use App\Http\Controllers\WalletController;
+use App\Http\Controllers\ImageProxyController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -98,6 +99,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
     Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
+
+    Route::get('/image/{path}', [ImageProxyController::class, 'show'])
+    ->where('path', '.*');
 
     // Wallet / Saldo (Penjual)
     Route::get('/wallet/balance', [WalletController::class, 'balance']);

@@ -6,6 +6,7 @@ use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Http\JsonResponse;
 
@@ -14,7 +15,7 @@ class ProfileController extends Controller
     public function show(Request $request): JsonResponse
     {
         $user = $request->user()->load('store');
-        return response()->json($user);
+        return response()->json($this->formatUser($user));
     }
 
     public function update(Request $request): JsonResponse
@@ -27,30 +28,37 @@ class ProfileController extends Controller
             'photo_url'         => 'sometimes|url',
         ]);
         $request->user()->update($validated);
-        return response()->json(['message' => 'Profil diperbarui', 'user' => $request->user()]);
-    }
-public function uploadPhoto(Request $request): JsonResponse
-{
-    $validated = $request->validate([
-        'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120',
-    ]);
-
-    $user = $request->user();
-
-    // Hapus foto lama kalau ada, biar storage tidak numpuk file yatim
-    if ($user->photo_url && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->photo_url)) {
-        \Illuminate\Support\Facades\Storage::disk('public')->delete($user->photo_url);
+        return response()->json([
+            'message' => 'Profil diperbarui',
+            'user'    => $this->formatUser($request->user()->fresh()),
+        ]);
     }
 
-    $path = $request->file('photo')->store('profile-photos', 'public');
-    $user->update(['photo_url' => $path]);
+    public function uploadPhoto(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120',
+        ]);
 
-    return response()->json([
-        'message'   => 'Foto profil berhasil diperbarui',
-        'photo_url' => $path,
-        'user'      => $user->fresh(),
-    ]);
-}
+        $user = $request->user();
+
+        // Hapus foto lama kalau ada, biar storage tidak numpuk file yatim
+        if ($user->photo_url && Storage::disk('public')->exists($user->photo_url)) {
+            Storage::disk('public')->delete($user->photo_url);
+        }
+
+        $path = $request->file('photo')->store('profile-photos', 'public');
+        // Simpan PATH RELATIF di database (jangan URL penuh),
+        // supaya kalau domain berubah, data lama tidak ikut rusak.
+        $user->update(['photo_url' => $path]);
+
+        return response()->json([
+            'message'   => 'Foto profil berhasil diperbarui',
+            'photo_url' => Storage::disk('public')->url($path), // ← URL LENGKAP dikirim ke Flutter
+            'user'      => $this->formatUser($user->fresh()),
+        ]);
+    }
+
     public function updatePassword(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -72,25 +80,15 @@ public function uploadPhoto(Request $request): JsonResponse
         }
         $store = $user->store;
         if (!$store) {
-            // Toko Penjual sekarang dibuat langsung oleh Admin saat akun
-            // dibuat. Kalau belum ada, artinya data toko belum diisi Admin.
             return response()->json(['message' => 'Toko Anda belum diisi oleh Admin. Silakan hubungi Admin.'], 404);
         }
 
         return response()->json([
             'message' => 'Data toko',
-            'data'    => $store,
+            'data'    => $this->formatStore($store),
         ]);
     }
 
-    /**
-     * Perbarui data toko milik Penjual yang sedang login.
-     *
-     * PENTING: Penjual TIDAK bisa lagi membuat toko baru lewat endpoint ini.
-     * Toko/BUMDes sekarang dibuat langsung oleh Admin bersamaan dengan akun
-     * Penjual (lihat AdminController@createUser) dan otomatis aktif. Endpoint
-     * ini hanya untuk Penjual mengedit data toko miliknya sendiri yang sudah ada.
-     */
     public function createOrUpdateStore(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -118,16 +116,16 @@ public function uploadPhoto(Request $request): JsonResponse
             'store_photo'         => 'sometimes|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
-        $storePhotoUrl = null;
+        $storePhotoPath = null;
         if ($request->hasFile('store_photo')) {
-            $storePhotoUrl = $request->file('store_photo')->store('store-photos', 'public');
+            $storePhotoPath = $request->file('store_photo')->store('store-photos', 'public');
         }
 
         try {
-            DB::transaction(function () use ($store, $validated, $storePhotoUrl) {
+            DB::transaction(function () use ($store, $validated, $storePhotoPath) {
                 $store->fill($validated);
-                if ($storePhotoUrl) {
-                    $store->store_photo_url = $storePhotoUrl;
+                if ($storePhotoPath) {
+                    $store->store_photo_url = $storePhotoPath; // tetap simpan path relatif
                 }
                 $store->save();
             });
@@ -139,7 +137,31 @@ public function uploadPhoto(Request $request): JsonResponse
 
         return response()->json([
             'message' => 'Toko berhasil diperbarui',
-            'data'    => $store->fresh(),
+            'data'    => $this->formatStore($store->fresh()),
         ]);
+    }
+
+    /**
+     * Ubah path relatif di kolom photo_url jadi URL lengkap sebelum dikirim ke Flutter.
+     */
+    private function formatUser($user): array
+    {
+        $data = $user->toArray();
+        if (!empty($data['photo_url']) && !str_starts_with($data['photo_url'], 'http')) {
+            $data['photo_url'] = Storage::disk('public')->url($data['photo_url']);
+        }
+        if (!empty($data['store'])) {
+            $data['store'] = $this->formatStore($user->store);
+        }
+        return $data;
+    }
+
+    private function formatStore($store): array
+    {
+        $data = $store->toArray();
+        if (!empty($data['store_photo_url']) && !str_starts_with($data['store_photo_url'], 'http')) {
+            $data['store_photo_url'] = Storage::disk('public')->url($data['store_photo_url']);
+        }
+        return $data;
     }
 }
