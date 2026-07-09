@@ -272,6 +272,9 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   }
 
   Widget _buildHeader(AuthProvider auth) {
+    final photoUrl = auth.user?.photoUrl;
+    final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -284,10 +287,13 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       ),
       child: Row(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 28,
-            backgroundColor: Color(0xFF2A7F41),
-            child: Icon(Icons.storefront, size: 28, color: Colors.white),
+            backgroundColor: const Color(0xFF2A7F41),
+            backgroundImage: hasPhoto ? NetworkImage(photoUrl) : null,
+            child: hasPhoto
+                ? null
+                : const Icon(Icons.storefront, size: 28, color: Colors.white),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -1375,6 +1381,9 @@ IconButton(
 
   Widget _buildProfileTab(AuthProvider auth) {
     final user = auth.user;
+    final photoUrl = user?.photoUrl;
+    final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
@@ -1397,10 +1406,13 @@ IconButton(
             ),
             child: Row(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 30,
-                  backgroundColor: Color(0xFF2A7F41),
-                  child: Icon(Icons.person, size: 30, color: Colors.white),
+                  backgroundColor: const Color(0xFF2A7F41),
+                  backgroundImage: hasPhoto ? NetworkImage(photoUrl) : null,
+                  child: hasPhoto
+                      ? null
+                      : const Icon(Icons.person, size: 30, color: Colors.white),
                 ),
                 const SizedBox(width: 16),
                 Expanded(

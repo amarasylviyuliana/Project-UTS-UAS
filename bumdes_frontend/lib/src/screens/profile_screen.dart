@@ -11,7 +11,7 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final user = auth.user;
-    
+
     final profileContent = user == null
         ? const Center(child: Text('Profil pengguna tidak tersedia'))
         : SingleChildScrollView(
@@ -19,6 +19,19 @@ class ProfileScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('Profil Saya', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2D5016))),
+                const SizedBox(height: 20),
+                Center(
+                  child: CircleAvatar(
+                    radius: 40,
+                    backgroundColor: const Color(0xFF2D5016).withValues(alpha: 0.1),
+                    backgroundImage: (user.photoUrl != null && user.photoUrl!.isNotEmpty)
+                        ? NetworkImage(user.photoUrl!)
+                        : null,
+                    child: (user.photoUrl == null || user.photoUrl!.isEmpty)
+                        ? const Icon(Icons.person, size: 40, color: Color(0xFF2D5016))
+                        : null,
+                  ),
+                ),
                 const SizedBox(height: 20),
                 Card(
                   elevation: 1,
@@ -103,7 +116,7 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           );
-    
+
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: profileContent,

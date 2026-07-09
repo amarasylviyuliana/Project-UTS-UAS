@@ -43,6 +43,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   double _taxPercentage = 0;
   bool _isLoadingWallet = false;
 
+  // Sub-tab di menu PENGGUNA: 0 = Penjual, 1 = Pembeli
+  int _userSubTab = 0;
+
   Timer? _autoRefreshTimer;
 
   final _adminService = AdminService();
@@ -316,15 +319,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ),
           IconButton(
-            onPressed: () =>
-                Navigator.pushNamed(context, AdminWalletScreen.routeName),
-            tooltip: 'Saldo & Pajak',
-            icon: const Icon(
-              Icons.account_balance_wallet,
-              color: Color(0xFF2A7F41),
-            ),
-          ),
-          IconButton(
             onPressed: _handleLogout,
             tooltip: 'Keluar',
             icon: const Icon(Icons.logout, color: Colors.red),
@@ -356,16 +350,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 style: const TextStyle(fontSize: 14, color: Colors.black54),
               ),
             ],
-          ),
-          IconButton(
-            onPressed: () =>
-                Navigator.pushNamed(context, AdminWalletScreen.routeName),
-            tooltip: 'Saldo & Pajak',
-            icon: const Icon(
-              Icons.account_balance_wallet,
-              color: Color(0xFF2A7F41),
-              size: 28,
-            ),
           ),
           IconButton(
             onPressed: _handleLogout,
@@ -1452,40 +1436,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // sendiri lewat app.
 
   Widget _buildUsersTab() {
-    final sellers = _sellerUsers;
-    final buyers = _users.where((u) {
-      final role = (u['role'] ?? '').toString().toLowerCase();
-      return role == 'buyer' || role == 'pembeli';
-    }).toList();
-
-    return DefaultTabController(
-      length: 3,
-      child: Column(
-        children: [
-          Container(
-            color: Colors.white,
-            child: TabBar(
-              labelColor: const Color(0xFF2A7F41),
-              unselectedLabelColor: Colors.black54,
-              indicatorColor: const Color(0xFF2A7F41),
-              tabs: [
-                Tab(text: 'Semua (${_users.length})'),
-                Tab(text: 'Penjual (${sellers.length})'),
-                Tab(text: 'Pembeli (${buyers.length})'),
-              ],
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: SegmentedButton<int>(
+            segments: const [
+              ButtonSegment(
+                value: 0,
+                label: Text('Penjual'),
+                icon: Icon(Icons.store, size: 16),
+              ),
+              ButtonSegment(
+                value: 1,
+                label: Text('Pembeli'),
+                icon: Icon(Icons.person, size: 16),
+              ),
+            ],
+            selected: {_userSubTab},
+            onSelectionChanged: (s) => setState(() => _userSubTab = s.first),
           ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _buildUserList(_users),
-                _buildUserList(sellers, showStoreInfo: true),
-                _buildUserList(buyers),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+        Expanded(
+          child: _userSubTab == 0
+              ? _buildUserList(_sellerUsers, showStoreInfo: true)
+              : _buildBuyerList(),
+        ),
+      ],
     );
   }
 
@@ -1502,7 +1480,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${userList.length} Pengguna',
+                '${userList.length} Penjual',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -1533,7 +1511,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             )
           else if (userList.isEmpty)
-            _buildEmptyState('Belum ada pengguna', Icons.people_outline)
+            _buildEmptyState('Belum ada penjual terdaftar', Icons.people_outline)
           else
             Container(
               decoration: BoxDecoration(
@@ -2040,8 +2018,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       text: existingStore?['bank_account_holder'] ?? '',
     );
 
-    String selectedRole =
-        (user?['role']?.toString().toLowerCase()) ?? 'seller';
     final formKey = GlobalKey<FormState>();
     bool isSaving = false;
 
@@ -2049,9 +2025,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
-          final showStoreFields = selectedRole == 'seller';
           return AlertDialog(
-            title: Text(isEditing ? 'Ubah Pengguna' : 'Tambah Pengguna'),
+            title: Text(isEditing ? 'Ubah Penjual' : 'Tambah Penjual'),
             content: Form(
               key: formKey,
               child: SingleChildScrollView(
@@ -2097,7 +2072,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             : 'Password',
                         helperText: isEditing
                             ? 'Kosongkan jika tidak ingin mengubah password'
-                            : 'Minimal 8 karakter, digunakan untuk login',
+                            : 'Minimal 8 karakter, digunakan Penjual untuk login',
                       ),
                       validator: (v) {
                         if (!isEditing && (v == null || v.isEmpty)) {
@@ -2109,154 +2084,118 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedRole,
-                      decoration: const InputDecoration(labelText: 'Peran'),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'admin',
-                          child: Text('Admin'),
+                    const SizedBox(height: 20),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Data Toko / BUMDes',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2A7F41),
+                      ),
+                    ),
+                    Text(
+                      isEditing
+                          ? 'Data toko akan diperbarui bersamaan dengan akun ini.'
+                          : 'Toko akan dibuat otomatis dan langsung aktif bersamaan dengan akun ini.',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: storeNameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama BUMDes/Toko',
+                      ),
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Wajib diisi' : null,
+                    ),
+                    TextFormField(
+                      controller: storeDescCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Deskripsi (opsional)',
+                      ),
+                      maxLines: 2,
+                    ),
+                    TextFormField(
+                      controller: storePhoneCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Nomor Telepon Toko',
+                      ),
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Wajib diisi' : null,
+                    ),
+                    TextFormField(
+                      controller: storeAddressCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Alamat Toko (opsional)',
+                      ),
+                      maxLines: 2,
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: villageCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Desa',
+                            ),
+                            validator: (v) =>
+                                v == null || v.isEmpty ? 'Wajib' : null,
+                          ),
                         ),
-                        DropdownMenuItem(
-                          value: 'seller',
-                          child: Text('Penjual'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'buyer',
-                          child: Text('Pembeli'),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            controller: districtCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Kecamatan',
+                            ),
+                            validator: (v) =>
+                                v == null || v.isEmpty ? 'Wajib' : null,
+                          ),
                         ),
                       ],
-                      onChanged: (v) {
-                        if (v != null) {
-                          setDialogState(() => selectedRole = v);
-                        }
-                      },
                     ),
-                    if (showStoreFields) ...[
-                      const SizedBox(height: 20),
-                      const Divider(),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Data Toko / BUMDes',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2A7F41),
-                        ),
+                    TextFormField(
+                      controller: regencyCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Kabupaten/Kota',
                       ),
-                      Text(
-                        isEditing
-                            ? 'Data toko akan diperbarui bersamaan dengan akun ini.'
-                            : 'Toko akan dibuat otomatis dan langsung aktif bersamaan dengan akun ini.',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.black54,
-                        ),
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Wajib diisi' : null,
+                    ),
+                    const SizedBox(height: 20),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Data Rekening (Opsional)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2A7F41),
                       ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: storeNameCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Nama BUMDes/Toko',
-                        ),
-                        validator: (v) =>
-                            showStoreFields && (v == null || v.isEmpty)
-                                ? 'Wajib diisi'
-                                : null,
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: bankNameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Bank',
                       ),
-                      TextFormField(
-                        controller: storeDescCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Deskripsi (opsional)',
-                        ),
-                        maxLines: 2,
+                    ),
+                    TextFormField(
+                      controller: bankNumberCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'No. Rekening',
                       ),
-                      TextFormField(
-                        controller: storePhoneCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Nomor Telepon Toko',
-                        ),
-                        validator: (v) =>
-                            showStoreFields && (v == null || v.isEmpty)
-                                ? 'Wajib diisi'
-                                : null,
+                    ),
+                    TextFormField(
+                      controller: bankHolderCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Pemilik Rekening',
                       ),
-                      TextFormField(
-                        controller: storeAddressCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Alamat Toko (opsional)',
-                        ),
-                        maxLines: 2,
-                      ),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: villageCtrl,
-                              decoration: const InputDecoration(
-                                labelText: 'Desa',
-                              ),
-                              validator: (v) =>
-                                  showStoreFields && (v == null || v.isEmpty)
-                                      ? 'Wajib'
-                                      : null,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextFormField(
-                              controller: districtCtrl,
-                              decoration: const InputDecoration(
-                                labelText: 'Kecamatan',
-                              ),
-                              validator: (v) =>
-                                  showStoreFields && (v == null || v.isEmpty)
-                                      ? 'Wajib'
-                                      : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      TextFormField(
-                        controller: regencyCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Kabupaten/Kota',
-                        ),
-                        validator: (v) =>
-                            showStoreFields && (v == null || v.isEmpty)
-                                ? 'Wajib diisi'
-                                : null,
-                      ),
-                      const SizedBox(height: 20),
-                      const Divider(),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Data Rekening (Opsional)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2A7F41),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: bankNameCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Nama Bank',
-                        ),
-                      ),
-                      TextFormField(
-                        controller: bankNumberCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'No. Rekening',
-                        ),
-                      ),
-                      TextFormField(
-                        controller: bankHolderCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Nama Pemilik Rekening',
-                        ),
-                      ),
-                    ],
+                    ),
                   ],
                 ),
               ),
@@ -2290,28 +2229,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             'phone': phoneCtrl.text.trim(),
                             if (passwordCtrl.text.isNotEmpty)
                               'password': passwordCtrl.text,
-                            'role': selectedRole == 'seller'
-                                ? 'Penjual'
-                                : selectedRole == 'admin'
-                                    ? 'Admin'
-                                    : 'Pembeli',
-                            if (showStoreFields) ...{
-                              'store_name': storeNameCtrl.text.trim(),
-                              'description': storeDescCtrl.text.trim(),
-                              'contact_phone': storePhoneCtrl.text.trim(),
-                              'store_address': storeAddressCtrl.text.trim(),
-                              'village': villageCtrl.text.trim(),
-                              'district': districtCtrl.text.trim(),
-                              'regency': regencyCtrl.text.trim(),
-                              if (bankNameCtrl.text.isNotEmpty)
-                                'bank_name': bankNameCtrl.text.trim(),
-                              if (bankNumberCtrl.text.isNotEmpty)
-                                'bank_account_number':
-                                    bankNumberCtrl.text.trim(),
-                              if (bankHolderCtrl.text.isNotEmpty)
-                                'bank_account_holder':
-                                    bankHolderCtrl.text.trim(),
-                            },
+                            'role': 'Penjual',
+                            'store_name': storeNameCtrl.text.trim(),
+                            'description': storeDescCtrl.text.trim(),
+                            'contact_phone': storePhoneCtrl.text.trim(),
+                            'store_address': storeAddressCtrl.text.trim(),
+                            'village': villageCtrl.text.trim(),
+                            'district': districtCtrl.text.trim(),
+                            'regency': regencyCtrl.text.trim(),
+                            if (bankNameCtrl.text.isNotEmpty)
+                              'bank_name': bankNameCtrl.text.trim(),
+                            if (bankNumberCtrl.text.isNotEmpty)
+                              'bank_account_number':
+                                  bankNumberCtrl.text.trim(),
+                            if (bankHolderCtrl.text.isNotEmpty)
+                              'bank_account_holder':
+                                  bankHolderCtrl.text.trim(),
                           };
 
                           if (isEditing && userId != null && _token != null) {
@@ -2330,8 +2263,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               SnackBar(
                                 content: Text(
                                   isEditing
-                                      ? 'Pengguna ${nameCtrl.text.trim()} berhasil diperbarui'
-                                      : 'Pengguna ${nameCtrl.text.trim()} berhasil ditambahkan',
+                                      ? 'Penjual ${nameCtrl.text.trim()} berhasil diperbarui'
+                                      : 'Penjual ${nameCtrl.text.trim()} berhasil ditambahkan dan toko langsung aktif',
                                 ),
                                 backgroundColor: Colors.green,
                               ),
