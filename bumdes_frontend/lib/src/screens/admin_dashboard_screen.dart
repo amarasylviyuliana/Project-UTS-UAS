@@ -793,6 +793,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
     final storeId = store['id'] as int?;
 
+    // 👈 sesuaikan nama field: coba beberapa kemungkinan lokasi foto toko
+    // (foto toko sendiri, atau foto pemilik/user-nya sebagai fallback).
+    final photoUrl = _extractPhotoUrl(store) ?? _extractPhotoUrl(store['user']);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -811,9 +815,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         children: [
           Row(
             children: [
-              const CircleAvatar(
-                backgroundColor: Color(0xFFE8F5E9),
-                child: Icon(Icons.store, color: Color(0xFF2A7F41)),
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: const Color(0xFFE8F5E9),
+                child: _buildAvatarContent(
+                  photoUrl,
+                  size: 48,
+                  fallback: const Icon(Icons.store, color: Color(0xFF2A7F41)),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1562,14 +1571,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   final name = user['name'] ?? '-';
                   final id = user['id'] as int?;
                   final store = user['store'];
+                  // 👈 sesuaikan nama field kalau backend kamu pakai key lain
+                  final photoUrl = _extractPhotoUrl(user);
                   return Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
                         CircleAvatar(
                           backgroundColor: Colors.grey[200],
-                          child: Text(
-                            name.isNotEmpty ? name[0].toUpperCase() : '?',
+                          child: _buildAvatarContent(
+                            photoUrl,
+                            size: 40,
+                            fallback: Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : '?',
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1769,14 +1784,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 itemBuilder: (context, buyer, index) {
                   final name = buyer['name'] ?? '-';
                   final id = buyer['id'] as int?;
+                  // 👈 sesuaikan nama field kalau backend kamu pakai key lain
+                  final photoUrl = _extractPhotoUrl(buyer);
                   return Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
                         CircleAvatar(
                           backgroundColor: Colors.grey[200],
-                          child: Text(
-                            name.isNotEmpty ? name[0].toUpperCase() : '?',
+                          child: _buildAvatarContent(
+                            photoUrl,
+                            size: 40,
+                            fallback: Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : '?',
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1930,6 +1951,75 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ── HELPERS ───────────────────────────────────────────────────────────────────
+
+  /// Ambil URL foto dari sebuah map user/toko, mencoba beberapa
+  /// kemungkinan nama field yang umum dipakai backend (photo_url, photo,
+  /// avatar, image, logo, dst). Kembalikan null kalau tidak ada satupun
+  /// yang cocok / isinya kosong.
+  ///
+  /// 👈 CATATAN: kalau setelah dicoba foto tetap tidak muncul, print salah
+  /// satu item map user/toko (mis. `print(_users.first)`) untuk lihat nama
+  /// field foto yang sebenarnya dikirim backend, lalu tambahkan ke daftar
+  /// kandidat di bawah ini.
+  String? _extractPhotoUrl(dynamic source) {
+    if (source is! Map<String, dynamic>) return null;
+    const candidateKeys = [
+      'photo_url',
+      'photo',
+      'avatar',
+      'avatar_url',
+      'image',
+      'image_url',
+      'logo',
+      'logo_url',
+      'profile_photo_url',
+    ];
+    for (final key in candidateKeys) {
+      final value = source[key];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+    return null;
+  }
+
+  /// Widget isi avatar: kalau ada [photoUrl], tampilkan gambarnya (dengan
+  /// fallback otomatis ke [fallback] kalau gagal dimuat / masih loading
+  /// ditampilkan spinner kecil). Kalau [photoUrl] null/kosong, langsung
+  /// tampilkan [fallback].
+  Widget _buildAvatarContent(
+    String? photoUrl, {
+    required Widget fallback,
+    double size = 40,
+  }) {
+    if (photoUrl == null || photoUrl.isEmpty) return fallback;
+    return ClipOval(
+      child: Image.network(
+        photoUrl,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          debugPrint('Gagal load foto dari "$photoUrl": $error');
+          return fallback;
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return SizedBox(
+            width: size,
+            height: size,
+            child: const Center(
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   Widget _buildErrorBanner(String message, VoidCallback onRetry) {
     return Container(
