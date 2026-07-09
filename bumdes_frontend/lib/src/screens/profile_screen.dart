@@ -75,14 +75,34 @@ class ProfileScreen extends StatelessWidget {
                   elevation: 1,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2D5016).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.person, color: Color(0xFF2D5016)),
-                    ),
+                    leading: (user.photoUrl != null && user.photoUrl!.isNotEmpty)
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              user.photoUrl!,
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2D5016).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.person, color: Color(0xFF2D5016)),
+                                );
+                              },
+                            ),
+                          )
+                        : Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2D5016).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.person, color: Color(0xFF2D5016)),
+                          ),
                     title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2D5016))),
                     subtitle: Text(user.email, style: const TextStyle(color: Colors.black54)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
