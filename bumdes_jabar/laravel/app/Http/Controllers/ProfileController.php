@@ -59,6 +59,33 @@ class ProfileController extends Controller
         ]);
     }
 
+    // ── TAMBAHAN: hapus foto profil ─────────────────────────────────────────
+    // DELETE /profile/photo
+    // Menghapus file fisik dari storage (kalau ada) dan mengosongkan kolom
+    // photo_url di database. Setelah ini, frontend akan otomatis fallback
+    // ke icon default karena photo_url jadi null.
+    public function deletePhoto(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user->photo_url) {
+            return response()->json([
+                'message' => 'Tidak ada foto profil untuk dihapus',
+            ], 404);
+        }
+
+        if (Storage::disk('public')->exists($user->photo_url)) {
+            Storage::disk('public')->delete($user->photo_url);
+        }
+
+        $user->update(['photo_url' => null]);
+
+        return response()->json([
+            'message' => 'Foto profil berhasil dihapus',
+            'user'    => $this->formatUser($user->fresh()),
+        ]);
+    }
+
     public function updatePassword(Request $request): JsonResponse
     {
         $validated = $request->validate([
