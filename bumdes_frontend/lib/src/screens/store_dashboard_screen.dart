@@ -610,41 +610,64 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
             if (_loadingOrders)
               const Center(child: CircularProgressIndicator())
             else
-              Wrap(
-                spacing: 14,
-                runSpacing: 14,
-                children: [
-                  _buildSummaryCard(
-                    'Total Pesanan',
-                    '$totalOrders',
-                    Colors.green,
-                  ),
-                  _buildSummaryCard(
-                    'Menunggu Konfirmasi',
-                    '$waitingConfirmation',
-                    Colors.orange,
-                  ),
-                  _buildSummaryCard(
-                    'Sedang Diproses',
-                    '$processingOrders',
-                    const Color(0xFFFFC107),
-                  ),
-                  _buildSummaryCard(
-                    'Sedang Dikirim',
-                    '$shippingOrders',
-                    Colors.blue,
-                  ),
-                  _buildSummaryCard(
-                    'Selesai',
-                    '$completedOrders',
-                    Colors.purple,
-                  ),
-                  _buildSummaryCard(
-                    'Dibatalkan',
-                    '$cancelledOrders',
-                    Colors.red,
-                  ),
-                ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final cardWidth = (constraints.maxWidth - 14) / 2;
+                  return Wrap(
+                    spacing: 14,
+                    runSpacing: 14,
+                    children: [
+                      SizedBox(
+                        width: cardWidth,
+                        child: _buildSummaryCard(
+                          'Total Pesanan',
+                          '$totalOrders',
+                          Colors.green,
+                        ),
+                      ),
+                      SizedBox(
+                        width: cardWidth,
+                        child: _buildSummaryCard(
+                          'Menunggu Konfirmasi',
+                          '$waitingConfirmation',
+                          Colors.orange,
+                        ),
+                      ),
+                      SizedBox(
+                        width: cardWidth,
+                        child: _buildSummaryCard(
+                          'Sedang Diproses',
+                          '$processingOrders',
+                          const Color(0xFFFFC107),
+                        ),
+                      ),
+                      SizedBox(
+                        width: cardWidth,
+                        child: _buildSummaryCard(
+                          'Sedang Dikirim',
+                          '$shippingOrders',
+                          Colors.blue,
+                        ),
+                      ),
+                      SizedBox(
+                        width: cardWidth,
+                        child: _buildSummaryCard(
+                          'Selesai',
+                          '$completedOrders',
+                          Colors.purple,
+                        ),
+                      ),
+                      SizedBox(
+                        width: cardWidth,
+                        child: _buildSummaryCard(
+                          'Dibatalkan',
+                          '$cancelledOrders',
+                          Colors.red,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             const SizedBox(height: 24),
             Container(
@@ -1676,7 +1699,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
 
   Widget _buildSummaryCard(String title, String value, Color color) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -1693,13 +1716,13 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
         children: [
           Text(
             title,
-            style: const TextStyle(color: Colors.black54, fontSize: 12),
+            style: const TextStyle(color: Colors.black54, fontSize: 13),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 14),
           Text(
             value,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: color,
             ),
