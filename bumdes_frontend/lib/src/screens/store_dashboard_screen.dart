@@ -1504,13 +1504,18 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
 
   // ── PROFILE TAB ────────────────────────────────────────────────────────────
 
-  Widget _buildProfileTab(AuthProvider auth) {
+ Widget _buildProfileTab(AuthProvider auth) {
     final user = auth.user;
     final photoUrl = user?.photoUrl;
     final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+    // FIX: dibungkus SingleChildScrollView + padding bawah ekstra supaya
+    // item terakhir (Bantuan & FAQ / Tentang Aplikasi / tombol Keluar)
+    // tidak lagi ketutup bottom navigation bar. Sebelumnya cuma Padding
+    // biasa tanpa scroll, jadi kalau kontennya lebih tinggi dari layar,
+    // bagian bawah langsung terpotong tanpa bisa di-scroll.
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1614,7 +1619,6 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       ),
     );
   }
-
   // ── HELPER WIDGETS ─────────────────────────────────────────────────────────
 
   // FIX: Helper untuk tampilkan gambar produk dengan fallback yang benar

@@ -623,8 +623,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
     );
   }
-
-  Widget _buildRecentActivity() {
+Widget _buildRecentActivity() {
     final recentOrders = _orders.take(5).toList();
     if (_isLoadingOrders) {
       return const Center(
@@ -670,9 +669,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         separatorBuilder: (_, __) => const Divider(height: 1),
         itemBuilder: (context, index) {
           final order = recentOrders[index];
+          // FIX: crossAxisAlignment.start + nomor pesanan dibatasi 1 baris
+          // (ellipsis). Sebelumnya Row tanpa batas baris membuat nomor
+          // pesanan yang panjang wrap ke 2-3 baris, dan karena Row
+          // default-nya center, badge status jadi kelihatan naik/tidak
+          // sejajar dengan teksnya.
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const CircleAvatar(
                   radius: 20,
@@ -694,17 +699,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      const SizedBox(height: 4),
                       Text(
                         '${order['recipient_name'] ?? order['user']?['name'] ?? 'Pembeli'} • ${_formatRupiah(_parseDouble(order['total'] ?? order['total_price']))}',
                         style: const TextStyle(
                           color: Colors.black54,
                           fontSize: 12,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 _buildStatusChip(order['status'] ?? '-'),
               ],
             ),
@@ -713,7 +724,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
     );
   }
-
   // ── STORES TAB ───────────────────────────────────────────────────────────────
 
   Widget _buildStoresTab() => _buildAllStoresTab();
@@ -802,7 +812,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildStoreCard(Map<String, dynamic> store) {
+Widget _buildStoreCard(Map<String, dynamic> store) {
     final name = store['store_name'] ?? store['name'] ?? '-';
     final owner = store['user']?['name'] ?? store['owner_name'] ?? '-';
     final ownerEmail = store['user']?['email'] ?? '-';
@@ -811,8 +821,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _parseDouble(store['total_revenue'] ?? store['revenue']),
     );
     final storeId = store['id'] as int?;
-    // TAMBAHAN: foto toko, kalau backend sudah kirim store_photo_url
-    final storePhotoUrl = store['store_photo_url'] as String?;
+    // FIX: sebelumnya cuma baca store['store_photo_url'] yang biasanya
+    // belum diisi backend, jadi selalu jatuh ke ikon toko generik.
+    // Sekarang diutamakan foto pemilik toko (user['photo_url']) — ini
+    // yang sama dipakai di halaman Akun/Pengguna dan sudah terbukti ada
+    // datanya (mis. foto BUMDes Garut) — baru fallback ke store_photo_url
+    // kalau suatu saat backend punya foto toko sendiri yang terpisah.
+    final storePhotoUrl =
+        (store['user']?['photo_url'] as String?) ??
+        (store['store_photo_url'] as String?);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -831,6 +848,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
                 backgroundColor: const Color(0xFFE8F5E9),
@@ -946,7 +964,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
     );
   }
-
   Future<void> _toggleStoreStatus(
     int storeId,
     bool activate,
@@ -1340,40 +1357,66 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         items: _orders,
         pageSize: 10,
         separatorBuilder: (_, __) => const Divider(height: 1),
+        // FIX: dirombak dari Row 4-kolom rata (yang bikin nomor pesanan
+        // panjang wrap dan badge status tidak sejajar) jadi card 2-baris:
+        // baris atas = nomor pesanan (1 baris, ellipsis) + badge status,
+        // baris bawah = nama pembeli (kiri) + total harga (kanan).
         itemBuilder: (context, order, index) {
           final status = order['status'] ?? '-';
+          final buyerName =
+              order['recipient_name'] ?? order['user']?['name'] ?? 'Pembeli';
+          final total = _formatRupiah(
+            _parseDouble(order['total'] ?? order['total_price']),
+          );
+
           return Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    '#${order['order_number'] ?? 'N/A'}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '#${order['order_number'] ?? 'N/A'}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    _buildStatusChip(status),
+                  ],
                 ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    order['recipient_name'] ??
-                        order['user']?['name'] ??
-                        'Pembeli',
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    _formatRupiah(
-                      _parseDouble(order['total'] ?? order['total_price']),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        buyerName,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black54,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    style: const TextStyle(fontSize: 13),
-                  ),
+                    const SizedBox(width: 8),
+                    Text(
+                      total,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2A7F41),
+                      ),
+                    ),
+                  ],
                 ),
-                Expanded(child: _buildStatusChip(status)),
               ],
             ),
           );
