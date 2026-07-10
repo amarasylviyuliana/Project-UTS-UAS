@@ -110,6 +110,93 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  // ── TAMBAHAN: kartu toko ala Shopee ──────────────────────────────────────
+  // Foto toko (bulat) + nama toko + lokasi, ditampilkan sebagai satu kartu
+  // terpisah dan rapi, alih-alih dua baris teks polos seperti sebelumnya.
+  // Sengaja pakai foto TOKO (store_photo_url), bukan foto profil pribadi
+  // penjual — sama seperti pola di Shopee/Tokopedia, karena yang relevan
+  // buat pembeli adalah identitas tokonya, bukan wajah pengelolanya.
+  Widget _buildStoreCard(ProductModel product) {
+    const double avatarSize = 48;
+    final hasPhoto = product.storePhotoUrl != null && product.storePhotoUrl!.isNotEmpty;
+
+    Widget avatar;
+    if (hasPhoto) {
+      avatar = ClipOval(
+        child: Image.network(
+          product.storePhotoUrl!,
+          width: avatarSize,
+          height: avatarSize,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stack) => Container(
+            width: avatarSize,
+            height: avatarSize,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8F5E9),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.store, color: Color(0xFF2D5016)),
+          ),
+        ),
+      );
+    } else {
+      avatar = Container(
+        width: avatarSize,
+        height: avatarSize,
+        decoration: const BoxDecoration(
+          color: Color(0xFFE8F5E9),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.store, color: Color(0xFF2D5016)),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6FAF6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF2D5016).withOpacity(0.08)),
+      ),
+      child: Row(
+        children: [
+          avatar,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.storeName.isNotEmpty ? product.storeName : 'Toko tidak diketahui',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF2D5016)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (product.location.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on_outlined, size: 14, color: Colors.black45),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          product.location,
+                          style: const TextStyle(fontSize: 12.5, color: Colors.black54),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDetailSection(ProductModel product, bool available, CartProvider cart) {
     return Container(
       padding: const EdgeInsets.all(28),
@@ -126,10 +213,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           Text(product.name, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Text('Harga: Rp ${product.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.green)),
-          const SizedBox(height: 8),
-          Text('Toko: ${product.storeName}', style: const TextStyle(fontSize: 16, color: Colors.black54)),
-          const SizedBox(height: 4),
-          Text('Asal: ${product.location}', style: const TextStyle(fontSize: 16, color: Colors.black54)),
+          const SizedBox(height: 16),
+          _buildStoreCard(product),
           const SizedBox(height: 16),
           Text(product.stock == 0 ? 'Stok Habis' : 'Stok tersedia: ${product.stock}', style: TextStyle(color: product.stock == 0 ? Colors.red : Colors.green, fontSize: 16)),
           const SizedBox(height: 24),

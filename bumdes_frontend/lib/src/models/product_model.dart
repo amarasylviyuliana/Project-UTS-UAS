@@ -13,6 +13,10 @@ class ProductModel {
   final String imageUrl;
   final bool isService;
   final bool isSample;
+  // TAMBAHAN: identitas toko, dipakai untuk kartu toko ala Shopee di
+  // halaman detail produk (foto toko + nama + lokasi).
+  final int? storeId;
+  final String? storePhotoUrl;
 
   ProductModel({
     required this.id,
@@ -26,6 +30,8 @@ class ProductModel {
     required this.imageUrl,
     this.isService = false,
     this.isSample = false,
+    this.storeId,
+    this.storePhotoUrl,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -65,6 +71,24 @@ class ProductModel {
       location = json['location'] as String? ?? '';
     }
 
+    // TAMBAHAN: id toko dan foto toko, dari nested store object atau
+    // fallback ke field flat store_id / store_photo_url kalau ada.
+    int? storeId;
+    if (storeObj is Map && storeObj['id'] != null) {
+      storeId = _parseInt(storeObj['id']);
+    } else if (json['store_id'] != null) {
+      storeId = _parseInt(json['store_id']);
+    }
+
+    String? rawStorePhotoUrl;
+    if (storeObj is Map) {
+      rawStorePhotoUrl = storeObj['store_photo_url'] as String?;
+    }
+    rawStorePhotoUrl ??= json['store_photo_url'] as String?;
+    final storePhotoUrl = (rawStorePhotoUrl != null && rawStorePhotoUrl.isNotEmpty)
+        ? resolveImageUrlWithProxy(_resolveImageUrl(rawStorePhotoUrl))
+        : null;
+
     // Parse isService dari field 'type' atau 'is_service'
     final typeVal = json['type'] as String? ?? '';
     final isService =
@@ -86,6 +110,8 @@ class ProductModel {
       imageUrl: resolveImageUrlWithProxy(_resolveImageUrl(rawImageUrl)),
       isService: isService,
       isSample: false,
+      storeId: storeId,
+      storePhotoUrl: storePhotoUrl,
     );
   }
 
