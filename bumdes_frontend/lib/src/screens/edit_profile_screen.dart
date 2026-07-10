@@ -30,6 +30,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String? _pickedPhotoName;
   bool _uploadingPhoto = false;
 
+  static const _primary = Color(0xFF2D5016);
+  static const _accent = Color(0xFF52B788);
+  static const _border = Color(0xFFC8E6C9);
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -55,7 +59,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  // ── TAMBAHAN: hapus foto profil ─────────────────────────────────────────
+  // ── hapus foto profil ─────────────────────────────────────────
   Future<void> _deletePhoto() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.token == null) {
@@ -68,12 +72,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Hapus Foto Profil', style: TextStyle(color: Color(0xFF2D5016))),
+        title: const Text('Hapus Foto Profil', style: TextStyle(color: _primary)),
         content: const Text('Yakin mau hapus foto profil? Foto akan kembali ke default.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Batal', style: TextStyle(color: Color(0xFF52B788))),
+            child: const Text('Batal', style: TextStyle(color: _accent)),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -124,16 +128,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => SafeArea(
         child: Wrap(
           children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 4),
+              child: Text(
+                'Ubah Foto Profil',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _primary),
+              ),
+            ),
             ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
+              leading: const Icon(Icons.photo_camera_outlined, color: _primary),
               title: const Text('Ambil dari Kamera'),
               onTap: () => Navigator.pop(ctx, ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
+              leading: const Icon(Icons.photo_library_outlined, color: _primary),
               title: const Text('Pilih dari Galeri'),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
             ),
@@ -146,6 +160,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   _deletePhoto();
                 },
               ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -170,7 +185,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       final service = AuthService();
       final result = await service.uploadProfilePhoto(auth.token!, bytes, xfile.name);
-      // Debug: cek apa yang sebenarnya dikembalikan backend setelah upload.
       debugPrint('uploadProfilePhoto response: $result');
       await auth.refreshProfile();
       debugPrint('photoUrl setelah refreshProfile: ${auth.user?.photoUrl}');
@@ -190,8 +204,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (mounted) {
         setState(() {
           _uploadingPhoto = false;
-          // Setelah upload sukses & refreshProfile jalan, kita pakai
-          // photoUrl dari server, bukan preview lokal lagi.
           _pickedPhotoBytes = null;
         });
       }
@@ -248,11 +260,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     final dialogFormKey = GlobalKey<FormState>();
 
+    InputDecoration passwordDecoration(String label) => InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: _primary),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: _border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: _accent, width: 2),
+          ),
+        );
+
     final result = await showDialog<Map<String, String>?>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Ubah Kata Sandi', style: TextStyle(color: Color(0xFF2D5016))),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Ubah Kata Sandi', style: TextStyle(color: _primary)),
           content: Form(
             key: dialogFormKey,
             child: Column(
@@ -261,18 +287,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 TextFormField(
                   controller: _currentPasswordController,
                   obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Password Saat Ini',
-                    labelStyle: const TextStyle(color: Color(0xFF2D5016)),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
-                    ),
-                  ),
+                  decoration: passwordDecoration('Password Saat Ini'),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Password saat ini diperlukan';
@@ -280,22 +295,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _newPasswordController,
                   obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Password Baru',
-                    labelStyle: const TextStyle(color: Color(0xFF2D5016)),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
-                    ),
-                  ),
+                  decoration: passwordDecoration('Password Baru'),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Password baru diperlukan';
@@ -306,22 +310,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Konfirmasi Password',
-                    labelStyle: const TextStyle(color: Color(0xFF2D5016)),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
-                    ),
-                  ),
+                  decoration: passwordDecoration('Konfirmasi Password'),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Konfirmasi password diperlukan';
@@ -338,11 +331,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(null),
-              child: const Text('Batal', style: TextStyle(color: Color(0xFF52B788))),
+              child: const Text('Batal', style: TextStyle(color: _accent)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2D5016),
+                backgroundColor: _primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: () {
                 if (!dialogFormKey.currentState!.validate()) return;
@@ -385,14 +379,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   // ── AVATAR DENGAN FALLBACK YANG BENAR ───────────────────────────────────
-  // Sebelumnya pakai CircleAvatar(backgroundImage: NetworkImage(...)):
-  // kalau gambar gagal dimuat (404 / CORS / URL salah), Flutter TIDAK
-  // otomatis balik ke icon, jadi yang muncul cuma warna background polos
-  // (itulah "gambar ijo doang" yang kamu lihat).
-  //
-  // Solusinya: pakai Image.network dengan errorBuilder, supaya kalau gagal
-  // load, otomatis fallback ke icon Icons.person + errornya di-print ke
-  // console supaya kelihatan penyebab aslinya (CORS / URL salah / dll).
   Widget _buildAvatarContent(String? photoUrl, double radius) {
     final double diameter = radius * 2;
 
@@ -415,10 +401,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           height: diameter,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) {
-            // Lihat log ini di console (F12 di browser / flutter run log)
-            // untuk tahu kenapa gambar gagal dimuat.
             debugPrint('Gagal load foto profil dari "$photoUrl": $error');
-            return Icon(Icons.person, size: radius, color: const Color(0xFF2D5016));
+            return Icon(Icons.person, size: radius, color: _primary);
           },
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
@@ -434,7 +418,58 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
     }
 
-    return Icon(Icons.person, size: radius, color: const Color(0xFF2D5016));
+    return Icon(Icons.person, size: radius, color: _primary);
+  }
+
+  // ── TAMBAHAN: pembungkus card generik supaya tiap bagian form (Foto,
+  // Data Diri, Notifikasi, Keamanan) punya batas & judul yang jelas.
+  // Sebelumnya semua field ditumpuk langsung di ListView tanpa pengelompokan
+  // visual, itu yang bikin halaman ini kelihatan "berantakan".
+  Widget _sectionCard({
+    required String title,
+    IconData? icon,
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE6EFE2)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color.fromRGBO(0, 0, 0, 0.04),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 18, color: _primary),
+                const SizedBox(width: 8),
+              ],
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: _primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
   }
 
   Widget _buildPhotoSection(AuthProvider auth) {
@@ -452,7 +487,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 height: diameter,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF52B788).withOpacity(0.15),
+                  color: _accent.withOpacity(0.15),
                 ),
                 child: _buildAvatarContent(user?.photoUrl, radius),
               ),
@@ -478,7 +513,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: const BoxDecoration(
-                      color: Color(0xFF2D5016),
+                      color: _primary,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
@@ -487,15 +522,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          TextButton(
+          const SizedBox(height: 10),
+          TextButton.icon(
             onPressed: _uploadingPhoto ? null : _pickAndUploadPhoto,
-            child: const Text('Ubah Foto Profil', style: TextStyle(color: Color(0xFF2D5016))),
+            icon: const Icon(Icons.camera_alt_outlined, size: 16, color: _primary),
+            label: const Text('Ubah Foto Profil', style: TextStyle(color: _primary)),
           ),
         ],
       ),
     );
   }
+
+  InputDecoration _inputDecoration(String label) => InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: _primary),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: _border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: _accent, width: 2),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -503,119 +552,105 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Profil', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-        backgroundColor: const Color(0xFF2D5016),
+        backgroundColor: _primary,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      backgroundColor: const Color(0xFFFAFAFA),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              _buildPhotoSection(auth),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: 'Nama',
-                  labelStyle: const TextStyle(color: Color(0xFF2D5016)),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
+      backgroundColor: const Color(0xFFF3F5F1),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _sectionCard(
+              title: 'Foto Profil',
+              icon: Icons.photo_camera_outlined,
+              child: _buildPhotoSection(auth),
+            ),
+            _sectionCard(
+              title: 'Data Diri',
+              icon: Icons.person_outline,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: _inputDecoration('Nama'),
+                    validator: (v) => (v ?? '').trim().isEmpty ? 'Nama diperlukan' : null,
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _phoneController,
+                    decoration: _inputDecoration('Telepon'),
+                    keyboardType: TextInputType.phone,
+                    validator: (v) => (v ?? '').trim().isEmpty ? 'Telepon diperlukan' : null,
                   ),
-                ),
-                validator: (v) => (v ?? '').trim().isEmpty ? 'Nama diperlukan' : null,
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: _inputDecoration('Email'),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (v) => (v ?? '').contains('@') ? null : 'Email tidak valid',
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _phoneController,
-                decoration: InputDecoration(
-                  labelText: 'Telepon',
-                  labelStyle: const TextStyle(color: Color(0xFF2D5016)),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
+            ),
+            _sectionCard(
+              title: 'Notifikasi Telegram',
+              icon: Icons.telegram,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: _telegramChatIdController,
+                    keyboardType: TextInputType.number,
+                    decoration: _inputDecoration('Telegram Chat ID (opsional)').copyWith(
+                      hintText: 'Contoh: 123456789',
+                    ),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _accent.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _accent.withOpacity(0.2)),
+                    ),
+                    child: const Text(
+                      'Isi ini kalau mau dapat notifikasi pesanan lewat Telegram.\n\n'
+                      'Cara dapat Chat ID:\n'
+                      '1. Cari bot BUMDes Jabar di Telegram\n'
+                      '2. Ketik /start ke bot tersebut\n'
+                      '3. Bot akan membalas dengan Chat ID kamu\n'
+                      '4. Salin nomor itu ke kolom di atas',
+                      style: TextStyle(fontSize: 12, color: Colors.black87, height: 1.5),
+                    ),
                   ),
-                ),
-                validator: (v) => (v ?? '').trim().isEmpty ? 'Telepon diperlukan' : null,
+                ],
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  labelStyle: const TextStyle(color: Color(0xFF2D5016)),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
+            ),
+            _sectionCard(
+              title: 'Keamanan Akun',
+              icon: Icons.lock_outline,
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: _accent, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
-                  ),
-                ),
-                validator: (v) => (v ?? '').contains('@') ? null : 'Email tidak valid',
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _telegramChatIdController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Telegram Chat ID (opsional)',
-                  hintText: 'Contoh: 123456789',
-                  labelStyle: const TextStyle(color: Color(0xFF2D5016)),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF52B788).withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF52B788).withOpacity(0.2)),
-                ),
-                child: const Text(
-                  'Isi ini kalau mau dapat notifikasi pesanan lewat Telegram.\n\n'
-                  'Cara dapat Chat ID:\n'
-                  '1. Cari bot BUMDes Jabar di Telegram\n'
-                  '2. Ketik /start ke bot tersebut\n'
-                  '3. Bot akan membalas dengan Chat ID kamu\n'
-                  '4. Salin nomor itu ke kolom di atas',
-                  style: TextStyle(fontSize: 12, color: Colors.black87, height: 1.5),
+                  onPressed: _showChangePasswordDialog,
+                  icon: const Icon(Icons.password, color: _primary, size: 18),
+                  label: const Text('Ubah Kata Sandi', style: TextStyle(color: _primary, fontWeight: FontWeight.w600)),
                 ),
               ),
-              const SizedBox(height: 24),
-              OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF52B788), width: 1.5),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: _showChangePasswordDialog,
-                child: const Text('Ubah Kata Sandi', style: TextStyle(color: Color(0xFF2D5016), fontWeight: FontWeight.w600)),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
+            ),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2D5016),
+                  backgroundColor: _primary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   elevation: 0,
@@ -625,8 +660,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
                     : const Text('Simpan Perubahan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 12),
+          ],
         ),
       ),
     );

@@ -2457,6 +2457,16 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
     );
   }
 
+  // ── DIROMBAK TOTAL: dialog "Tambah/Ubah Penjual" (ini juga yang jadi
+  // form "Daftarkan Toko Penjual") sebelumnya semua field ditumpuk rapat
+  // tanpa jarak/border yang jelas dan dialog tidak dibatasi lebarnya —
+  // itu penyebab tampilan "berantakan" di HP/web. Sekarang:
+  //   1) Lebar & tinggi dialog dibatasi rapi (ConstrainedBox) supaya tidak
+  //      mepet ke tepi layar dan tidak terlalu tinggi.
+  //   2) Tiap field dikasih border kotak (OutlineInputBorder) + jarak antar
+  //      field yang konsisten (12px).
+  //   3) Tiap bagian (Akun, Toko, Rekening) dibungkus card abu-abu supaya
+  //      jelas kelompoknya — bukan cuma judul teks nempel ke field.
   Future<void> _showUserFormDialog({
     Map<String, dynamic>? user,
     int? userId,
@@ -2503,279 +2513,454 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
     final formKey = GlobalKey<FormState>();
     bool isSaving = false;
 
+    const labelColor = Color(0xFF2A7F41);
+    OutlineInputBorder fieldBorder(Color color, {double width = 1}) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: color, width: width),
+        );
+    InputDecoration fieldDecoration(String label, {String? helper}) =>
+        InputDecoration(
+          labelText: label,
+          helperText: helper,
+          helperMaxLines: 2,
+          filled: true,
+          fillColor: Colors.white,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 14,
+          ),
+          border: fieldBorder(const Color(0xFFCBD5C0)),
+          enabledBorder: fieldBorder(const Color(0xFFCBD5C0)),
+          focusedBorder: fieldBorder(labelColor, width: 1.6),
+          errorBorder: fieldBorder(Colors.red),
+        );
+
+    Widget sectionCard({
+      required String title,
+      String? subtitle,
+      required List<Widget> fields,
+    }) {
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F7F1),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFDCE7D8)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: labelColor,
+                fontSize: 14,
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(fontSize: 11.5, color: Colors.black54),
+              ),
+            ],
+            const SizedBox(height: 12),
+            for (int i = 0; i < fields.length; i++) ...[
+              fields[i],
+              if (i != fields.length - 1) const SizedBox(height: 12),
+            ],
+          ],
+        ),
+      );
+    }
+
     await showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
-          return AlertDialog(
-            title: Text(isEditing ? 'Ubah Penjual' : 'Tambah Penjual'),
-            content: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Data Akun',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2A7F41),
+          final screenSize = MediaQuery.of(ctx).size;
+          final dialogWidth = screenSize.width < 560
+              ? screenSize.width * 0.94
+              : 520.0;
+          final dialogMaxHeight = screenSize.height * 0.85;
+
+          return Dialog(
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 24,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: dialogWidth,
+                maxHeight: dialogMaxHeight,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(20, 18, 12, 18),
+                    decoration: const BoxDecoration(
+                      color: labelColor,
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(20),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: nameCtrl,
-                      decoration: const InputDecoration(labelText: 'Nama'),
-                      validator: (v) =>
-                          v == null || v.isEmpty ? 'Wajib diisi' : null,
-                    ),
-                    TextFormField(
-                      controller: emailCtrl,
-                      decoration: const InputDecoration(labelText: 'Email'),
-                      validator: (v) =>
-                          v == null || v.isEmpty ? 'Wajib diisi' : null,
-                    ),
-                    TextFormField(
-                      controller: phoneCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Nomor Telepon',
-                      ),
-                      validator: (v) =>
-                          v == null || v.isEmpty ? 'Wajib diisi' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: passwordCtrl,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: isEditing
-                            ? 'Password Baru (opsional)'
-                            : 'Password',
-                        helperText: isEditing
-                            ? 'Kosongkan jika tidak ingin mengubah password'
-                            : 'Minimal 8 karakter, digunakan Penjual untuk login',
-                      ),
-                      validator: (v) {
-                        if (!isEditing && (v == null || v.isEmpty)) {
-                          return 'Wajib diisi';
-                        }
-                        if (v != null && v.isNotEmpty && v.length < 8) {
-                          return 'Minimal 8 karakter';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    const Divider(),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Data Toko / BUMDes',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2A7F41),
-                      ),
-                    ),
-                    Text(
-                      isEditing
-                          ? 'Data toko akan diperbarui bersamaan dengan akun ini.'
-                          : 'Toko akan dibuat otomatis dan langsung aktif bersamaan dengan akun ini.',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: storeNameCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Nama BUMDes/Toko',
-                      ),
-                      validator: (v) =>
-                          v == null || v.isEmpty ? 'Wajib diisi' : null,
-                    ),
-                    TextFormField(
-                      controller: storeDescCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Deskripsi (opsional)',
-                      ),
-                      maxLines: 2,
-                    ),
-                    TextFormField(
-                      controller: storePhoneCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Nomor Telepon Toko',
-                      ),
-                      validator: (v) =>
-                          v == null || v.isEmpty ? 'Wajib diisi' : null,
-                    ),
-                    TextFormField(
-                      controller: storeAddressCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Alamat Toko (opsional)',
-                      ),
-                      maxLines: 2,
-                    ),
-                    Row(
+                    child: Row(
                       children: [
+                        Icon(
+                          isEditing ? Icons.edit : Icons.store,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
                         Expanded(
-                          child: TextFormField(
-                            controller: villageCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Desa',
+                          child: Text(
+                            isEditing
+                                ? 'Ubah Penjual & Toko'
+                                : 'Daftarkan Toko Penjual',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
                             ),
-                            validator: (v) =>
-                                v == null || v.isEmpty ? 'Wajib' : null,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextFormField(
-                            controller: districtCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Kecamatan',
+                        IconButton(
+                          onPressed: isSaving ? null : () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          splashRadius: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Body (scrollable)
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 4),
+                      child: Form(
+                        key: formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            sectionCard(
+                              title: 'Data Akun',
+                              fields: [
+                                TextFormField(
+                                  controller: nameCtrl,
+                                  decoration: fieldDecoration('Nama'),
+                                  validator: (v) => v == null || v.isEmpty
+                                      ? 'Wajib diisi'
+                                      : null,
+                                ),
+                                TextFormField(
+                                  controller: emailCtrl,
+                                  decoration: fieldDecoration('Email'),
+                                  keyboardType: TextInputType.emailAddress,
+                                  validator: (v) => v == null || v.isEmpty
+                                      ? 'Wajib diisi'
+                                      : null,
+                                ),
+                                TextFormField(
+                                  controller: phoneCtrl,
+                                  decoration:
+                                      fieldDecoration('Nomor Telepon'),
+                                  keyboardType: TextInputType.phone,
+                                  validator: (v) => v == null || v.isEmpty
+                                      ? 'Wajib diisi'
+                                      : null,
+                                ),
+                                TextFormField(
+                                  controller: passwordCtrl,
+                                  obscureText: true,
+                                  decoration: fieldDecoration(
+                                    isEditing
+                                        ? 'Password Baru (opsional)'
+                                        : 'Password',
+                                    helper: isEditing
+                                        ? 'Kosongkan jika tidak ingin mengubah password'
+                                        : 'Minimal 8 karakter, dipakai Penjual untuk login',
+                                  ),
+                                  validator: (v) {
+                                    if (!isEditing &&
+                                        (v == null || v.isEmpty)) {
+                                      return 'Wajib diisi';
+                                    }
+                                    if (v != null &&
+                                        v.isNotEmpty &&
+                                        v.length < 8) {
+                                      return 'Minimal 8 karakter';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ],
                             ),
-                            validator: (v) =>
-                                v == null || v.isEmpty ? 'Wajib' : null,
+                            sectionCard(
+                              title: 'Data Toko / BUMDes',
+                              subtitle: isEditing
+                                  ? 'Data toko akan diperbarui bersamaan dengan akun ini.'
+                                  : 'Toko akan dibuat otomatis dan langsung aktif bersamaan dengan akun ini.',
+                              fields: [
+                                TextFormField(
+                                  controller: storeNameCtrl,
+                                  decoration:
+                                      fieldDecoration('Nama BUMDes/Toko'),
+                                  validator: (v) => v == null || v.isEmpty
+                                      ? 'Wajib diisi'
+                                      : null,
+                                ),
+                                TextFormField(
+                                  controller: storeDescCtrl,
+                                  decoration: fieldDecoration(
+                                    'Deskripsi (opsional)',
+                                  ),
+                                  maxLines: 2,
+                                ),
+                                TextFormField(
+                                  controller: storePhoneCtrl,
+                                  decoration:
+                                      fieldDecoration('Nomor Telepon Toko'),
+                                  keyboardType: TextInputType.phone,
+                                  validator: (v) => v == null || v.isEmpty
+                                      ? 'Wajib diisi'
+                                      : null,
+                                ),
+                                TextFormField(
+                                  controller: storeAddressCtrl,
+                                  decoration: fieldDecoration(
+                                    'Alamat Toko (opsional)',
+                                  ),
+                                  maxLines: 2,
+                                ),
+                                Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: villageCtrl,
+                                        decoration:
+                                            fieldDecoration('Desa'),
+                                        validator: (v) =>
+                                            v == null || v.isEmpty
+                                                ? 'Wajib'
+                                                : null,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: districtCtrl,
+                                        decoration:
+                                            fieldDecoration('Kecamatan'),
+                                        validator: (v) =>
+                                            v == null || v.isEmpty
+                                                ? 'Wajib'
+                                                : null,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TextFormField(
+                                  controller: regencyCtrl,
+                                  decoration:
+                                      fieldDecoration('Kabupaten/Kota'),
+                                  validator: (v) => v == null || v.isEmpty
+                                      ? 'Wajib diisi'
+                                      : null,
+                                ),
+                              ],
+                            ),
+                            sectionCard(
+                              title: 'Data Rekening (Opsional)',
+                              fields: [
+                                TextFormField(
+                                  controller: bankNameCtrl,
+                                  decoration: fieldDecoration('Nama Bank'),
+                                ),
+                                TextFormField(
+                                  controller: bankNumberCtrl,
+                                  decoration:
+                                      fieldDecoration('No. Rekening'),
+                                  keyboardType: TextInputType.number,
+                                ),
+                                TextFormField(
+                                  controller: bankHolderCtrl,
+                                  decoration: fieldDecoration(
+                                    'Nama Pemilik Rekening',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Footer actions
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: Color(0xFFE3E9E1)),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed:
+                                isSaving ? null : () => Navigator.pop(ctx),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: const Text('Batal'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: labelColor,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onPressed: isSaving
+                                ? null
+                                : () async {
+                                    if (!(formKey.currentState?.validate() ??
+                                        false)) {
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Mohon lengkapi semua field yang wajib diisi',
+                                          ),
+                                          backgroundColor: Colors.orange,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    setDialogState(() => isSaving = true);
+                                    try {
+                                      final data = <String, dynamic>{
+                                        'name': nameCtrl.text.trim(),
+                                        'email': emailCtrl.text.trim(),
+                                        'phone': phoneCtrl.text.trim(),
+                                        if (passwordCtrl.text.isNotEmpty)
+                                          'password': passwordCtrl.text,
+                                        'role': 'Penjual',
+                                        'store_name':
+                                            storeNameCtrl.text.trim(),
+                                        'description':
+                                            storeDescCtrl.text.trim(),
+                                        'contact_phone':
+                                            storePhoneCtrl.text.trim(),
+                                        'store_address':
+                                            storeAddressCtrl.text.trim(),
+                                        'village': villageCtrl.text.trim(),
+                                        'district':
+                                            districtCtrl.text.trim(),
+                                        'regency': regencyCtrl.text.trim(),
+                                        if (bankNameCtrl.text.isNotEmpty)
+                                          'bank_name':
+                                              bankNameCtrl.text.trim(),
+                                        if (bankNumberCtrl.text.isNotEmpty)
+                                          'bank_account_number':
+                                              bankNumberCtrl.text.trim(),
+                                        if (bankHolderCtrl.text.isNotEmpty)
+                                          'bank_account_holder':
+                                              bankHolderCtrl.text.trim(),
+                                      };
+
+                                      if (isEditing &&
+                                          userId != null &&
+                                          _token != null) {
+                                        await _adminService.updateUser(
+                                          _token!,
+                                          userId,
+                                          data,
+                                        );
+                                      } else if (_token != null) {
+                                        await _adminService.createUser(
+                                          _token!,
+                                          data,
+                                        );
+                                      }
+
+                                      if (mounted) {
+                                        Navigator.pop(ctx);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              isEditing
+                                                  ? 'Penjual ${nameCtrl.text.trim()} berhasil diperbarui'
+                                                  : 'Penjual ${nameCtrl.text.trim()} berhasil ditambahkan dan toko langsung aktif',
+                                            ),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                      }
+                                      _loadUsers();
+                                      _loadStores();
+                                    } catch (e) {
+                                      setDialogState(() => isSaving = false);
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(ctx)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Gagal menyimpan pengguna: ${_cleanErrorMessage(e)}',
+                                            ),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                            child: isSaving
+                                ? const SizedBox(
+                                    height: 18,
+                                    width: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    isEditing ? 'Simpan' : 'Daftarkan',
+                                    style:
+                                        const TextStyle(color: Colors.white),
+                                  ),
                           ),
                         ),
                       ],
                     ),
-                    TextFormField(
-                      controller: regencyCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Kabupaten/Kota',
-                      ),
-                      validator: (v) =>
-                          v == null || v.isEmpty ? 'Wajib diisi' : null,
-                    ),
-                    const SizedBox(height: 20),
-                    const Divider(),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Data Rekening (Opsional)',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2A7F41),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: bankNameCtrl,
-                      decoration: const InputDecoration(labelText: 'Nama Bank'),
-                    ),
-                    TextFormField(
-                      controller: bankNumberCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'No. Rekening',
-                      ),
-                    ),
-                    TextFormField(
-                      controller: bankHolderCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Nama Pemilik Rekening',
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: isSaving ? null : () => Navigator.pop(ctx),
-                child: const Text('Batal'),
-              ),
-              ElevatedButton(
-                onPressed: isSaving
-                    ? null
-                    : () async {
-                        if (!(formKey.currentState?.validate() ?? false)) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Mohon lengkapi semua field yang wajib diisi',
-                              ),
-                              backgroundColor: Colors.orange,
-                            ),
-                          );
-                          return;
-                        }
-
-                        setDialogState(() => isSaving = true);
-                        try {
-                          final data = <String, dynamic>{
-                            'name': nameCtrl.text.trim(),
-                            'email': emailCtrl.text.trim(),
-                            'phone': phoneCtrl.text.trim(),
-                            if (passwordCtrl.text.isNotEmpty)
-                              'password': passwordCtrl.text,
-                            'role': 'Penjual',
-                            'store_name': storeNameCtrl.text.trim(),
-                            'description': storeDescCtrl.text.trim(),
-                            'contact_phone': storePhoneCtrl.text.trim(),
-                            'store_address': storeAddressCtrl.text.trim(),
-                            'village': villageCtrl.text.trim(),
-                            'district': districtCtrl.text.trim(),
-                            'regency': regencyCtrl.text.trim(),
-                            if (bankNameCtrl.text.isNotEmpty)
-                              'bank_name': bankNameCtrl.text.trim(),
-                            if (bankNumberCtrl.text.isNotEmpty)
-                              'bank_account_number': bankNumberCtrl.text.trim(),
-                            if (bankHolderCtrl.text.isNotEmpty)
-                              'bank_account_holder': bankHolderCtrl.text.trim(),
-                          };
-
-                          if (isEditing && userId != null && _token != null) {
-                            await _adminService.updateUser(
-                              _token!,
-                              userId,
-                              data,
-                            );
-                          } else if (_token != null) {
-                            await _adminService.createUser(_token!, data);
-                          }
-
-                          if (mounted) {
-                            Navigator.pop(ctx);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  isEditing
-                                      ? 'Penjual ${nameCtrl.text.trim()} berhasil diperbarui'
-                                      : 'Penjual ${nameCtrl.text.trim()} berhasil ditambahkan dan toko langsung aktif',
-                                ),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          }
-                          _loadUsers();
-                          _loadStores();
-                        } catch (e) {
-                          setDialogState(() => isSaving = false);
-                          if (mounted) {
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Gagal menyimpan pengguna: ${_cleanErrorMessage(e)}',
-                                ),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                child: isSaving
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(isEditing ? 'Simpan' : 'Tambah'),
-              ),
-            ],
           );
         },
       ),
