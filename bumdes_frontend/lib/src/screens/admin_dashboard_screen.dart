@@ -484,15 +484,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // ── DASHBOARD TAB ────────────────────────────────────────────────────────────
 
   Widget _buildDashboardTab() {
-    // FIX: sebelumnya kartu "Saldo Admin" memakai `total_revenue`, yaitu
-    // TOTAL NILAI SEMUA PESANAN BERSTATUS SELESAI (omzet kotor seluruh
-    // waktu) — bukan saldo platform yang sebenarnya, dan tidak pernah
-    // berkurang meskipun saldo sudah ditarik lewat menu Keuangan. Itu
-    // sebabnya angkanya tetap "Rp 25.000" walau saldo asli di halaman
-    // Keuangan sudah Rp 0 setelah ditarik.
-    // Sekarang kartu ini memakai `_platformBalance`, yaitu saldo platform
-    // yang SUDAH memperhitungkan penarikan — sama seperti yang ditampilkan
-    // di halaman Keuangan (Saldo Platform Tersedia).
     final balance = _platformBalance;
     final totalTransactions =
         (_stats['total_orders'] ??
@@ -724,8 +715,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ── STORES TAB ───────────────────────────────────────────────────────────────
-  // ALUR BARU: toko selalu aktif sejak dibuat Admin, jadi tab BUMDES cukup
-  // satu daftar "Semua Toko" — tidak ada lagi sub-tab Persetujuan.
 
   Widget _buildStoresTab() => _buildAllStoresTab();
 
@@ -781,6 +770,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  // ── TAMBAHAN: helper avatar dari URL foto ────────────────────────────────
+  // Dipakai untuk avatar Pembeli, Penjual, dan Toko di dashboard Admin.
+  // Kalau [photoUrl] ada dan gambarnya berhasil dimuat, tampilkan foto asli
+  // (dibulatkan). Kalau tidak ada atau gagal dimuat, tampilkan [fallback]
+  // (inisial huruf atau icon generik) seperti sebelumnya.
+  Widget _buildAvatarFromUrl(
+    String? photoUrl, {
+    required Widget fallback,
+    double radius = 20,
+  }) {
+    if (photoUrl == null || photoUrl.isEmpty) return fallback;
+    return ClipOval(
+      child: Image.network(
+        photoUrl,
+        width: radius * 2,
+        height: radius * 2,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => fallback,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return SizedBox(
+            width: radius * 2,
+            height: radius * 2,
+            child: const Center(
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildStoreCard(Map<String, dynamic> store) {
     final name = store['store_name'] ?? store['name'] ?? '-';
     final owner = store['user']?['name'] ?? store['owner_name'] ?? '-';
@@ -790,10 +811,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _parseDouble(store['total_revenue'] ?? store['revenue']),
     );
     final storeId = store['id'] as int?;
-
-    // 👈 sesuaikan nama field: coba beberapa kemungkinan lokasi foto toko
-    // (foto toko sendiri, atau foto pemilik/user-nya sebagai fallback).
-    final photoUrl = _extractPhotoUrl(store) ?? _extractPhotoUrl(store['user']);
+    // TAMBAHAN: foto toko, kalau backend sudah kirim store_photo_url
+    final storePhotoUrl = store['store_photo_url'] as String?;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -814,11 +833,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Row(
             children: [
               CircleAvatar(
-                radius: 24,
                 backgroundColor: const Color(0xFFE8F5E9),
-                child: _buildAvatarContent(
-                  photoUrl,
-                  size: 48,
+                child: _buildAvatarFromUrl(
+                  storePhotoUrl,
                   fallback: const Icon(Icons.store, color: Color(0xFF2A7F41)),
                 ),
               ),
@@ -1146,10 +1163,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ── ORDERS TAB ───────────────────────────────────────────────────────────────
-  // ALUR BARU: Admin hanya MEMANTAU pesanan (read-only). Perubahan status
-  // pesanan (konfirmasi, kirim, selesai, batal) sepenuhnya menjadi tanggung
-  // jawab Penjual lewat aplikasinya sendiri, jadi tombol "Konfirmasi" yang
-  // dulu ada di sini sudah dihapus.
 
   Widget _buildOrdersTab() {
     return SingleChildScrollView(
@@ -1279,11 +1292,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _buildReportCard(
             'Total Revenue',
             _formatRupiah(totalRevenue),
-            // Catatan: ini omzet KOTOR seluruh waktu (jumlah total_price
-            // semua pesanan Selesai), sengaja TIDAK berkurang walau saldo
-            // sudah ditarik lewat menu Keuangan — ini metrik historis, bukan
-            // saldo yang bisa ditarik. Untuk saldo yang bisa ditarik, lihat
-            // kartu "Saldo Platform Tersedia" di bawah.
             'Seluruh waktu (omzet kotor, bukan saldo)',
             Colors.green,
           ),
@@ -1467,9 +1475,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ── USERS TAB ────────────────────────────────────────────────────────────────
-  // ALUR BARU: menu Pengguna sekarang punya sub-tab Semua/Penjual/Pembeli.
-  // Pembeli read-only, cuma bisa dilihat + dihapus, karena Pembeli daftar
-  // sendiri lewat app.
 
   Widget _buildUsersTab() {
     return Column(
@@ -1572,17 +1577,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   final name = user['name'] ?? '-';
                   final id = user['id'] as int?;
                   final store = user['store'];
-                  // 👈 sesuaikan nama field kalau backend kamu pakai key lain
-                  final photoUrl = _extractPhotoUrl(user);
+                  // TAMBAHAN: foto profil penjual, kalau backend sudah kirim photo_url
+                  final photoUrl = user['photo_url'] as String?;
                   return Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
                         CircleAvatar(
                           backgroundColor: Colors.grey[200],
-                          child: _buildAvatarContent(
+                          child: _buildAvatarFromUrl(
                             photoUrl,
-                            size: 40,
                             fallback: Text(
                               name.isNotEmpty ? name[0].toUpperCase() : '?',
                             ),
@@ -1673,11 +1677,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 color: Colors.red,
                                 size: 20,
                               ),
-                              // FIX: dulu tidak ada try/catch di sini, jadi
-                              // kalau backend menolak (mis. penjual ini masih
-                              // punya toko/produk/pesanan terkait), error-nya
-                              // hilang begitu saja dan admin tidak tahu
-                              // kenapa data tidak terhapus.
                               onPressed: id == null
                                   ? null
                                   : () async {
@@ -1727,7 +1726,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // Daftar Pembeli — read-only, cuma tombol hapus, tanpa tombol Tambah/Ubah.
-  // Pembeli daftar sendiri lewat app, bukan dibuatkan Admin.
   Widget _buildBuyerList() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -1785,17 +1783,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 itemBuilder: (context, buyer, index) {
                   final name = buyer['name'] ?? '-';
                   final id = buyer['id'] as int?;
-                  // 👈 sesuaikan nama field kalau backend kamu pakai key lain
-                  final photoUrl = _extractPhotoUrl(buyer);
+                  // TAMBAHAN: foto profil pembeli, kalau backend sudah kirim photo_url
+                  final photoUrl = buyer['photo_url'] as String?;
                   return Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
                         CircleAvatar(
                           backgroundColor: Colors.grey[200],
-                          child: _buildAvatarContent(
+                          child: _buildAvatarFromUrl(
                             photoUrl,
-                            size: 40,
                             fallback: Text(
                               name.isNotEmpty ? name[0].toUpperCase() : '?',
                             ),
@@ -1829,15 +1826,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ],
                           ),
                         ),
-                        // FIX UTAMA: dulu error 409 dari backend (mis.
-                        // "Pengguna ini masih memiliki N pesanan yang
-                        // sedang berjalan...") ditampilkan APA ADANYA lewat
-                        // e.toString(), termasuk prefix teknis semacam
-                        // "ApiException(409): ...". Sekarang pesannya
-                        // dibersihkan dulu lewat _cleanErrorMessage() dan
-                        // ditampilkan sebagai dialog yang rapi lewat
-                        // _showDeleteFailedDialog(), bukan SnackBar merah
-                        // berisi detail teknis.
                         IconButton(
                           icon: const Icon(
                             Icons.delete,
@@ -1975,75 +1963,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   // ── HELPERS ───────────────────────────────────────────────────────────────────
 
-  /// Ambil URL foto dari sebuah map user/toko, mencoba beberapa
-  /// kemungkinan nama field yang umum dipakai backend (photo_url, photo,
-  /// avatar, image, logo, dst). Kembalikan null kalau tidak ada satupun
-  /// yang cocok / isinya kosong.
-  ///
-  /// 👈 CATATAN: kalau setelah dicoba foto tetap tidak muncul, print salah
-  /// satu item map user/toko (mis. `print(_users.first)`) untuk lihat nama
-  /// field foto yang sebenarnya dikirim backend, lalu tambahkan ke daftar
-  /// kandidat di bawah ini.
-  String? _extractPhotoUrl(dynamic source) {
-    if (source is! Map<String, dynamic>) return null;
-    const candidateKeys = [
-      'photo_url',
-      'photo',
-      'avatar',
-      'avatar_url',
-      'image',
-      'image_url',
-      'logo',
-      'logo_url',
-      'profile_photo_url',
-    ];
-    for (final key in candidateKeys) {
-      final value = source[key];
-      if (value is String && value.trim().isNotEmpty) {
-        return value.trim();
-      }
-    }
-    return null;
-  }
-
-  /// Widget isi avatar: kalau ada [photoUrl], tampilkan gambarnya (dengan
-  /// fallback otomatis ke [fallback] kalau gagal dimuat / masih loading
-  /// ditampilkan spinner kecil). Kalau [photoUrl] null/kosong, langsung
-  /// tampilkan [fallback].
-  Widget _buildAvatarContent(
-    String? photoUrl, {
-    required Widget fallback,
-    double size = 40,
-  }) {
-    if (photoUrl == null || photoUrl.isEmpty) return fallback;
-    return ClipOval(
-      child: Image.network(
-        photoUrl,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          debugPrint('Gagal load foto dari "$photoUrl": $error');
-          return fallback;
-        },
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return SizedBox(
-            width: size,
-            height: size,
-            child: const Center(
-              child: SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildErrorBanner(String message, VoidCallback onRetry) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -2169,13 +2088,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  /// Ambil pesan error yang "bersih" dari sebuah Exception, tanpa embel-embel
-  /// nama class teknis seperti "ApiException(409): " di depannya — supaya
-  /// yang tampil ke Admin cuma kalimat penjelasannya saja, bukan detail
-  /// implementasi (nama class exception, kode status, dsb).
   String _cleanErrorMessage(Object error) {
     final raw = error.toString();
-    // Pola umum exception di project ini: "NamaClass(kode): pesan".
     final match = RegExp(
       r'^[A-Za-z_]+\(\d+\):\s*(.*)$',
       dotAll: true,
@@ -2185,17 +2099,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         match.group(1)!.trim().isNotEmpty) {
       return match.group(1)!.trim();
     }
-    // Fallback: buang prefix generik "Exception: " kalau ada.
     return raw.replaceFirst('Exception: ', '').trim();
   }
 
-  /// Tampilkan dialog rapi saat suatu penghapusan gagal, alih-alih SnackBar
-  /// merah berisi detail teknis (nama class exception, kode status, dsb).
-  ///
-  /// - Kalau pesannya adalah aturan bisnis yang wajar (mis. "masih ada
-  ///   pesanan yang sedang berjalan" / "masih ada data terkait"), dialog
-  ///   dipakaikan ikon info berwarna oranye — ini bukan bug, cuma aturan.
-  /// - Selain itu, dipakaikan ikon error merah seperti biasa.
   Future<void> _showDeleteFailedDialog(String title, Object error) {
     final message = _cleanErrorMessage(error);
     final isBusinessRule =
@@ -2223,11 +2129,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // ── FORM TAMBAH/EDIT PENGGUNA ────────────────────────────────────────────────
-  // ALUR BARU: Admin bisa membuat akun dengan peran Admin, Penjual, atau
-  // Pembeli. Kalau peran Penjual, data toko/BUMDes wajib diisi sekaligus di
-  // form ini — backend membuat User + Store dalam satu transaksi dan
-  // langsung aktif (tidak ada lagi proses approval).
   Future<void> _showUserFormDialog({
     Map<String, dynamic>? user,
     int? userId,
