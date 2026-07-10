@@ -34,6 +34,11 @@ class _CourierTrackingMapState extends State<CourierTrackingMap> {
   String? _error;
   Timer? _timer;
 
+  // Ditandai true lewat callback onMapReady milik FlutterMap. Sebelum ini
+  // true, MapController belum "attached" ke widget peta manapun, jadi
+  // memanggil _mapController.move() akan throw exception.
+  bool _mapReady = false;
+
   @override
   void initState() {
     super.initState();
@@ -48,26 +53,35 @@ class _CourierTrackingMapState extends State<CourierTrackingMap> {
   }
 
   Future<void> _load() async {
+    OrderTrackingModel data;
     try {
-      final data = await _service.fetchTrackingLocation(
-        widget.token,
-        widget.orderId,
-      );
-      if (!mounted) return;
-      setState(() {
-        _tracking = data;
-        _error = null;
-      });
-
-      if (!_tracking!.isCompleted) {
-        _mapController.move(
-          LatLng(_tracking!.current.lat, _tracking!.current.lng),
-          _mapController.camera.zoom,
-        );
-      }
+      data = await _service.fetchTrackingLocation(widget.token, widget.orderId);
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = 'Gagal memuat lokasi kurir');
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _tracking = data;
+      _error = null;
+    });
+
+    // Geser kamera ke posisi kurir terbaru. Ini SENGAJA dipisah dari try/catch
+    // fetch data di atas dan dibungkus try/catch sendiri, supaya kegagalan
+    // menggeser kamera (mis. peta belum sempat ter-attach) tidak pernah
+    // dianggap sebagai "gagal memuat lokasi kurir" — datanya sebenarnya
+    // sudah berhasil didapat.
+    if (_mapReady && !data.isCompleted) {
+      try {
+        _mapController.move(
+          LatLng(data.current.lat, data.current.lng),
+          _mapController.camera.zoom,
+        );
+      } catch (_) {
+        // Abaikan; posisi akan tersinkron lagi di polling berikutnya.
+      }
     }
   }
 
@@ -101,6 +115,11 @@ class _CourierTrackingMapState extends State<CourierTrackingMap> {
               options: MapOptions(
                 initialCenter: current,
                 initialZoom: 13,
+                onMapReady: () {
+                  if (mounted) {
+                    setState(() => _mapReady = true);
+                  }
+                },
               ),
               children: [
                 TileLayer(
@@ -112,7 +131,7 @@ class _CourierTrackingMapState extends State<CourierTrackingMap> {
                     Polyline(
                       points: [origin, destination],
                       strokeWidth: 3,
-                      color: const Color(0xFF2A7F41).withOpacity(0.5),
+                      color: const Color(0xFF2A7F41).withValues(alpha: 0.5),
                     ),
                   ],
                 ),
