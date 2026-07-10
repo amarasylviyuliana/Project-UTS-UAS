@@ -275,6 +275,38 @@ class OrderController extends Controller
     }
 
     /**
+     * Ambil data peta pelacakan kurir: titik asal (toko), titik tujuan
+     * (alamat pembeli), dan posisi kurir saat ini (hasil simulasi
+     * berbasis waktu). Dipanggil berkala oleh frontend (polling) supaya
+     * marker kurir terlihat bergerak secara real-time.
+     */
+    public function trackingLocation(Request $request, $id, \App\Services\OrderTrackingService $trackingService): JsonResponse
+    {
+        $order = Order::with('store')->find($id);
+
+        if (!$order) {
+            return response()->json([
+                'message' => 'Pesanan tidak ditemukan',
+            ], 404);
+        }
+
+        $user = $request->user();
+        $isOwner = $user && $order->buyer_id === $user->id;
+        $isSellerOfOrder = $user && $order->store && $order->store->user_id === $user->id;
+
+        if (!$isOwner && !$isSellerOfOrder && !($user && $user->isAdmin())) {
+            return response()->json([
+                'message' => 'Anda tidak punya akses ke pesanan ini',
+            ], 403);
+        }
+
+        return response()->json([
+            'message' => 'Lokasi pelacakan pesanan',
+            'data' => $trackingService->buildTrackingPayload($order),
+        ]);
+    }
+
+    /**
      * Get buyer's order history
      * REQ-31
      */

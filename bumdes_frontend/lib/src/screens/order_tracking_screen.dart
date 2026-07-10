@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/order_model.dart';
+import '../providers/auth_provider.dart';
+import '../widgets/courier_tracking_map.dart';
 
 class OrderTrackingScreen extends StatelessWidget {
   static const routeName = '/order-tracking';
   final OrderModel order;
 
   const OrderTrackingScreen({super.key, required this.order});
+
+  // Peta kurir hanya relevan begitu paket benar-benar dalam perjalanan.
+  bool get _isInTransit =>
+      order.status == 'Dikirim' || order.status == 'Estimasi Sampai';
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +74,24 @@ class OrderTrackingScreen extends StatelessWidget {
                 ],
               ),
             ),
+            if (_isInTransit) ...[
+              const SizedBox(height: 18),
+              const Text(
+                'Lokasi Kurir',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              Builder(
+                builder: (context) {
+                  final token =
+                      Provider.of<AuthProvider>(context, listen: false).token;
+                  if (token == null) {
+                    return const SizedBox.shrink();
+                  }
+                  return CourierTrackingMap(token: token, orderId: order.id);
+                },
+              ),
+            ],
             const SizedBox(height: 18),
             const Text(
               'Keadaan Produk',

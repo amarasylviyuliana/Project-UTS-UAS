@@ -24,12 +24,21 @@ class Order extends Model
         'total_price',
         'delivered_at',
         'completed_at',
+        'origin_lat',
+        'origin_lng',
+        'dest_lat',
+        'dest_lng',
+        'estimated_delivery_minutes',
     ];
 
     protected $casts = [
         'total_price' => 'decimal:2',
         'delivered_at' => 'datetime',
         'completed_at' => 'datetime',
+        'origin_lat' => 'float',
+        'origin_lng' => 'float',
+        'dest_lat' => 'float',
+        'dest_lng' => 'float',
     ];
 
     // Relationships

@@ -145,6 +145,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders/buyer/history', [OrderController::class, 'getBuyerOrders']);
     Route::get('/orders/buyer/sync', [OrderController::class, 'getBuyerOrdersSync']);
     Route::get('/orders/{id}', [OrderController::class, 'show']);
+    Route::get('/orders/{id}/tracking-location', [OrderController::class, 'trackingLocation']);
     Route::get('/seller/orders', [OrderController::class, 'getSellerOrders']);
     Route::get('/seller/orders/sync', [OrderController::class, 'getSellerOrdersSync']);
     Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus']);
