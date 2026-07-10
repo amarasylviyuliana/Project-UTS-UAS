@@ -12,18 +12,12 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
-    // FIX CORS: photo_url di database berupa path relatif (mis. "product-photos/abc.jpg").
-    // Flutter Web tidak bisa load langsung dari Railway /storage karena CORS tidak terset di nginx.
-    // Solusi: gunakan route /api/image/{path} yang di-handle Laravel → CORS header otomatis terset.
-    // Kalau URL sudah absolute (http/https) dari sistem lama, biarkan apa adanya (fallback).
     private function resolvePhotoUrl(?string $path): ?string
     {
         if (!$path) {
             return null;
         }
-        // Sudah absolute URL (dari sistem lama / upload luar) — proxy juga supaya CORS aman
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            // Kalau sudah berupa URL railway /storage/..., konvert ke proxy
             if (preg_match('#/storage/(.+)$#', $path, $m)) {
                 $baseUrl = rtrim(env('APP_URL', 'https://project-uts-uas-production.up.railway.app'), '/');
                 if (str_contains($baseUrl, 'localhost') || str_contains($baseUrl, '127.0.0.1')) {
@@ -33,14 +27,29 @@ class ProductController extends Controller
             }
             return $path;
         }
-        // Path relatif (format baru) → pakai proxy
         $baseUrl = rtrim(env('APP_URL', 'https://project-uts-uas-production.up.railway.app'), '/');
         if (str_contains($baseUrl, 'localhost') || str_contains($baseUrl, '127.0.0.1')) {
             $baseUrl = 'https://project-uts-uas-production.up.railway.app';
         }
-        // Hapus prefix /storage/ kalau ada (supaya path bersih untuk proxy)
         $cleanPath = preg_replace('#^/?storage/#', '', $path);
         return $baseUrl . '/api/image/' . ltrim($cleanPath, '/');
+    }
+
+    // TAMBAHAN: data toko (id, nama, foto toko, lokasi) dipisah jadi helper
+    // sendiri, dipakai baik oleh listing produk maupun detail produk, supaya
+    // Flutter bisa menampilkan kartu toko ala Shopee (foto toko + nama +
+    // lokasi) di halaman detail produk.
+    private function mapStoreForResponse($store): ?array
+    {
+        if (!$store) return null;
+        return [
+            'id'              => $store->id,
+            'store_name'      => $store->store_name,
+            'village'         => $store->village,
+            'district'        => $store->district ?? null,
+            'regency'         => $store->regency ?? null,
+            'store_photo_url' => $this->resolvePhotoUrl($store->store_photo_url),
+        ];
     }
 
     private function mapProductForResponse($product): array
@@ -50,6 +59,9 @@ class ProductController extends Controller
             'name' => $product->name,
             'store_name' => $product->store?->store_name ?? 'Unknown Store',
             'location' => $product->store?->village ?? '',
+            // TAMBAHAN: store_id + object store lengkap (termasuk foto toko)
+            'store_id' => $product->store?->id,
+            'store' => $this->mapStoreForResponse($product->store),
             'category' => $product->category?->name ?? '',
             'price' => $product->price,
             'stock' => $product->stock,
@@ -59,12 +71,7 @@ class ProductController extends Controller
             'is_active' => $product->is_active,
         ];
     }
-/**
-     * Get all active products (dipanggil GET /products, dipakai halaman
-     * "Semua Produk" pembeli). Sebelumnya method ini tidak ada sama sekali
-     * -> route /products error 500 "Method ...::index does not exist"
-     * -> Flutter fallback diam-diam ke sample/dummy data.
-     */
+
     public function index(): JsonResponse
     {
         $products = Product::where('is_active', true)
@@ -79,13 +86,8 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Get popular stores for homepage
-     * REQ-20
-     */
     public function getPopularStores(): JsonResponse
     {
-        // Get stores with most orders
         $stores = DB::table('stores')
             ->leftJoin('orders', 'stores.id', '=', 'orders.store_id')
             ->select('stores.*', DB::raw('count(orders.id) as order_count'))
@@ -101,10 +103,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Search products and stores
-     * REQ-16
-     */
     public function search(Request $request): JsonResponse
     {
         $keyword = $request->query('q', '');
@@ -139,6 +137,7 @@ class ProductController extends Controller
         }
 
         $products = $query->paginate(12);
+        $products->getCollection()->transform(fn($product) => $this->mapProductForResponse($product));
 
         return response()->json([
             'message' => 'Hasil pencarian produk',
@@ -148,7 +147,16 @@ class ProductController extends Controller
 
     /**
      * Get product details
-     * REQ-18
+     *
+     * FIX: sebelumnya method ini return `$product` mentah (hasil Eloquent
+     * toArray otomatis), yang berarti `store.store_photo_url` dikirim
+     * sebagai PATH RELATIF tanpa lewat resolvePhotoUrl() — persis masalah
+     * CORS/gagal-load yang sama seperti foto profil user, hanya saja belum
+     * ketahuan karena Flutter belum pernah menampilkan foto toko di halaman
+     * ini. Sekarang responsnya dibentuk manual lewat mapProductForResponse()
+     * (konsisten dengan index/search/getByStore) + reviews, supaya
+     * store_photo_url selalu berupa URL proxy yang valid dan bisa dimuat
+     * oleh Image.network() di Flutter.
      */
     public function show($id): JsonResponse
     {
@@ -160,17 +168,23 @@ class ProductController extends Controller
             ], 404);
         }
 
+        $data = $this->mapProductForResponse($product);
+        $data['reviews'] = $product->reviews->map(function ($review) {
+            return [
+                'id'      => $review->id,
+                'rating'  => $review->rating,
+                'comment' => $review->comment,
+                'buyer_name' => $review->buyer?->name ?? 'Pembeli',
+                'created_at' => $review->created_at,
+            ];
+        });
+
         return response()->json([
             'message' => 'Detail produk',
-            'data' => $product,
+            'data' => $data,
         ]);
     }
 
-    /**
-     * Upload product photo and return its full URL.
-     * Dipanggil Flutter SEBELUM create/update produk (lihat product_form_screen.dart).
-     * FIX: endpoint ini sebelumnya tidak ada sama sekali di backend -> 404 -> foto tidak pernah tersimpan.
-     */
     public function uploadImage(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -182,7 +196,7 @@ class ProductController extends Controller
         }
 
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg|max:5120', // 5MB
+            'image' => 'required|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
         $path = $request->file('image')->store('product-photos', 'public');
@@ -195,10 +209,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Add new product (seller only)
-     * REQ-11
-     */
     public function store(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -216,7 +226,6 @@ class ProductController extends Controller
             ], 403);
         }
 
-        // FIX: tolak tambah produk selama toko belum disetujui admin
         if (!$store->is_active) {
             return response()->json([
                 'message' => 'Toko Anda belum disetujui admin. Mohon tunggu persetujuan sebelum menambahkan produk.',
@@ -230,9 +239,7 @@ class ProductController extends Controller
             'price' => 'required|numeric|min:0',
             'stock' => 'required_if:type,produk|numeric|min:0',
             'description' => 'sometimes|string',
-            'photo' => 'sometimes|image|mimes:jpeg,png,jpg|max:5120', // 5MB
-            // FIX: dukung image_url string (hasil dari /products/upload-image)
-            // selain upload file langsung lewat field 'photo'
+            'photo' => 'sometimes|image|mimes:jpeg,png,jpg|max:5120',
             'image_url' => 'sometimes|nullable|string',
         ]);
 
@@ -253,31 +260,14 @@ class ProductController extends Controller
             'photo_url' => $photoUrl,
         ]);
 
-        // Load relationships for response
         $product->load(['store', 'category']);
 
         return response()->json([
             'message' => 'Produk berhasil ditambahkan',
-            'data' => [
-                'id' => $product->id,
-                'name' => $product->name,
-                'store_name' => $product->store?->store_name ?? 'Unknown Store',
-                'location' => $product->store?->village ?? '',
-                'category' => $product->category?->name ?? '',
-                'price' => $product->price,
-                'stock' => $product->stock,
-                'description' => $product->description,
-                'image_url' => $this->resolvePhotoUrl($product->photo_url),
-                'is_service' => $product->type === 'jasa',
-                'is_active' => $product->is_active,
-            ],
+            'data' => $this->mapProductForResponse($product),
         ], 201);
     }
 
-    /**
-     * Update product (seller only)
-     * REQ-12
-     */
     public function update(Request $request, $id): JsonResponse
     {
         $user = $request->user();
@@ -314,9 +304,7 @@ class ProductController extends Controller
             'price' => 'sometimes|numeric|min:0',
             'stock' => 'sometimes|numeric|min:0',
             'description' => 'sometimes|string',
-            'photo' => 'sometimes|image|mimes:jpeg,png,jpg|max:5120', // 5MB
-            // FIX: dukung image_url string (hasil dari /products/upload-image)
-            // selain upload file langsung lewat field 'photo'
+            'photo' => 'sometimes|image|mimes:jpeg,png,jpg|max:5120',
             'image_url' => 'sometimes|nullable|string',
         ]);
 
@@ -332,31 +320,14 @@ class ProductController extends Controller
 
         $product->update($validated);
 
-        // Load relationships for response
         $product->load(['store', 'category']);
 
         return response()->json([
             'message' => 'Produk berhasil diperbarui',
-            'data' => [
-                'id' => $product->id,
-                'name' => $product->name,
-                'store_name' => $product->store?->store_name ?? 'Unknown Store',
-                'location' => $product->store?->village ?? '',
-                'category' => $product->category?->name ?? '',
-                'price' => $product->price,
-                'stock' => $product->stock,
-                'description' => $product->description,
-                'image_url' => $this->resolvePhotoUrl($product->photo_url),
-                'is_service' => $product->type === 'jasa',
-                'is_active' => $product->is_active,
-            ],
+            'data' => $this->mapProductForResponse($product),
         ]);
     }
 
-    /**
-     * Delete product (seller only)
-     * REQ-13
-     */
     public function destroy(Request $request, $id): JsonResponse
     {
         $user = $request->user();
@@ -369,8 +340,6 @@ class ProductController extends Controller
 
         $product = Product::find($id);
 
-        // FIX: dulu langsung akses $product->store->user_id tanpa cek null,
-        // kalau relasi store-nya null PHP fatal error -> muncul sebagai "Gagal menghapus produk"
         if (!$product || !$product->store || $product->store->user_id !== $user->id) {
             return response()->json([
                 'message' => 'Produk tidak ditemukan atau anda tidak punya akses',
@@ -395,10 +364,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Admin deactivate product
-     * REQ-15
-     */
     public function deactivate(Request $request, $id): JsonResponse
     {
         $product = Product::find($id);
@@ -416,10 +381,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Admin delete product
-     * REQ-15
-     */
     public function adminDelete(Request $request, $id): JsonResponse
     {
         $product = Product::find($id);
@@ -433,10 +394,6 @@ class ProductController extends Controller
         try {
             $product->delete();
         } catch (\Illuminate\Database\QueryException $e) {
-            // FIX: sebelumnya exception ini bocor sebagai 500 mentah kalau produk
-            // masih direferensikan oleh order_items (riwayat pesanan). Sekarang
-            // ditangani dengan pesan yang jelas + saran nonaktifkan saja, alih-alih
-            // menampilkan Internal Server Error yang membingungkan ke admin.
             Log::warning('Gagal hapus produk (admin) karena masih terkait data lain', [
                 'product_id' => $id,
                 'error' => $e->getMessage(),
@@ -452,9 +409,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Get products by store
-     */
     public function getByStore($store_id): JsonResponse
     {
         $products = Product::where('store_id', $store_id)
@@ -470,10 +424,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Get all product categories.
-     * Dipakai untuk dropdown kategori di form tambah/edit produk dan filter pencarian.
-     */
     public function getCategories(): JsonResponse
     {
         $categories = Category::all();
@@ -481,11 +431,6 @@ class ProductController extends Controller
         return response()->json($categories);
     }
 
-    /**
-     * Info persentase biaya admin/pajak platform (publik).
-     * Dipakai di form tambah produk agar Penjual tahu dari awal
-     * bahwa saldo mereka akan dipotong biaya ini saat pesanan Selesai.
-     */
     public function getPlatformFeeInfo(): JsonResponse
     {
         return response()->json([
