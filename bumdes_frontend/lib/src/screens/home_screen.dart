@@ -287,7 +287,7 @@ class _HomeTabState extends State<HomeTab> {
 
   Widget _buildHeroIllustration() {
     return Container(
-      height: 280,
+      height: 300,
       decoration: BoxDecoration(
         color: const Color(0xFFF5F0E8),
         borderRadius: BorderRadius.circular(28),
@@ -303,35 +303,40 @@ class _HomeTabState extends State<HomeTab> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Image.asset(
-              'assets/logo.jpeg',
-              height: 180,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.eco,
-                    size: 64,
-                    color: const Color(0xFF1B5E20).withValues(alpha: 0.6),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final imageSize = constraints.maxWidth < 360 ? 170.0 : 200.0;
+                return Image.asset(
+                  'assets/logo.jpeg',
+                  height: imageSize,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.eco,
+                        size: 72,
+                        color: const Color(0xFF1B5E20).withValues(alpha: 0.6),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'BUMDES JABAR',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1B5E20),
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      const Text(
+                        'Koperasi Umat Berdaulat',
+                        style: TextStyle(fontSize: 11, color: Colors.black45),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'BUMDES JABAR',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1B5E20),
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const Text(
-                    'Koperasi Umat Berdaulat',
-                    style: TextStyle(fontSize: 11, color: Colors.black45),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -529,26 +534,40 @@ class _HomeTabState extends State<HomeTab> {
                   colors: [Color(0xFF1B5E20), Color(0xFF388E3C)],
                 ),
               ),
-              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
               child: LayoutBuilder(
                 builder: (context, constraints) {
+                  final horizontalPadding = constraints.maxWidth < 550
+                      ? 16.0
+                      : 24.0;
                   if (constraints.maxWidth > 900) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(child: _buildHeroText()),
-                        const SizedBox(width: 32),
-                        Expanded(child: _buildHeroIllustration()),
-                      ],
+                    return Padding(
+                      padding: EdgeInsets.symmetric(
+                        vertical: 40,
+                        horizontal: horizontalPadding,
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(child: _buildHeroText()),
+                          const SizedBox(width: 32),
+                          Expanded(child: _buildHeroIllustration()),
+                        ],
+                      ),
                     );
                   }
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeroText(),
-                      const SizedBox(height: 24),
-                      _buildHeroIllustration(),
-                    ],
+                  return Padding(
+                    padding: EdgeInsets.symmetric(
+                      vertical: 40,
+                      horizontal: horizontalPadding,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeroText(),
+                        const SizedBox(height: 24),
+                        _buildHeroIllustration(),
+                      ],
+                    ),
                   );
                 },
               ),
