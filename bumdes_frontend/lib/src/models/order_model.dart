@@ -66,10 +66,11 @@ class OrderModel {
     }
 
     return OrderModel(
-      id: json['id'] as int? ?? 0,
+      id: _parseInt(json['id'] ?? json['order_id'] ?? json['orderId']),
       orderNumber:
           json['order_number'] as String? ??
           json['order_code'] as String? ??
+          json['orderId'] as String? ??
           'N/A',
       status:
           json['status'] as String? ??
@@ -99,6 +100,15 @@ class OrderModel {
       sellerName: _parseSellerName(json),
       paymentStatus: _parsePaymentStatus(json),
     );
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value is int) return value;
+    if (value is String) {
+      return int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    }
+    if (value is num) return value.toInt();
+    return 0;
   }
 
   static double _parseDouble(dynamic value) {

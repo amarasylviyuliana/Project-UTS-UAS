@@ -259,6 +259,13 @@ class ProfileScreen extends StatelessWidget {
             ),
           );
 
-    return Padding(padding: const EdgeInsets.all(20.0), child: profileContent);
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        Navigator.pushReplacementNamed(context, '/home');
+      },
+      child: Padding(padding: const EdgeInsets.all(20.0), child: profileContent),
+    );
   }
 }

@@ -251,33 +251,49 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F6),
-      body: isMobile
-          ? SafeArea(
-              child: Column(
-                children: [
-                  _buildHeader(auth),
-                  Expanded(child: _buildTabContent()),
-                ],
-              ),
-            )
-          : SafeArea(
-              child: Row(
-                children: [
-                  _buildSidebar(),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        _buildHeaderDesktop(auth),
-                        Expanded(child: _buildTabContent()),
-                      ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        // If user is on a non-dashboard admin tab, switch back to dashboard
+        // instead of navigating away.
+        if (_selectedIndex != 0) {
+          setState(() => _selectedIndex = 0);
+          return;
+        }
+
+        // Otherwise do nothing here and allow the global back handler
+        // (in app.dart) to handle dashboard -> Login redirect.
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF6F6F6),
+        body: isMobile
+            ? SafeArea(
+                child: Column(
+                  children: [
+                    _buildHeader(auth),
+                    Expanded(child: _buildTabContent()),
+                  ],
+                ),
+              )
+            : SafeArea(
+                child: Row(
+                  children: [
+                    _buildSidebar(),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _buildHeaderDesktop(auth),
+                          Expanded(child: _buildTabContent()),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-      bottomNavigationBar: isMobile ? _buildBottomNav() : null,
+        bottomNavigationBar: isMobile ? _buildBottomNav() : null,
+      ),
     );
   }
 
