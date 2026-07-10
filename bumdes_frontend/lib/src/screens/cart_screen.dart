@@ -9,6 +9,41 @@ import 'order_history_screen.dart';
 import 'payment_gateway_screen.dart';
 import 'home_screen.dart';
 
+/// 27 kabupaten/kota resmi di Provinsi Jawa Barat. Dipakai sebagai pilihan
+/// wajib saat checkout supaya alamat pengiriman selalu jelas kotanya --
+/// ini juga membuat geocoding otomatis untuk peta pelacakan kurir
+/// (lihat OrderTrackingService di backend) jauh lebih akurat, karena
+/// alamat bebas ketik sering kali ambigu atau tidak menyebut kota.
+const List<String> _kJawaBaratCities = [
+  'Kota Bandung',
+  'Kota Banjar',
+  'Kota Bekasi',
+  'Kota Bogor',
+  'Kota Cimahi',
+  'Kota Cirebon',
+  'Kota Depok',
+  'Kota Sukabumi',
+  'Kota Tasikmalaya',
+  'Kabupaten Bandung',
+  'Kabupaten Bandung Barat',
+  'Kabupaten Bekasi',
+  'Kabupaten Bogor',
+  'Kabupaten Ciamis',
+  'Kabupaten Cianjur',
+  'Kabupaten Cirebon',
+  'Kabupaten Garut',
+  'Kabupaten Indramayu',
+  'Kabupaten Karawang',
+  'Kabupaten Kuningan',
+  'Kabupaten Majalengka',
+  'Kabupaten Pangandaran',
+  'Kabupaten Purwakarta',
+  'Kabupaten Subang',
+  'Kabupaten Sukabumi',
+  'Kabupaten Sumedang',
+  'Kabupaten Tasikmalaya',
+];
+
 class CartScreen extends StatefulWidget {
   static const routeName = '/cart';
   const CartScreen({super.key});
@@ -21,14 +56,15 @@ class _CartScreenState extends State<CartScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _addressController = TextEditingController();
+  final _addressDetailController = TextEditingController();
+  String? _selectedCity;
   bool _isSubmitting = false;
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
-    _addressController.dispose();
+    _addressDetailController.dispose();
     super.dispose();
   }
 
@@ -99,6 +135,21 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  InputDecoration _fieldDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Color(0xFF2D5016)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
+      ),
+    );
+  }
+
   Widget _buildOrderForm(
     CartProvider cart,
     AuthProvider auth,
@@ -123,18 +174,7 @@ class _CartScreenState extends State<CartScreen> {
                 children: [
                   TextFormField(
                     controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Nama Penerima',
-                      labelStyle: const TextStyle(color: Color(0xFF2D5016)),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
-                      ),
-                    ),
+                    decoration: _fieldDecoration('Nama Penerima'),
                     validator: (value) => value == null || value.isEmpty
                         ? 'Nama penerima wajib diisi'
                         : null,
@@ -143,40 +183,39 @@ class _CartScreenState extends State<CartScreen> {
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
-                    decoration: InputDecoration(
-                      labelText: 'No. HP Penerima',
-                      labelStyle: const TextStyle(color: Color(0xFF2D5016)),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
-                      ),
-                    ),
+                    decoration: _fieldDecoration('No. HP Penerima'),
                     validator: (value) => value == null || value.isEmpty
                         ? 'Nomor HP wajib diisi'
                         : null,
                   ),
                   const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedCity,
+                    decoration: _fieldDecoration('Kabupaten/Kota (Jawa Barat)'),
+                    isExpanded: true,
+                    hint: const Text('Pilih Kabupaten/Kota'),
+                    items: _kJawaBaratCities
+                        .map((city) => DropdownMenuItem(
+                              value: city,
+                              child: Text(city),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() => _selectedCity = value);
+                    },
+                    validator: (value) => value == null || value.isEmpty
+                        ? 'Silakan pilih kabupaten/kota tujuan pengiriman'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
                   TextFormField(
-                    controller: _addressController,
-                    decoration: InputDecoration(
-                      labelText: 'Alamat Pengiriman',
-                      labelStyle: const TextStyle(color: Color(0xFF2D5016)),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFC8E6C9)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFF52B788), width: 2),
-                      ),
+                    controller: _addressDetailController,
+                    decoration: _fieldDecoration(
+                      'Detail Alamat (nama jalan, no. rumah, RT/RW)',
                     ),
                     maxLines: 4,
                     validator: (value) => value == null || value.isEmpty
-                        ? 'Alamat wajib diisi'
+                        ? 'Detail alamat wajib diisi'
                         : null,
                   ),
                 ],
@@ -248,6 +287,12 @@ class _CartScreenState extends State<CartScreen> {
       _isSubmitting = true;
     });
 
+    // Gabungkan detail alamat + kabupaten/kota + provinsi jadi satu string
+    // alamat lengkap, supaya backend (geocoding) selalu dapat konteks kota
+    // yang jelas dan hasil peta pelacakan kurir konsisten di Jawa Barat.
+    final fullAddress =
+        '${_addressDetailController.text.trim()}, $_selectedCity, Jawa Barat';
+
     final currentContext = context;
     try {
       debugPrint('DEBUG: Starting checkout...');
@@ -261,7 +306,7 @@ class _CartScreenState extends State<CartScreen> {
         cart.total,
         _nameController.text.trim(),
         _phoneController.text.trim(),
-        _addressController.text.trim(),
+        fullAddress,
       );
 
       debugPrint('DEBUG: Checkout response: $response');
