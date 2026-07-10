@@ -35,11 +35,25 @@ class ProductModel {
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
-    // Resolve URL gambar dulu
+    // FIX: sebelumnya 'photo_url' (path MENTAH dari database, belum
+    // diproses backend) diprioritaskan di atas 'image_url' (yang sudah
+    // diresolve backend jadi URL proxy /api/image/... yang valid).
+    //
+    // Di halaman daftar produk (Beranda/Pencarian), API cuma pernah
+    // mengirim 'image_url', jadi bug ini tidak kelihatan. Tapi di
+    // Riwayat Pesanan, Order->orderItems->product di-serialize otomatis
+    // oleh Eloquent dan ikut mengirim KEDUA field ('photo_url' mentah +
+    // 'image_url' hasil accessor). Karena 'photo_url' diambil duluan,
+    // foto produk jadi gagal dimuat (blank) walau sebenarnya ada URL
+    // yang valid di 'image_url'.
+    //
+    // Sekarang urutannya dibalik: 'image_url' (sudah diproses & pasti
+    // valid) diprioritaskan, 'photo_url' mentah hanya jadi fallback
+    // terakhir kalau 'image_url' benar-benar tidak ada.
     final rawImageUrl =
-        json['photo_url'] as String? ??
         json['image_url'] as String? ??
         json['imageUrl'] as String? ??
+        json['photo_url'] as String? ??
         '';
 
     // Parse kategori (bisa berupa Map, String, atau nilai lain dari backend)
@@ -132,8 +146,8 @@ class ProductModel {
     if (cleaned.startsWith('http://') || cleaned.startsWith('https://'))
       return cleaned;
     // Path relatif — tambahkan base URL backend
-    if (cleaned.startsWith('/')) return '\$backendUrl\$cleaned';
-    return '\$backendUrl/\$cleaned';
+    if (cleaned.startsWith('/')) return '$backendUrl$cleaned';
+    return '$backendUrl/$cleaned';
   }
 
   static int _parseInt(dynamic value) {
