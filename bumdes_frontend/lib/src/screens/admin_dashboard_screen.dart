@@ -1493,7 +1493,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
+          colors: [Color(0xFF2E7D32), Color(0xFF66BB6A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1545,7 +1545,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   label: const Text('Tarik Saldo'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF1565C0),
+                    foregroundColor: const Color(0xFF2E7D32),
                   ),
                 ),
               ),

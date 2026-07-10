@@ -582,15 +582,27 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                 ),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2A7F41),
+                    backgroundColor: const Color(0xFF1B5E20),
+                    foregroundColor: Colors.white,
+                    shadowColor: Colors.black26,
+                    elevation: 4,
                     padding: const EdgeInsets.symmetric(
                       vertical: 14,
                       horizontal: 18,
                     ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: () => _onMenuTap('Pesanan'),
-                  icon: const Icon(Icons.receipt_long_outlined),
-                  label: const Text('Lihat Pesanan'),
+                  icon: const Icon(Icons.receipt_long, size: 20),
+                  label: const Text(
+                    'Lihat Pesanan',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
                 ),
               ],
             ),
