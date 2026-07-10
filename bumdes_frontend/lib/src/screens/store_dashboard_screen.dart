@@ -1093,7 +1093,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     }
   }
 
-  // ── ORDERS TAB ─────────────────────────────────────────────────────────────
+  // ── ORDERS TAB (FIX: layout card pesanan dirapikan) ───────────────────────
 
   Widget _buildOrdersTab() {
     final pendingCount = _sellerOrders
@@ -1192,8 +1192,14 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                   if (order.status == 'Dikirim') statusColor = Colors.blue;
                   if (order.status == 'Dibatalkan') statusColor = Colors.red;
 
+                  // FIX: Card dirombak jadi Column 2 baris supaya rapi:
+                  // - Baris atas: ikon + nomor pesanan (1 baris, ellipsis) + badge status
+                  // - Baris bawah: nama penerima & total (kiri), status pembayaran (kanan)
+                  // Sebelumnya semua disatukan dalam 1 Row sehingga nomor
+                  // pesanan yang panjang wrap ke 2 baris dan mendorong
+                  // badge status jadi tidak sejajar / berantakan.
                   return Container(
-                    padding: const EdgeInsets.all(18),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
@@ -1205,49 +1211,38 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                         ),
                       ],
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Icon(
-                            Icons.receipt_long,
-                            color: Colors.green,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
+                        // Baris atas: ikon + nomor pesanan + badge status
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.receipt_long,
+                                color: Colors.green,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
                                 order.orderNumber,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
+                                  fontSize: 13,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                order.recipientName ?? '',
-                                style: const TextStyle(color: Colors.black54),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Total: Rp ${order.total.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
+                            ),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
@@ -1262,19 +1257,56 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                                 style: TextStyle(
                                   color: statusColor,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                                  fontSize: 11,
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              paymentStatus,
-                              style: const TextStyle(
-                                color: Colors.black54,
-                                fontSize: 12,
-                              ),
-                            ),
                           ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Baris bawah: nama penerima + total (kiri),
+                        // status pembayaran (kanan). Diberi indent kiri 48
+                        // supaya sejajar dengan teks di atas, bukan ikon.
+                        Padding(
+                          padding: const EdgeInsets.only(left: 48),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      order.recipientName ?? '-',
+                                      style: const TextStyle(
+                                        color: Colors.black54,
+                                        fontSize: 13,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Total: Rp ${order.total.toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                paymentStatus,
+                                style: const TextStyle(
+                                  color: Colors.black54,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
