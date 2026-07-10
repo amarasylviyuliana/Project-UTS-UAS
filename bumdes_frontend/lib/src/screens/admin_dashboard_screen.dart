@@ -1015,7 +1015,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  // ── DIUBAH: layout responsif — card di HP, tabel di layar lebar ──────────
   Widget _buildProductList() {
+    final isMobile = MediaQuery.of(context).size.width < 700;
+
+    if (isMobile) {
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(
+              color: Color.fromRGBO(0, 0, 0, 0.05),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: PaginatedListView<Map<String, dynamic>>(
+          items: _products,
+          pageSize: 10,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, p, index) => _buildProductCardMobile(p),
+        ),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1069,93 +1094,189 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             items: _products,
             pageSize: 10,
             separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, p, index) {
-              final productId = p['id'] as int?;
-              return Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
+            itemBuilder: (context, p, index) => _buildProductRowDesktop(p),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // TAMBAHAN: card produk untuk layar HP.
+  Widget _buildProductCardMobile(Map<String, dynamic> p) {
+    final productId = p['id'] as int?;
+    final name = p['name'] ?? '-';
+    final storeName = p['store']?['store_name'] ?? '-';
+    final price = _formatRupiah(_parseDouble(p['price']));
+    final status = p['product_approval']?['status'] ??
+        (p['is_active'] == true ? 'Aktif' : 'Nonaktif');
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                ),
+                const SizedBox(height: 4),
+                Row(
                   children: [
+                    const Icon(Icons.store, size: 13, color: Colors.black38),
+                    const SizedBox(width: 4),
                     Expanded(
-                      flex: 3,
                       child: Text(
-                        p['name'] ?? '-',
-                        style: const TextStyle(fontWeight: FontWeight.w500),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        p['store']?['store_name'] ?? '-',
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontSize: 13,
-                        ),
+                        storeName,
+                        style: const TextStyle(color: Colors.black54, fontSize: 12),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    Expanded(
-                      child: Text(
-                        _formatRupiah(_parseDouble(p['price'])),
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildStatusChip(
-                        p['product_approval']?['status'] ??
-                            (p['is_active'] == true ? 'Aktif' : 'Nonaktif'),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 60,
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.delete,
-                          color: Colors.red,
-                          size: 20,
-                        ),
-                        onPressed: productId == null
-                            ? null
-                            : () async {
-                                final confirm = await _showConfirmDialog(
-                                  'Hapus produk ${p['name']}?',
-                                );
-                                if (confirm == true && _token != null) {
-                                  try {
-                                    await _adminService.deleteProduct(
-                                      _token!,
-                                      productId,
-                                    );
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Produk ${p['name']} berhasil dihapus',
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                    _loadProducts();
-                                  } catch (e) {
-                                    if (mounted) {
-                                      _showDeleteFailedDialog(
-                                        'Tidak Bisa Menghapus Produk',
-                                        e,
-                                      );
-                                    }
-                                  }
-                                }
-                              },
-                      ),
-                    ),
                   ],
                 ),
-              );
-            },
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Text(
+                      price,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Color(0xFF2A7F41),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildStatusChip(status),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+            onPressed: productId == null
+                ? null
+                : () async {
+                    final confirm = await _showConfirmDialog(
+                      'Hapus produk ${p['name']}?',
+                    );
+                    if (confirm == true && _token != null) {
+                      try {
+                        await _adminService.deleteProduct(_token!, productId);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Produk ${p['name']} berhasil dihapus',
+                              ),
+                            ),
+                          );
+                        }
+                        _loadProducts();
+                      } catch (e) {
+                        if (mounted) {
+                          _showDeleteFailedDialog(
+                            'Tidak Bisa Menghapus Produk',
+                            e,
+                          );
+                        }
+                      }
+                    }
+                  },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // TAMBAHAN: baris tabel produk untuk layar lebar (logika sama seperti semula).
+  Widget _buildProductRowDesktop(Map<String, dynamic> p) {
+    final productId = p['id'] as int?;
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Text(
+              p['name'] ?? '-',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              p['store']?['store_name'] ?? '-',
+              style: const TextStyle(
+                color: Colors.black54,
+                fontSize: 13,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              _formatRupiah(_parseDouble(p['price'])),
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+          Expanded(
+            child: _buildStatusChip(
+              p['product_approval']?['status'] ??
+                  (p['is_active'] == true ? 'Aktif' : 'Nonaktif'),
+            ),
+          ),
+          SizedBox(
+            width: 60,
+            child: IconButton(
+              icon: const Icon(
+                Icons.delete,
+                color: Colors.red,
+                size: 20,
+              ),
+              onPressed: productId == null
+                  ? null
+                  : () async {
+                      final confirm = await _showConfirmDialog(
+                        'Hapus produk ${p['name']}?',
+                      );
+                      if (confirm == true && _token != null) {
+                        try {
+                          await _adminService.deleteProduct(
+                            _token!,
+                            productId,
+                          );
+                          if (mounted) {
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Produk ${p['name']} berhasil dihapus',
+                                ),
+                              ),
+                            );
+                          }
+                          _loadProducts();
+                        } catch (e) {
+                          if (mounted) {
+                            _showDeleteFailedDialog(
+                              'Tidak Bisa Menghapus Produk',
+                              e,
+                            );
+                          }
+                        }
+                      }
+                    },
+            ),
           ),
         ],
       ),
@@ -1573,12 +1694,176 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 items: userList,
                 pageSize: 10,
                 separatorBuilder: (_, __) => const Divider(height: 1),
+                // ── DIUBAH: layout responsif — card 2-baris di HP, Row lama di layar lebar
                 itemBuilder: (context, user, index) {
                   final name = user['name'] ?? '-';
                   final id = user['id'] as int?;
                   final store = user['store'];
                   // TAMBAHAN: foto profil penjual, kalau backend sudah kirim photo_url
                   final photoUrl = user['photo_url'] as String?;
+                  final isMobile = MediaQuery.of(context).size.width < 700;
+
+                  if (isMobile) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Baris 1: avatar + nama + email — dapat lebar penuh
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: Colors.grey[200],
+                                child: _buildAvatarFromUrl(
+                                  photoUrl,
+                                  fallback: Text(
+                                    name.isNotEmpty
+                                        ? name[0].toUpperCase()
+                                        : '?',
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    Text(
+                                      user['email'] ?? '-',
+                                      style: const TextStyle(
+                                        color: Colors.black54,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          // Baris 2: info toko di kiri, role chip + aksi di kanan
+                          Row(
+                            children: [
+                              Expanded(
+                                child: showStoreInfo
+                                    ? (store != null
+                                        ? Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.store,
+                                                size: 13,
+                                                color: Colors.black38,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Flexible(
+                                                child: Text(
+                                                  store['store_name'] ?? '-',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.black54,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              _buildStatusChip(
+                                                store['is_active'] == true
+                                                    ? 'Aktif'
+                                                    : 'Nonaktif',
+                                              ),
+                                            ],
+                                          )
+                                        : const Text(
+                                            'Belum punya toko',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.orange,
+                                            ),
+                                          ))
+                                    : const SizedBox.shrink(),
+                              ),
+                              Chip(
+                                label: Text(
+                                  user['role'] ?? '-',
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                                backgroundColor: Colors.blue.withAlpha(50),
+                                visualDensity: VisualDensity.compact,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.edit,
+                                  color: Colors.blue,
+                                  size: 20,
+                                ),
+                                onPressed: () => _showUserFormDialog(
+                                  user: user,
+                                  userId: id,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                  size: 20,
+                                ),
+                                onPressed: id == null
+                                    ? null
+                                    : () async {
+                                        final confirm =
+                                            await _showConfirmDialog(
+                                          'Hapus pengguna $name?',
+                                        );
+                                        if (confirm == true &&
+                                            _token != null) {
+                                          try {
+                                            await _adminService.deleteUser(
+                                              _token!,
+                                              id,
+                                            );
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    'Pengguna $name berhasil dihapus',
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                            _loadUsers();
+                                          } catch (e) {
+                                            if (mounted) {
+                                              _showDeleteFailedDialog(
+                                                'Tidak Bisa Menghapus Pengguna',
+                                                e,
+                                              );
+                                            }
+                                          }
+                                        }
+                                      },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  // ── Layout lama untuk layar lebar (tidak berubah) ──
                   return Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(
