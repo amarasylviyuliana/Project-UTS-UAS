@@ -39,16 +39,32 @@ class ProductController extends Controller
     // sendiri, dipakai baik oleh listing produk maupun detail produk, supaya
     // Flutter bisa menampilkan kartu toko ala Shopee (foto toko + nama +
     // lokasi) di halaman detail produk.
+    //
+    // FIX: banyak toko belum pernah upload store_photo_url-nya sendiri
+    // (field ini terpisah dari foto profil pribadi penjual), sehingga kartu
+    // toko di sisi pembeli selalu fallback ke icon generik walau penjualnya
+    // sudah punya foto profil. Sekarang: kalau store_photo_url kosong, kita
+    // fallback ke foto profil PRIBADI pemilik toko (user->photo_url) supaya
+    // pembeli tetap melihat identitas visual tokonya. Kalau seller nanti
+    // upload foto toko sendiri lewat menu "Profil Toko", foto itu yang akan
+    // dipakai (foto toko selalu diprioritaskan di atas foto pribadi).
     private function mapStoreForResponse($store): ?array
     {
         if (!$store) return null;
+
+        $storePhoto = $this->resolvePhotoUrl($store->store_photo_url);
+        if (!$storePhoto) {
+            // Fallback: pakai foto profil pribadi pemilik toko, kalau ada.
+            $storePhoto = $this->resolvePhotoUrl($store->user?->photo_url);
+        }
+
         return [
             'id'              => $store->id,
             'store_name'      => $store->store_name,
             'village'         => $store->village,
             'district'        => $store->district ?? null,
             'regency'         => $store->regency ?? null,
-            'store_photo_url' => $this->resolvePhotoUrl($store->store_photo_url),
+            'store_photo_url' => $storePhoto,
         ];
     }
 
@@ -74,8 +90,11 @@ class ProductController extends Controller
 
     public function index(): JsonResponse
     {
+        // DIUBAH: eager load 'store.user' (bukan cuma 'store'), supaya
+        // mapStoreForResponse bisa fallback ke foto profil pemilik toko
+        // tanpa memicu query tambahan per produk (N+1).
         $products = Product::where('is_active', true)
-            ->with('store', 'category')
+            ->with('store.user', 'category')
             ->latest()
             ->get()
             ->map(fn($product) => $this->mapProductForResponse($product));
@@ -110,8 +129,9 @@ class ProductController extends Controller
         $min_price = $request->query('min_price');
         $max_price = $request->query('max_price');
 
+        // DIUBAH: eager load 'store.user' (bukan cuma 'store').
         $query = Product::where('is_active', true)
-            ->with('store', 'category');
+            ->with('store.user', 'category');
 
         if ($keyword) {
             $query->where(function ($q) use ($keyword) {
@@ -157,10 +177,14 @@ class ProductController extends Controller
      * (konsisten dengan index/search/getByStore) + reviews, supaya
      * store_photo_url selalu berupa URL proxy yang valid dan bisa dimuat
      * oleh Image.network() di Flutter.
+     *
+     * DIUBAH: eager load 'store.user' juga, supaya mapStoreForResponse bisa
+     * fallback ke foto profil pribadi pemilik toko kalau store_photo_url
+     * kosong.
      */
     public function show($id): JsonResponse
     {
-        $product = Product::with(['store', 'category', 'reviews.buyer'])->find($id);
+        $product = Product::with(['store.user', 'category', 'reviews.buyer'])->find($id);
 
         if (!$product || !$product->is_active) {
             return response()->json([
@@ -260,7 +284,7 @@ class ProductController extends Controller
             'photo_url' => $photoUrl,
         ]);
 
-        $product->load(['store', 'category']);
+        $product->load(['store.user', 'category']);
 
         return response()->json([
             'message' => 'Produk berhasil ditambahkan',
@@ -320,7 +344,7 @@ class ProductController extends Controller
 
         $product->update($validated);
 
-        $product->load(['store', 'category']);
+        $product->load(['store.user', 'category']);
 
         return response()->json([
             'message' => 'Produk berhasil diperbarui',
@@ -411,9 +435,10 @@ class ProductController extends Controller
 
     public function getByStore($store_id): JsonResponse
     {
+        // DIUBAH: eager load 'store.user' (bukan cuma 'store').
         $products = Product::where('store_id', $store_id)
             ->where('is_active', true)
-            ->with('store', 'category')
+            ->with('store.user', 'category')
             ->paginate(12);
 
         $products->getCollection()->transform(fn($product) => $this->mapProductForResponse($product));

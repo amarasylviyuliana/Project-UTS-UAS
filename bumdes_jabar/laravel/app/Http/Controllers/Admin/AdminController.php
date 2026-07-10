@@ -11,17 +11,41 @@ use Illuminate\Support\Facades\Storage;
 class AdminController extends Controller
 {
     /**
-     * TAMBAHAN: ubah path relatif jadi URL lengkap, konsisten dengan
-     * ProfileController@formatUser. Dipakai untuk photo_url (User) dan
-     * store_photo_url (Store) di semua endpoint Admin di bawah, supaya
-     * Image.network() di Flutter tidak gagal load karena menerima path
-     * relatif seperti "profile-photos/xxx.jpg" tanpa domain.
+     * FIX: sebelumnya method ini pakai Storage::disk('public')->url($path),
+     * yang menghasilkan URL "/storage/..." langsung. Pola ini SUDAH TERBUKTI
+     * gagal dimuat oleh Image.network() di Flutter (lihat catatan di
+     * ProductController@resolvePhotoUrl — kemungkinan besar karena CORS atau
+     * symlink storage tidak aktif di hosting Railway).
+     *
+     * Sekarang disamakan persis dengan ProductController@resolvePhotoUrl:
+     * semua path (relatif maupun URL /storage/ lama) diarahkan lewat proxy
+     * "/api/image/{path}", supaya konsisten dan benar-benar bisa dimuat.
      */
     private function formatPhotoUrl(?string $path): ?string
     {
-        if (empty($path)) return null;
-        if (str_starts_with($path, 'http')) return $path;
-        return Storage::disk('public')->url($path);
+        if (empty($path)) {
+            return null;
+        }
+
+        $baseUrl = rtrim(env('APP_URL', 'https://project-uts-uas-production.up.railway.app'), '/');
+        if (str_contains($baseUrl, 'localhost') || str_contains($baseUrl, '127.0.0.1')) {
+            $baseUrl = 'https://project-uts-uas-production.up.railway.app';
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            // Kalau sudah berupa URL lengkap tapi masih mengandung "/storage/...",
+            // ambil bagian setelah "/storage/" dan arahkan lewat proxy /api/image/.
+            if (preg_match('#/storage/(.+)$#', $path, $m)) {
+                return $baseUrl . '/api/image/' . $m[1];
+            }
+            // Sudah berupa URL lengkap non-storage (mis. sudah proxy /api/image/),
+            // biarkan apa adanya.
+            return $path;
+        }
+
+        // Path relatif mentah (mis. "profile-photos/xxx.jpg" atau "store-photos/xxx.jpg")
+        $cleanPath = preg_replace('#^/?storage/#', '', $path);
+        return $baseUrl . '/api/image/' . ltrim($cleanPath, '/');
     }
 
     /**
