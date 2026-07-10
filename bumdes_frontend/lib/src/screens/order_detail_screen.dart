@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/order_model.dart';
+import '../models/order_tracking_model.dart';
 import '../providers/auth_provider.dart';
 import '../services/order_service.dart';
 import '../widgets/courier_tracking_map.dart';
@@ -30,6 +31,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   String? _refreshError;
   String? _loadError;
 
+  // Progress pengiriman terakhir yang dilaporkan oleh CourierTrackingMap.
+  // Dipakai untuk mengunci tombol "Tandai Selesai" / "Konfirmasi Penerimaan"
+  // selama kurir belum benar-benar sampai (progress < 100%).
+  OrderTrackingModel? _tracking;
+
   @override
   void initState() {
     super.initState();
@@ -46,6 +52,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     super.didUpdateWidget(oldWidget);
     if (widget.orderId != null && widget.orderId != oldWidget.orderId) {
       _order = widget.order;
+      _tracking = null;
       _loadOrder();
     }
   }
@@ -268,6 +275,23 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
+  // Dipanggil oleh CourierTrackingMap setiap kali data lokasi kurir
+  // ter-update (polling). Dipakai untuk menentukan apakah tombol
+  // "Tandai Selesai" / "Konfirmasi Penerimaan" sudah boleh ditekan.
+  void _handleTrackingUpdate(OrderTrackingModel tracking) {
+    if (!mounted) return;
+    setState(() => _tracking = tracking);
+  }
+
+  /// True hanya jika kurir sudah benar-benar sampai (progress 100% atau
+  /// flag isCompleted dari server). Selama data tracking belum termuat
+  /// sama sekali, defaultnya FALSE (aman) — bukan diasumsikan selesai.
+  bool get _isDeliveryComplete {
+    final tracking = _tracking;
+    if (tracking == null) return false;
+    return tracking.isCompleted || tracking.progress >= 1.0;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_order == null) {
@@ -320,6 +344,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     final order = _order!;
     final statusColor = _getStatusColor(order.status);
+    final deliveryComplete = _isDeliveryComplete;
 
     return PopScope(
       canPop: false,
@@ -563,6 +588,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     return CourierTrackingMap(
                       token: token,
                       orderId: order.id,
+                      onTrackingUpdate: _handleTrackingUpdate,
                     );
                   },
                 ),
@@ -645,32 +671,50 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ),
                 ),
 
+              // Tombol Konfirmasi Penerimaan (pembeli) — terkunci selama
+              // kurir belum benar-benar sampai (progress < 100%).
               if (order.status.toLowerCase() == 'dikirim' &&
                   Provider.of<AuthProvider>(context).user?.role != 'seller')
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isPerformingAction ? null : _confirmReceipt,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: (_isPerformingAction || !deliveryComplete)
+                            ? null
+                            : _confirmReceipt,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        child: _isPerformingAction
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Konfirmasi Penerimaan',
+                                style: TextStyle(fontSize: 16),
+                              ),
                       ),
                     ),
-                    child: _isPerformingAction
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            'Konfirmasi Penerimaan',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                  ),
+                    if (!deliveryComplete)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 6.0, left: 4.0),
+                        child: Text(
+                          'Tombol aktif setelah kurir sampai di lokasi tujuan (100%).',
+                          style: TextStyle(fontSize: 12, color: Colors.black54),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                  ],
                 ),
               if (Provider.of<AuthProvider>(context).user?.role == 'seller')
                 Column(
@@ -765,34 +809,49 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         ),
                       ),
 
+                    // Tombol Tandai Selesai (penjual) — terkunci selama
+                    // kurir belum benar-benar sampai (progress < 100%).
                     if (order.status.toLowerCase() == 'dikirim')
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _isPerformingAction
-                              ? null
-                              : () => _updateOrderStatus('Selesai'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: (_isPerformingAction || !deliveryComplete)
+                                  ? null
+                                  : () => _updateOrderStatus('Selesai'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                              ),
+                              child: _isPerformingAction
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Tandai Selesai',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
                             ),
                           ),
-                          child: _isPerformingAction
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text(
-                                  'Tandai Selesai',
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                        ),
+                          if (!deliveryComplete)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 6.0, left: 4.0),
+                              child: Text(
+                                'Tombol aktif setelah kurir sampai di lokasi tujuan (100%).',
+                                style: TextStyle(fontSize: 12, color: Colors.black54),
+                              ),
+                            ),
+                        ],
                       ),
                     // Tombol Batalkan untuk Penjual
                     if (order.status.toLowerCase() == 'menunggu konfirmasi' ||

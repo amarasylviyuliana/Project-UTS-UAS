@@ -18,11 +18,18 @@ class CourierTrackingMap extends StatefulWidget {
   final int orderId;
   final Duration refreshInterval;
 
+  /// Dipanggil setiap kali data tracking baru berhasil di-fetch dari
+  /// server, supaya widget induk (misal OrderDetailScreen) bisa tahu
+  /// progress pengiriman terkini (mis. untuk enable/disable tombol
+  /// "Tandai Selesai" / "Konfirmasi Penerimaan").
+  final ValueChanged<OrderTrackingModel>? onTrackingUpdate;
+
   const CourierTrackingMap({
     super.key,
     required this.token,
     required this.orderId,
     this.refreshInterval = const Duration(seconds: 8),
+    this.onTrackingUpdate,
   });
 
   @override
@@ -102,6 +109,10 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
         _animStartedAt = null;
       }
     });
+
+    // Beri tahu widget induk (mis. OrderDetailScreen) soal progress
+    // terbaru, supaya ia bisa mengatur enable/disable tombol aksi.
+    widget.onTrackingUpdate?.call(data);
   }
 
   void _tickAnimation() {
@@ -181,7 +192,12 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
                 PolylineLayer(
                   polylines: [
                     Polyline(
-                      points: [origin, destination],
+                      // Mengikuti bentuk jalan sesungguhnya (hasil OSRM) kalau
+                      // tersedia; kalau backend fallback ke garis lurus,
+                      // `tracking.route` otomatis cuma berisi [origin, destination].
+                      points: tracking.route
+                          .map((p) => LatLng(p.lat, p.lng))
+                          .toList(),
                       strokeWidth: 3,
                       color: const Color(0xFF2A7F41).withValues(alpha: 0.5),
                     ),
