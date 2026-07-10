@@ -105,6 +105,41 @@ class ProductController extends Controller
         ]);
     }
 
+    /**
+     * TAMBAHAN: Produk unggulan berdasarkan popularitas asli (total
+     * quantity terjual dari order_items), bukan sekadar produk terbaru.
+     *
+     * Sebelumnya "Produk Unggulan" di Flutter (ProductProvider.featured)
+     * hanya mengambil 6 produk pertama dari daftar produk biasa (yang
+     * di-order berdasarkan created_at terbaru), jadi tidak benar-benar
+     * mencerminkan produk yang paling banyak dibeli.
+     *
+     * Endpoint ini menghitung total quantity yang pernah dipesan untuk
+     * tiap produk (LEFT JOIN supaya produk yang belum pernah terjual
+     * tetap ikut terhitung dengan total_sold = 0), lalu diurutkan
+     * menurun. Sebagai tie-breaker (produk yang sama-sama belum pernah
+     * terjual), diurutkan berdasarkan produk terbaru supaya list tidak
+     * terasa acak.
+     */
+    public function getFeaturedProducts(): JsonResponse
+    {
+        $products = Product::where('products.is_active', true)
+            ->leftJoin('order_items', 'order_items.product_id', '=', 'products.id')
+            ->select('products.*', DB::raw('COALESCE(SUM(order_items.quantity), 0) as total_sold'))
+            ->groupBy('products.id')
+            ->with('store.user', 'category')
+            ->orderByDesc('total_sold')
+            ->orderByDesc('products.created_at')
+            ->limit(6)
+            ->get()
+            ->map(fn($product) => $this->mapProductForResponse($product));
+
+        return response()->json([
+            'message' => 'Produk unggulan',
+            'data' => $products,
+        ]);
+    }
+
     public function getPopularStores(): JsonResponse
     {
         $stores = DB::table('stores')

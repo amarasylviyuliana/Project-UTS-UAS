@@ -34,8 +34,20 @@ class Product extends Model
     /**
      * Accessor: image_url selalu full URL, dipakai otomatis setiap kali
      * Product di-serialize ke JSON (order, cart, product list, dll).
-     * Ini menyatukan logic resolvePhotoUrl yang sebelumnya hanya ada
-     * di ProductController sehingga endpoint lain (order) ikut benar.
+     *
+     * FIX: sebelumnya method ini membangun URL lewat "/storage/{path}"
+     * langsung, BEDA dengan ProductController::resolvePhotoUrl() yang
+     * dipakai di endpoint produk (index/search/show) yang membangun URL
+     * lewat proxy "/api/image/{path}". Akibatnya, tiap kali Product
+     * di-serialize di konteks lain (mis. Order->orderItems->product di
+     * Riwayat Pesanan), field 'image_url' yang dikirim jadi URL yang
+     * beda skema dan seringkali gagal dimuat (foto blank), padahal di
+     * halaman daftar produk (yang lewat ProductController) foto yang
+     * sama tampil normal.
+     *
+     * Sekarang logic-nya disamakan persis dengan resolvePhotoUrl() di
+     * ProductController, supaya field 'image_url' SELALU konsisten di
+     * mana pun Product di-serialize.
      */
     public function getImageUrlAttribute(): ?string
     {
@@ -43,7 +55,15 @@ class Product extends Model
         if (!$path) {
             return null;
         }
+
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            if (preg_match('#/storage/(.+)$#', $path, $m)) {
+                $baseUrl = rtrim(env('APP_URL', 'https://project-uts-uas-production.up.railway.app'), '/');
+                if (str_contains($baseUrl, 'localhost') || str_contains($baseUrl, '127.0.0.1')) {
+                    $baseUrl = 'https://project-uts-uas-production.up.railway.app';
+                }
+                return $baseUrl . '/api/image/' . $m[1];
+            }
             return $path;
         }
 
@@ -51,8 +71,8 @@ class Product extends Model
         if (str_contains($baseUrl, 'localhost') || str_contains($baseUrl, '127.0.0.1')) {
             $baseUrl = 'https://project-uts-uas-production.up.railway.app';
         }
-        $storagePath = str_starts_with($path, '/') ? $path : '/storage/' . $path;
-        return $baseUrl . $storagePath;
+        $cleanPath = preg_replace('#^/?storage/#', '', $path);
+        return $baseUrl . '/api/image/' . ltrim($cleanPath, '/');
     }
 
     // Relationships
