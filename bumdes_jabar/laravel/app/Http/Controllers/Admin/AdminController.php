@@ -6,9 +6,24 @@ use App\Models\Admin;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
+    /**
+     * TAMBAHAN: ubah path relatif jadi URL lengkap, konsisten dengan
+     * ProfileController@formatUser. Dipakai untuk photo_url (User) dan
+     * store_photo_url (Store) di semua endpoint Admin di bawah, supaya
+     * Image.network() di Flutter tidak gagal load karena menerima path
+     * relatif seperti "profile-photos/xxx.jpg" tanpa domain.
+     */
+    private function formatPhotoUrl(?string $path): ?string
+    {
+        if (empty($path)) return null;
+        if (str_starts_with($path, 'http')) return $path;
+        return Storage::disk('public')->url($path);
+    }
+
     /**
      * Get all admins
      */
@@ -169,16 +184,6 @@ class AdminController extends Controller
 
     /**
      * Get admin dashboard stats
-     * FIX: cukup cek role, tidak perlu record di tabel admins
-     *
-     * CATATAN: `total_revenue` di sini adalah OMZET KOTOR seluruh waktu
-     * (jumlah total_price semua pesanan berstatus Selesai). Ini BUKAN saldo
-     * platform yang bisa ditarik, dan sengaja tidak berkurang meskipun admin
-     * sudah menarik saldo lewat menu Keuangan. Untuk saldo yang benar-benar
-     * bisa ditarik (sudah memperhitungkan penarikan), pakai endpoint
-     * GET /admin/wallet/summary (field `platform_balance`), bukan field ini.
-     * Dashboard Flutter sudah diperbaiki supaya kartu "Saldo Admin" memakai
-     * `platform_balance` dari wallet summary, bukan `total_revenue` di sini.
      */
     public function getDashboardStats()
     {
@@ -209,9 +214,6 @@ class AdminController extends Controller
 
     /**
      * Get all orders (admin)
-     *
-     * ALUR BARU: Admin HANYA memantau pesanan (read-only). Mengubah status
-     * pesanan sepenuhnya tanggung jawab Penjual lewat aplikasinya sendiri.
      */
     public function getAllOrders(Request $request)
     {
@@ -255,17 +257,13 @@ class AdminController extends Controller
     /**
      * Get all users (admin)
      *
-     * Menu Pengguna adalah pusat pengelolaan akun Penjual. Data toko/BUMDes
-     * penjual ditampilkan langsung di sini karena dibuat bersamaan dengan
-     * akun Penjual. Tidak ada lagi status approval toko.
-     *
-     * Untuk daftar Pembeli, gunakan endpoint terpisah getAllBuyers() di
-     * bawah — Pembeli read-only (daftar sendiri lewat app, bukan dibuatkan
-     * Admin), jadi sengaja tidak dicampur di sini.
+     * TAMBAHAN: sekarang menyertakan `photo_url` (foto profil Penjual) dan
+     * `store.store_photo_url` sudah dalam bentuk URL LENGKAP (bukan path
+     * relatif mentah), supaya Image.network() di Flutter berhasil memuatnya
+     * — konsisten dengan ProfileController@formatUser.
      */
     public function getAllUsers(Request $request)
     {
-        // Dashboard Admin sekarang HANYA mengelola akun Penjual.
         $query = \App\Models\User::with(['store'])->where('role', 'Penjual');
 
         $users = $query->orderBy('created_at', 'desc')
@@ -277,6 +275,7 @@ class AdminController extends Controller
                     'email'      => $user->email,
                     'role'       => $user->role,
                     'phone'      => $user->phone,
+                    'photo_url'  => $this->formatPhotoUrl($user->photo_url),
                     'created_at' => $user->created_at,
                     'store' => $user->store ? [
                         'id'                  => $user->store->id,
@@ -287,7 +286,7 @@ class AdminController extends Controller
                         'village'             => $user->store->village,
                         'district'            => $user->store->district,
                         'regency'             => $user->store->regency,
-                        'store_photo_url'     => $user->store->store_photo_url,
+                        'store_photo_url'     => $this->formatPhotoUrl($user->store->store_photo_url),
                         'is_active'           => $user->store->is_active,
                         'bank_name'           => $user->store->bank_name,
                         'bank_account_number' => $user->store->bank_account_number,
@@ -304,8 +303,10 @@ class AdminController extends Controller
 
     /**
      * Get all buyers (admin) — read-only + hapus saja.
-     * Tidak ada create/update karena Pembeli daftar sendiri lewat app,
-     * bukan dibuatkan Admin.
+     *
+     * TAMBAHAN: sekarang menyertakan `photo_url` (foto profil Pembeli)
+     * dalam bentuk URL lengkap, supaya avatar Pembeli di dashboard Admin
+     * ikut menampilkan foto asli, bukan selalu fallback ke inisial huruf.
      */
     public function getAllBuyers(Request $request)
     {
@@ -328,6 +329,7 @@ class AdminController extends Controller
                     'email'        => $user->email,
                     'role'         => $user->role,
                     'phone'        => $user->phone,
+                    'photo_url'    => $this->formatPhotoUrl($user->photo_url),
                     'created_at'   => $user->created_at,
                     'total_orders' => \App\Models\Order::where('buyer_id', $user->id)->count(),
                 ];
@@ -341,6 +343,10 @@ class AdminController extends Controller
 
     /**
      * Get all stores (admin)
+     *
+     * TAMBAHAN: menyertakan `store_photo_url` dalam bentuk URL lengkap,
+     * supaya kartu Toko/BUMDes di dashboard Admin ikut menampilkan foto
+     * toko asli, bukan selalu fallback ke icon generik.
      */
     public function getAllStores(Request $request)
     {
@@ -361,10 +367,12 @@ class AdminController extends Controller
                     'is_active'       => $store->is_active,
                     'status'          => $store->is_active ? 'Aktif' : 'Nonaktif',
                     'owner_name'      => $store->user?->name,
+                    'store_photo_url' => $this->formatPhotoUrl($store->store_photo_url),
                     'user' => $store->user ? [
-                        'id'    => $store->user->id,
-                        'name'  => $store->user->name,
-                        'email' => $store->user->email,
+                        'id'        => $store->user->id,
+                        'name'      => $store->user->name,
+                        'email'     => $store->user->email,
+                        'photo_url' => $this->formatPhotoUrl($store->user->photo_url),
                     ] : null,
                     'total_revenue' => (float) $revenue,
                     'revenue'       => (float) $revenue,
@@ -410,29 +418,6 @@ class AdminController extends Controller
 
     /**
      * Delete user (admin)
-     *
-     * ATURAN BISNIS UNTUK PEMBELI:
-     * - Kalau Pembeli ini masih punya pesanan yang statusnya BELUM final
-     *   (bukan "Selesai", "Dibatalkan", atau "Ditolak" — misalnya masih
-     *   "Menunggu Pembayaran", "Menunggu Konfirmasi", "Diproses", atau
-     *   "Dikirim"), akun TIDAK BOLEH dihapus. Endpoint mengembalikan 409
-     *   dengan `code: 'has_active_orders'` dan pesan yang jelas, supaya
-     *   Flutter bisa menampilkannya sebagai info biasa (bukan error teknis).
-     * - Kalau SEMUA pesanan Pembeli itu sudah final, akun BOLEH dihapus.
-     *   Supaya tidak kena constraint foreign key dari tabel `orders`,
-     *   kolom `buyer_id` pada pesanan-pesanan lama itu di-NULL-kan dulu
-     *   (riwayat pesanan tetap tersimpan lewat recipient_name/
-     *   recipient_phone yang sudah snapshot di tabel orders), baru user-nya
-     *   dihapus.
-     *
-     * CATATAN: kolom `orders.buyer_id` wajib nullable supaya langkah di
-     * atas berjalan. Kalau kolomnya masih NOT NULL, jalankan migration
-     * `make_buyer_id_nullable_in_orders_table` (lihat berkas migration
-     * terpisah) sebelum fitur ini dipakai.
-     *
-     * Untuk role lain (Penjual/Admin), perilaku lama dipertahankan: DELETE
-     * langsung dicoba, dan kalau masih ada data terkait (toko, produk, dst)
-     * yang menghalangi, endpoint mengembalikan 409 dengan pesan yang jelas.
      */
     public function deleteUser($id)
     {
@@ -441,9 +426,6 @@ class AdminController extends Controller
             return response()->json(['status' => 'error', 'message' => 'User tidak ditemukan'], 404);
         }
 
-        // Status pesanan yang dianggap "final" alias sudah tidak berjalan
-        // lagi. Selama status pesanan Pembeli belum masuk daftar ini,
-        // akunnya tidak boleh dihapus.
         $finalOrderStatuses = ['Selesai', 'Dibatalkan', 'Ditolak'];
 
         if ($user->role === 'Pembeli') {
@@ -459,11 +441,6 @@ class AdminController extends Controller
                 ], 409);
             }
 
-            // Semua pesanan Pembeli ini sudah final → aman untuk dihapus.
-            // Lepaskan dulu relasi buyer_id dari pesanan-pesanan lama itu
-            // supaya penghapusan user tidak terhalang foreign key
-            // constraint. Baris pesanannya sendiri TIDAK dihapus, jadi
-            // riwayat/laporan transaksi toko tetap utuh.
             \App\Models\Order::where('buyer_id', $user->id)
                 ->whereIn('status', $finalOrderStatuses)
                 ->update(['buyer_id' => null]);
@@ -473,9 +450,6 @@ class AdminController extends Controller
             $user->delete();
             return response()->json(['status' => 'success', 'message' => 'User berhasil dihapus']);
         } catch (\Illuminate\Database\QueryException $e) {
-            // SQLSTATE 23000 = integrity constraint violation (foreign key).
-            // Untuk Penjual, biasanya karena masih punya `store`/`products`
-            // terkait yang belum dihapus/dinonaktifkan.
             if ($e->getCode() === '23000') {
                 return response()->json([
                     'status'  => 'error',
@@ -523,10 +497,6 @@ class AdminController extends Controller
 
     /**
      * Delete store (admin)
-     *
-     * Sama seperti deleteUser() di atas: dibungkus try/catch supaya kalau
-     * toko masih punya produk/pesanan terkait, Admin dapat pesan error yang
-     * jelas alih-alih 500 mentah.
      */
     public function deleteStore($id)
     {
@@ -560,10 +530,6 @@ class AdminController extends Controller
 
     /**
      * Delete product (admin)
-     *
-     * Sama seperti deleteUser()/deleteStore(): dibungkus try/catch supaya
-     * kalau produk masih punya item pesanan terkait, Admin dapat pesan error
-     * yang jelas alih-alih 500 mentah.
      */
     public function deleteProduct($id)
     {
@@ -595,35 +561,11 @@ class AdminController extends Controller
         }
     }
 
-    // CATATAN PERUBAHAN ALUR BISNIS:
-    // Method updateOrderStatus() (admin mengubah status pesanan, termasuk
-    // konfirmasi pembayaran) sudah DIHAPUS total dari sini. Admin sekarang
-    // HANYA memantau pesanan lewat getAllOrders() di atas (read-only).
-    // Mengubah status pesanan (Dikonfirmasi/Diproses/Dikirim/Selesai/dst)
-    // sepenuhnya tanggung jawab Penjual lewat endpoint miliknya sendiri
-    // (mis. SellerOrderController@updateStatus), bukan lewat controller ini.
-    //
-    // PENTING: pastikan route yang tadinya mengarah ke sini juga dihapus
-    // dari routes/api.php, misalnya baris seperti:
-    //   Route::put('/admin/orders/{id}/status', [AdminController::class, 'updateOrderStatus']);
-    // Kalau baris itu masih ada tapi method-nya sudah tidak ada, request ke
-    // endpoint tersebut akan error 500 — jadi baris route-nya wajib
-    // dihapus/dikomentari juga, bukan cuma method-nya.
-
     /**
      * Create user (admin)
-     *
-     * ALUR BARU: Registrasi Penjual publik + pendaftaran/approval toko sudah
-     * dihapus. Sekarang SATU-SATUNYA cara membuat akun Penjual adalah lewat
-     * endpoint ini. Kalau role = Penjual, Admin WAJIB mengisi data toko/BUMDes
-     * sekaligus (nama toko, deskripsi, telepon, alamat, logo opsional). User +
-     * Store dibuat dalam satu transaksi dan LANGSUNG AKTIF — tidak ada lagi
-     * status "Menunggu Persetujuan".
      */
     public function createUser(Request $request)
     {
-        // Admin sekarang HANYA membuat akun Penjual — role tidak lagi dari
-        // input frontend, selalu dipaksa "Penjual" di sini.
         $rules = [
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users',
@@ -650,7 +592,7 @@ class AdminController extends Controller
                 $user = \App\Models\User::create([
                     'name'     => $validated['name'],
                     'email'    => $validated['email'],
-                    'role'     => 'Penjual', // dipaksa, bukan dari input
+                    'role'     => 'Penjual',
                     'phone'    => $validated['phone'],
                     'password' => bcrypt($validated['password'] ?? 'password123'),
                     'email_verified_at' => now(),
@@ -697,9 +639,6 @@ class AdminController extends Controller
 
     /**
      * Update user (admin)
-     *
-     * Kalau user adalah Penjual dan mengirim field data toko, data toko
-     * ikut diperbarui sekaligus (toko tetap satu-satunya milik user itu).
      */
     public function updateUser(Request $request, $id)
     {
@@ -708,8 +647,6 @@ class AdminController extends Controller
             return response()->json(['status' => 'error', 'message' => 'User tidak ditemukan'], 404);
         }
 
-        // Role Penjual tidak boleh diubah dari Dashboard Admin — input role
-        // dari frontend diabaikan sepenuhnya.
         $user->update($request->only(['name', 'email', 'phone']));
 
         $storeFields = $request->only([
