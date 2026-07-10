@@ -91,12 +91,22 @@ class _HomeScreenState extends State<HomeScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isNarrow = screenWidth < 600;
     final isCompact = screenWidth < 360;
+    final isTablet = screenWidth >= 600;
     final navHeight = isCompact
         ? 72.0
         : isNarrow
         ? 76.0
         : 82.0;
-    final labelFontSize = isCompact ? 10.0 : 11.5;
+    final labelFontSize = isCompact
+        ? 10.5
+        : isTablet
+        ? 11.5
+        : 12.0;
+    final iconSize = isCompact
+        ? 21.5
+        : isTablet
+        ? 24.0
+        : 23.0;
 
     return PopScope(
       canPop: false,
@@ -164,17 +174,19 @@ class _HomeScreenState extends State<HomeScreen> {
           top: false,
           child: NavigationBarTheme(
             data: NavigationBarThemeData(
-              backgroundColor: Colors.white,
+              backgroundColor: const Color(0xFFF8FBF9),
               surfaceTintColor: Colors.white,
-              indicatorColor: const Color(0xFF2A7F41).withValues(alpha: 0.16),
+              indicatorColor: const Color(0xFF2A7F41).withValues(alpha: 0.14),
               indicatorShape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
+              shadowColor: Colors.black.withValues(alpha: 0.06),
               labelTextStyle: WidgetStateProperty.resolveWith((states) {
                 final isSelected = states.contains(WidgetState.selected);
                 return TextStyle(
                   fontSize: labelFontSize,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                  height: 1.2,
                   color: isSelected
                       ? const Color(0xFF2A7F41)
                       : const Color(0xFF64748B),
@@ -184,27 +196,38 @@ class _HomeScreenState extends State<HomeScreen> {
               iconTheme: WidgetStateProperty.resolveWith((states) {
                 final isSelected = states.contains(WidgetState.selected);
                 return IconThemeData(
-                  size: isCompact ? 22 : 24,
+                  size: iconSize,
                   color: isSelected
                       ? const Color(0xFF2A7F41)
                       : const Color(0xFF64748B),
                 );
               }),
             ),
-            child: NavigationBar(
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: (index) =>
-                  setState(() => _selectedIndex = index),
-              elevation: 8,
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              destinations: [
-                for (int i = 0; i < menuLabels.length; i++)
-                  NavigationDestination(
-                    icon: Icon(menuIcons[i]),
-                    selectedIcon: Icon(menuIconsFilled[i]),
-                    label: menuLabels[i],
-                  ),
-              ],
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isCompact
+                    ? 8
+                    : isTablet
+                    ? 16
+                    : 20,
+                vertical: isCompact ? 6 : 8,
+              ),
+              child: NavigationBar(
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (index) =>
+                    setState(() => _selectedIndex = index),
+                height: navHeight,
+                elevation: 2,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                destinations: [
+                  for (int i = 0; i < menuLabels.length; i++)
+                    NavigationDestination(
+                      icon: Icon(menuIcons[i]),
+                      selectedIcon: Icon(menuIconsFilled[i]),
+                      label: menuLabels[i],
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -887,14 +910,13 @@ class _SearchTabState extends State<SearchTab> {
                           itemCount: provider.products.length,
                           gridDelegate:
                               SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: crossAxisCount,
-                            mainAxisSpacing: 14,
-                            crossAxisSpacing: 14,
-                            childAspectRatio: 0.62,
-                          ),
-                          itemBuilder: (context, index) => ProductCard(
-                            product: provider.products[index],
-                          ),
+                                crossAxisCount: crossAxisCount,
+                                mainAxisSpacing: 14,
+                                crossAxisSpacing: 14,
+                                childAspectRatio: 0.62,
+                              ),
+                          itemBuilder: (context, index) =>
+                              ProductCard(product: provider.products[index]),
                         );
                       },
                     ),
@@ -1035,9 +1057,7 @@ class ProductCard extends StatelessWidget {
                       child: Text(
                         stockLabel,
                         style: TextStyle(
-                          color: product.stock == 0
-                              ? Colors.red
-                              : Colors.green,
+                          color: product.stock == 0 ? Colors.red : Colors.green,
                           fontWeight: FontWeight.w600,
                           fontSize: 10,
                         ),

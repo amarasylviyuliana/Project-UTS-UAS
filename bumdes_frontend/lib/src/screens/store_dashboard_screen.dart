@@ -1274,8 +1274,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                             children: [
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       order.recipientName ?? '-',
@@ -1504,7 +1503,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
 
   // ── PROFILE TAB ────────────────────────────────────────────────────────────
 
- Widget _buildProfileTab(AuthProvider auth) {
+  Widget _buildProfileTab(AuthProvider auth) {
     final user = auth.user;
     final photoUrl = user?.photoUrl;
     final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
@@ -2036,7 +2035,22 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   Widget _buildBottomNavigationBar() {
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 360;
-    final labelFontSize = isCompact ? 10.0 : 11.5;
+    final isTablet = screenWidth >= 600;
+    final navHeight = isCompact
+        ? 72.0
+        : isTablet
+        ? 80.0
+        : 76.0;
+    final labelFontSize = isCompact
+        ? 10.5
+        : isTablet
+        ? 11.5
+        : 12.0;
+    final iconSize = isCompact
+        ? 21.5
+        : isTablet
+        ? 24.0
+        : 23.0;
 
     const items = [
       _NavItem(
@@ -2070,17 +2084,19 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       top: false,
       child: NavigationBarTheme(
         data: NavigationBarThemeData(
-          backgroundColor: Colors.white,
+          backgroundColor: const Color(0xFFF8FBF9),
           surfaceTintColor: Colors.white,
-          indicatorColor: const Color(0xFF2A7F41).withValues(alpha: 0.16),
+          indicatorColor: const Color(0xFF2A7F41).withValues(alpha: 0.14),
           indicatorShape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
+          shadowColor: Colors.black.withValues(alpha: 0.06),
           labelTextStyle: WidgetStateProperty.resolveWith((states) {
             final isSelected = states.contains(WidgetState.selected);
             return TextStyle(
               fontSize: labelFontSize,
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+              height: 1.2,
               color: isSelected
                   ? const Color(0xFF2A7F41)
                   : const Color(0xFF64748B),
@@ -2090,28 +2106,39 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           iconTheme: WidgetStateProperty.resolveWith((states) {
             final isSelected = states.contains(WidgetState.selected);
             return IconThemeData(
-              size: isCompact ? 22 : 24,
+              size: iconSize,
               color: isSelected
                   ? const Color(0xFF2A7F41)
                   : const Color(0xFF64748B),
             );
           }),
         ),
-        child: NavigationBar(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: (index) =>
-              setState(() => _selectedIndex = index),
-          elevation: 8,
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: items
-              .map(
-                (item) => NavigationDestination(
-                  icon: Icon(item.icon),
-                  selectedIcon: Icon(item.iconFilled),
-                  label: item.label,
-                ),
-              )
-              .toList(),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact
+                ? 8
+                : isTablet
+                ? 16
+                : 20,
+            vertical: isCompact ? 6 : 8,
+          ),
+          child: NavigationBar(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (index) =>
+                setState(() => _selectedIndex = index),
+            height: navHeight,
+            elevation: 2,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            destinations: items
+                .map(
+                  (item) => NavigationDestination(
+                    icon: Icon(item.icon),
+                    selectedIcon: Icon(item.iconFilled),
+                    label: item.label,
+                  ),
+                )
+                .toList(),
+          ),
         ),
       ),
     );

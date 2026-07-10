@@ -623,7 +623,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
     );
   }
-Widget _buildRecentActivity() {
+
+  Widget _buildRecentActivity() {
     final recentOrders = _orders.take(5).toList();
     if (_isLoadingOrders) {
       return const Center(
@@ -812,7 +813,7 @@ Widget _buildRecentActivity() {
     );
   }
 
-Widget _buildStoreCard(Map<String, dynamic> store) {
+  Widget _buildStoreCard(Map<String, dynamic> store) {
     final name = store['store_name'] ?? store['name'] ?? '-';
     final owner = store['user']?['name'] ?? store['owner_name'] ?? '-';
     final ownerEmail = store['user']?['email'] ?? '-';
@@ -964,6 +965,7 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
       ),
     );
   }
+
   Future<void> _toggleStoreStatus(
     int storeId,
     bool activate,
@@ -1124,7 +1126,8 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
     final name = p['name'] ?? '-';
     final storeName = p['store']?['store_name'] ?? '-';
     final price = _formatRupiah(_parseDouble(p['price']));
-    final status = p['product_approval']?['status'] ??
+    final status =
+        p['product_approval']?['status'] ??
         (p['is_active'] == true ? 'Aktif' : 'Nonaktif');
 
     return Padding(
@@ -1138,7 +1141,10 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -1148,7 +1154,10 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                     Expanded(
                       child: Text(
                         storeName,
-                        style: const TextStyle(color: Colors.black54, fontSize: 12),
+                        style: const TextStyle(
+                          color: Colors.black54,
+                          fontSize: 12,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1231,10 +1240,7 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
             flex: 2,
             child: Text(
               p['store']?['store_name'] ?? '-',
-              style: const TextStyle(
-                color: Colors.black54,
-                fontSize: 13,
-              ),
+              style: const TextStyle(color: Colors.black54, fontSize: 13),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -1254,11 +1260,7 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
           SizedBox(
             width: 60,
             child: IconButton(
-              icon: const Icon(
-                Icons.delete,
-                color: Colors.red,
-                size: 20,
-              ),
+              icon: const Icon(Icons.delete, color: Colors.red, size: 20),
               onPressed: productId == null
                   ? null
                   : () async {
@@ -1267,14 +1269,9 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                       );
                       if (confirm == true && _token != null) {
                         try {
-                          await _adminService.deleteProduct(
-                            _token!,
-                            productId,
-                          );
+                          await _adminService.deleteProduct(_token!, productId);
                           if (mounted) {
-                            ScaffoldMessenger.of(
-                              context,
-                            ).showSnackBar(
+                            ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
                                   'Produk ${p['name']} berhasil dihapus',
@@ -1770,8 +1767,7 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       name,
@@ -1799,40 +1795,40 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                               Expanded(
                                 child: showStoreInfo
                                     ? (store != null
-                                        ? Row(
-                                            children: [
-                                              const Icon(
-                                                Icons.store,
-                                                size: 13,
-                                                color: Colors.black38,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Flexible(
-                                                child: Text(
-                                                  store['store_name'] ?? '-',
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.black54,
-                                                  ),
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
+                                          ? Row(
+                                              children: [
+                                                const Icon(
+                                                  Icons.store,
+                                                  size: 13,
+                                                  color: Colors.black38,
                                                 ),
+                                                const SizedBox(width: 4),
+                                                Flexible(
+                                                  child: Text(
+                                                    store['store_name'] ?? '-',
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.black54,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                _buildStatusChip(
+                                                  store['is_active'] == true
+                                                      ? 'Aktif'
+                                                      : 'Nonaktif',
+                                                ),
+                                              ],
+                                            )
+                                          : const Text(
+                                              'Belum punya toko',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.orange,
                                               ),
-                                              const SizedBox(width: 6),
-                                              _buildStatusChip(
-                                                store['is_active'] == true
-                                                    ? 'Aktif'
-                                                    : 'Nonaktif',
-                                              ),
-                                            ],
-                                          )
-                                        : const Text(
-                                            'Belum punya toko',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.orange,
-                                            ),
-                                          ))
+                                            ))
                                     : const SizedBox.shrink(),
                               ),
                               Chip(
@@ -1851,10 +1847,8 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                                   color: Colors.blue,
                                   size: 20,
                                 ),
-                                onPressed: () => _showUserFormDialog(
-                                  user: user,
-                                  userId: id,
-                                ),
+                                onPressed: () =>
+                                    _showUserFormDialog(user: user, userId: id),
                               ),
                               IconButton(
                                 icon: const Icon(
@@ -1867,10 +1861,9 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                                     : () async {
                                         final confirm =
                                             await _showConfirmDialog(
-                                          'Hapus pengguna $name?',
-                                        );
-                                        if (confirm == true &&
-                                            _token != null) {
+                                              'Hapus pengguna $name?',
+                                            );
+                                        if (confirm == true && _token != null) {
                                           try {
                                             await _adminService.deleteUser(
                                               _token!,
@@ -2211,7 +2204,22 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
   Widget _buildBottomNav() {
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 360;
-    final labelFontSize = isCompact ? 10.0 : 11.5;
+    final isTablet = screenWidth >= 600;
+    final navHeight = isCompact
+        ? 72.0
+        : isTablet
+        ? 80.0
+        : 76.0;
+    final labelFontSize = isCompact
+        ? 10.5
+        : isTablet
+        ? 11.5
+        : 12.0;
+    final iconSize = isCompact
+        ? 21.5
+        : isTablet
+        ? 24.0
+        : 23.0;
 
     final destinations = [
       const NavigationDestination(
@@ -2250,17 +2258,19 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
       top: false,
       child: NavigationBarTheme(
         data: NavigationBarThemeData(
-          backgroundColor: Colors.white,
+          backgroundColor: const Color(0xFFF8FBF9),
           surfaceTintColor: Colors.white,
-          indicatorColor: const Color(0xFF2A7F41).withValues(alpha: 0.16),
+          indicatorColor: const Color(0xFF2A7F41).withValues(alpha: 0.14),
           indicatorShape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
+          shadowColor: Colors.black.withValues(alpha: 0.06),
           labelTextStyle: WidgetStateProperty.resolveWith((states) {
             final isSelected = states.contains(WidgetState.selected);
             return TextStyle(
               fontSize: labelFontSize,
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+              height: 1.2,
               color: isSelected
                   ? const Color(0xFF2A7F41)
                   : const Color(0xFF64748B),
@@ -2270,20 +2280,31 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
           iconTheme: WidgetStateProperty.resolveWith((states) {
             final isSelected = states.contains(WidgetState.selected);
             return IconThemeData(
-              size: isCompact ? 22 : 24,
+              size: iconSize,
               color: isSelected
                   ? const Color(0xFF2A7F41)
                   : const Color(0xFF64748B),
             );
           }),
         ),
-        child: NavigationBar(
-          selectedIndex: _selectedIndex > 5 ? 0 : _selectedIndex,
-          onDestinationSelected: (index) =>
-              setState(() => _selectedIndex = index),
-          elevation: 8,
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: destinations,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact
+                ? 8
+                : isTablet
+                ? 16
+                : 20,
+            vertical: isCompact ? 6 : 8,
+          ),
+          child: NavigationBar(
+            selectedIndex: _selectedIndex > 5 ? 0 : _selectedIndex,
+            onDestinationSelected: (index) =>
+                setState(() => _selectedIndex = index),
+            height: navHeight,
+            elevation: 2,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            destinations: destinations,
+          ),
         ),
       ),
     );
@@ -2672,8 +2693,7 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                                 ),
                                 TextFormField(
                                   controller: phoneCtrl,
-                                  decoration:
-                                      fieldDecoration('Nomor Telepon'),
+                                  decoration: fieldDecoration('Nomor Telepon'),
                                   keyboardType: TextInputType.phone,
                                   validator: (v) => v == null || v.isEmpty
                                       ? 'Wajib diisi'
@@ -2713,8 +2733,9 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                               fields: [
                                 TextFormField(
                                   controller: storeNameCtrl,
-                                  decoration:
-                                      fieldDecoration('Nama BUMDes/Toko'),
+                                  decoration: fieldDecoration(
+                                    'Nama BUMDes/Toko',
+                                  ),
                                   validator: (v) => v == null || v.isEmpty
                                       ? 'Wajib diisi'
                                       : null,
@@ -2728,8 +2749,9 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                                 ),
                                 TextFormField(
                                   controller: storePhoneCtrl,
-                                  decoration:
-                                      fieldDecoration('Nomor Telepon Toko'),
+                                  decoration: fieldDecoration(
+                                    'Nomor Telepon Toko',
+                                  ),
                                   keyboardType: TextInputType.phone,
                                   validator: (v) => v == null || v.isEmpty
                                       ? 'Wajib diisi'
@@ -2743,38 +2765,34 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                                   maxLines: 2,
                                 ),
                                 Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Expanded(
                                       child: TextFormField(
                                         controller: villageCtrl,
-                                        decoration:
-                                            fieldDecoration('Desa'),
-                                        validator: (v) =>
-                                            v == null || v.isEmpty
-                                                ? 'Wajib'
-                                                : null,
+                                        decoration: fieldDecoration('Desa'),
+                                        validator: (v) => v == null || v.isEmpty
+                                            ? 'Wajib'
+                                            : null,
                                       ),
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: TextFormField(
                                         controller: districtCtrl,
-                                        decoration:
-                                            fieldDecoration('Kecamatan'),
-                                        validator: (v) =>
-                                            v == null || v.isEmpty
-                                                ? 'Wajib'
-                                                : null,
+                                        decoration: fieldDecoration(
+                                          'Kecamatan',
+                                        ),
+                                        validator: (v) => v == null || v.isEmpty
+                                            ? 'Wajib'
+                                            : null,
                                       ),
                                     ),
                                   ],
                                 ),
                                 TextFormField(
                                   controller: regencyCtrl,
-                                  decoration:
-                                      fieldDecoration('Kabupaten/Kota'),
+                                  decoration: fieldDecoration('Kabupaten/Kota'),
                                   validator: (v) => v == null || v.isEmpty
                                       ? 'Wajib diisi'
                                       : null,
@@ -2790,8 +2808,7 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                                 ),
                                 TextFormField(
                                   controller: bankNumberCtrl,
-                                  decoration:
-                                      fieldDecoration('No. Rekening'),
+                                  decoration: fieldDecoration('No. Rekening'),
                                   keyboardType: TextInputType.number,
                                 ),
                                 TextFormField(
@@ -2811,20 +2828,17 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: const BoxDecoration(
-                      border: Border(
-                        top: BorderSide(color: Color(0xFFE3E9E1)),
-                      ),
+                      border: Border(top: BorderSide(color: Color(0xFFE3E9E1))),
                     ),
                     child: Row(
                       children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed:
-                                isSaving ? null : () => Navigator.pop(ctx),
+                            onPressed: isSaving
+                                ? null
+                                : () => Navigator.pop(ctx),
                             style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 14,
-                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -2838,9 +2852,7 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: labelColor,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 14,
-                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -2870,27 +2882,26 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                                         if (passwordCtrl.text.isNotEmpty)
                                           'password': passwordCtrl.text,
                                         'role': 'Penjual',
-                                        'store_name':
-                                            storeNameCtrl.text.trim(),
-                                        'description':
-                                            storeDescCtrl.text.trim(),
-                                        'contact_phone':
-                                            storePhoneCtrl.text.trim(),
-                                        'store_address':
-                                            storeAddressCtrl.text.trim(),
+                                        'store_name': storeNameCtrl.text.trim(),
+                                        'description': storeDescCtrl.text
+                                            .trim(),
+                                        'contact_phone': storePhoneCtrl.text
+                                            .trim(),
+                                        'store_address': storeAddressCtrl.text
+                                            .trim(),
                                         'village': villageCtrl.text.trim(),
-                                        'district':
-                                            districtCtrl.text.trim(),
+                                        'district': districtCtrl.text.trim(),
                                         'regency': regencyCtrl.text.trim(),
                                         if (bankNameCtrl.text.isNotEmpty)
-                                          'bank_name':
-                                              bankNameCtrl.text.trim(),
+                                          'bank_name': bankNameCtrl.text.trim(),
                                         if (bankNumberCtrl.text.isNotEmpty)
-                                          'bank_account_number':
-                                              bankNumberCtrl.text.trim(),
+                                          'bank_account_number': bankNumberCtrl
+                                              .text
+                                              .trim(),
                                         if (bankHolderCtrl.text.isNotEmpty)
-                                          'bank_account_holder':
-                                              bankHolderCtrl.text.trim(),
+                                          'bank_account_holder': bankHolderCtrl
+                                              .text
+                                              .trim(),
                                       };
 
                                       if (isEditing &&
@@ -2910,8 +2921,9 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
 
                                       if (mounted) {
                                         Navigator.pop(ctx);
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           SnackBar(
                                             content: Text(
                                               isEditing
@@ -2927,8 +2939,7 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                                     } catch (e) {
                                       setDialogState(() => isSaving = false);
                                       if (mounted) {
-                                        ScaffoldMessenger.of(ctx)
-                                            .showSnackBar(
+                                        ScaffoldMessenger.of(ctx).showSnackBar(
                                           SnackBar(
                                             content: Text(
                                               'Gagal menyimpan pengguna: ${_cleanErrorMessage(e)}',
@@ -2950,8 +2961,7 @@ Widget _buildStoreCard(Map<String, dynamic> store) {
                                   )
                                 : Text(
                                     isEditing ? 'Simpan' : 'Daftarkan',
-                                    style:
-                                        const TextStyle(color: Colors.white),
+                                    style: const TextStyle(color: Colors.white),
                                   ),
                           ),
                         ),
