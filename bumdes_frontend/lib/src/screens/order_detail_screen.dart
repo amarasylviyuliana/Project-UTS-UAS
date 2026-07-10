@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/order_model.dart';
 import '../providers/auth_provider.dart';
 import '../services/order_service.dart';
+import '../widgets/courier_tracking_map.dart';
 import 'payment_gateway_screen.dart';
 import 'order_history_screen.dart';
 
@@ -545,6 +546,28 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
               ),
               const SizedBox(height: 18),
+
+              if (order.status.toLowerCase() == 'dikirim' ||
+                  order.status.toLowerCase() == 'estimasi sampai') ...[
+                _buildSectionTitle('Lokasi Kurir'),
+                const SizedBox(height: 12),
+                Builder(
+                  builder: (context) {
+                    final token = Provider.of<AuthProvider>(
+                      context,
+                      listen: false,
+                    ).token;
+                    if (token == null) {
+                      return const SizedBox.shrink();
+                    }
+                    return CourierTrackingMap(
+                      token: token,
+                      orderId: order.id,
+                    );
+                  },
+                ),
+                const SizedBox(height: 18),
+              ],
 
               if (order.paymentStatus != null)
                 Card(
