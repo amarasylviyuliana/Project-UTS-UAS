@@ -42,14 +42,9 @@ class ProductModel {
         json['imageUrl'] as String? ??
         '';
 
-    // Parse kategori (bisa berupa Map atau String)
+    // Parse kategori (bisa berupa Map, String, atau nilai lain dari backend)
     final rawCategory = json['category'];
-    final String categoryName;
-    if (rawCategory is Map) {
-      categoryName = rawCategory['name'] as String? ?? '';
-    } else {
-      categoryName = rawCategory as String? ?? '';
-    }
+    final String categoryName = normalizeCategoryName(rawCategory);
 
     // Parse storeName dari nested object atau flat field
     final storeObj = json['store'];
@@ -58,9 +53,7 @@ class ProductModel {
       storeName = storeObj['store_name'] as String? ?? '';
     } else {
       storeName =
-          json['store_name'] as String? ??
-          json['storeName'] as String? ??
-          '';
+          json['store_name'] as String? ?? json['storeName'] as String? ?? '';
     }
 
     // Parse lokasi dari nested store object
@@ -85,7 +78,8 @@ class ProductModel {
       rawStorePhotoUrl = storeObj['store_photo_url'] as String?;
     }
     rawStorePhotoUrl ??= json['store_photo_url'] as String?;
-    final storePhotoUrl = (rawStorePhotoUrl != null && rawStorePhotoUrl.isNotEmpty)
+    final storePhotoUrl =
+        (rawStorePhotoUrl != null && rawStorePhotoUrl.isNotEmpty)
         ? resolveImageUrlWithProxy(_resolveImageUrl(rawStorePhotoUrl))
         : null;
 
@@ -115,12 +109,28 @@ class ProductModel {
     );
   }
 
+  static String normalizeCategoryName(dynamic value) {
+    if (value == null) return '';
+    if (value is Map) {
+      final name =
+          value['name'] ?? value['category_name'] ?? value['slug'] ?? '';
+      return _normalizeCategoryText(name.toString());
+    }
+    return _normalizeCategoryText(value.toString());
+  }
+
+  static String _normalizeCategoryText(String value) {
+    final trimmed = value.trim();
+    return trimmed.replaceAll(RegExp(r'\s+'), ' ');
+  }
+
   /// Pastikan URL gambar selalu absolute dan bersih.
   static String _resolveImageUrl(String url) {
     if (url.isEmpty) return '';
     // Bersihkan escaped slash dari JSON (\/ -> /)
     final cleaned = url.replaceAll(r'\/', '/');
-    if (cleaned.startsWith('http://') || cleaned.startsWith('https://')) return cleaned;
+    if (cleaned.startsWith('http://') || cleaned.startsWith('https://'))
+      return cleaned;
     // Path relatif — tambahkan base URL backend
     if (cleaned.startsWith('/')) return '\$backendUrl\$cleaned';
     return '\$backendUrl/\$cleaned';

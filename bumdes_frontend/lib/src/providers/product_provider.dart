@@ -20,15 +20,37 @@ class ProductProvider extends ChangeNotifier {
   // FIX: kategori diambil dinamis dari data produk asli (sesuai tabel
   // `categories` di backend), bukan daftar hardcoded yang gampang basi
   // kalau admin menambah/mengubah kategori.
-  List<String> get categories {
-    final names =
-        _products
-            .map((p) => p.category.trim())
-            .where((c) => c.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
-    return ['Semua', ...names];
+  List<String> get categories => buildCategoryNames(_products);
+
+  static String normalizeCategoryName(String? value) {
+    if (value == null) return '';
+    final trimmed = value.trim();
+    return trimmed.replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  static List<String> buildCategoryNames(
+    List<ProductModel> products, [
+    List<String>? fallbackCategories,
+  ]) {
+    final names = <String>{};
+    for (final product in products) {
+      final normalized = normalizeCategoryName(product.category);
+      if (normalized.isNotEmpty) {
+        names.add(normalized);
+      }
+    }
+
+    if (fallbackCategories != null) {
+      for (final category in fallbackCategories) {
+        final normalized = normalizeCategoryName(category);
+        if (normalized.isNotEmpty) {
+          names.add(normalized);
+        }
+      }
+    }
+
+    final sorted = names.toList()..sort();
+    return ['Semua', ...sorted];
   }
 
   ProductProvider() {
@@ -69,9 +91,15 @@ class ProductProvider extends ChangeNotifier {
   void search(String query) {
     _lastQuery = query;
     final lower = query.toLowerCase();
+    final normalizedSelectedCategory = normalizeCategoryName(selectedCategory);
     List<ProductModel> base = List.of(_products);
-    if (selectedCategory != 'Semua') {
-      base = base.where((p) => p.category == selectedCategory).toList();
+    if (normalizedSelectedCategory != 'Semua' &&
+        normalizedSelectedCategory.isNotEmpty) {
+      base = base.where((p) {
+        final normalizedCategory = normalizeCategoryName(p.category);
+        return normalizedCategory.toLowerCase() ==
+            normalizedSelectedCategory.toLowerCase();
+      }).toList();
     }
     if (query.isEmpty) {
       _filtered = base;
@@ -86,7 +114,7 @@ class ProductProvider extends ChangeNotifier {
   }
 
   void filterByCategory(String category) {
-    selectedCategory = category;
+    selectedCategory = normalizeCategoryName(category);
     // reuse last query so selecting category doesn't clear user's search
     search(_lastQuery);
   }
