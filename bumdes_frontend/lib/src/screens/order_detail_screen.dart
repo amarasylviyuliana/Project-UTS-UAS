@@ -623,11 +623,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
 
               const SizedBox(height: 20),
-              // FIX: tombol "Bayar Sekarang" sekarang diberi
-              // foregroundColor: Colors.white secara eksplisit, supaya
-              // teksnya tidak lagi ikut warna hijau default dari theme
-              // (yang sebelumnya nyaris tak terlihat di atas background
-              // tombol yang juga hijau).
+              // Tombol "Bayar Sekarang" — foregroundColor: Colors.white
+              // diberikan eksplisit supaya teksnya tidak ikut warna hijau
+              // default dari theme (yang sebelumnya nyaris tak terlihat
+              // di atas background tombol yang juga hijau).
               if ((order.status.toLowerCase().contains('pembayaran') ||
                       order.status.toLowerCase().contains('pending')) &&
                   Provider.of<AuthProvider>(context, listen: false).user?.role != 'seller' &&
@@ -648,6 +647,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2A7F41),
                       foregroundColor: Colors.white,
+                      disabledBackgroundColor: const Color(0xFFBDBDBD),
+                      disabledForegroundColor: const Color(0xFF616161),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(18),
@@ -694,6 +695,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
               // Tombol Konfirmasi Penerimaan (pembeli) — terkunci selama
               // kurir belum benar-benar sampai (progress < 100%).
+              // FIX: sebelumnya tidak ada backgroundColor eksplisit, dan
+              // tidak ada warna khusus untuk state disabled, sehingga
+              // kontrasnya bisa jadi jelek tergantung theme default.
               if (order.status.toLowerCase() == 'dikirim' &&
                   Provider.of<AuthProvider>(context).user?.role != 'seller')
                 Column(
@@ -706,7 +710,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             ? null
                             : _confirmReceipt,
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2A7F41),
                           foregroundColor: Colors.white,
+                          disabledBackgroundColor: const Color(0xFFBDBDBD),
+                          disabledForegroundColor: const Color(0xFF616161),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
@@ -753,6 +760,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue,
                               foregroundColor: Colors.white,
+                              disabledBackgroundColor: const Color(0xFFBDBDBD),
+                              disabledForegroundColor: const Color(0xFF616161),
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18),
@@ -811,6 +820,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.indigo,
                               foregroundColor: Colors.white,
+                              disabledBackgroundColor: const Color(0xFFBDBDBD),
+                              disabledForegroundColor: const Color(0xFF616161),
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18),
@@ -835,6 +846,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
                     // Tombol Tandai Selesai (penjual) — terkunci selama
                     // kurir belum benar-benar sampai (progress < 100%).
+                    // FIX: warna disabled ditambahkan eksplisit supaya saat
+                    // aktif (100%) teksnya putih jelas di atas hijau, dan
+                    // saat masih terkunci warnanya tetap terbaca (abu tua
+                    // di atas abu muda), bukan abu pucat di atas abu pucat.
                     if (order.status.toLowerCase() == 'dikirim')
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -846,8 +861,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                   ? null
                                   : () => _updateOrderStatus('Selesai'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
+                                backgroundColor: const Color(0xFF2A7F41),
                                 foregroundColor: Colors.white,
+                                disabledBackgroundColor: const Color(0xFFBDBDBD),
+                                disabledForegroundColor: const Color(0xFF616161),
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(18),

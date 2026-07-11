@@ -319,11 +319,18 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // FIX: logo diberi padding vertikal & ukuran sedikit lebih kecil supaya
-  // tidak lagi terlihat "kepotong"/mepet ke tepi container krem di splash.
+  // FIX: sebelumnya Container ini tidak punya `width`, dan parent-nya
+  // (Column dengan crossAxisAlignment.start di layout HP/narrow) tidak
+  // pernah men-stretch child-nya secara horizontal. Akibatnya kotak krem
+  // logo menyusut mengikuti ukuran gambar di dalamnya dan menyisakan
+  // ruang kosong di kanan — persis yang digarisin di screenshot.
+  // Sekarang width: double.infinity dipaksa supaya kotak selalu selebar
+  // ruang yang tersedia (full-bleed sesuai padding luar), konsisten di
+  // HP maupun web/desktop.
   Widget _buildHeroIllustration() {
     return Container(
-      height: 300,
+      width: double.infinity,
+      height: 320,
       decoration: BoxDecoration(
         color: const Color(0xFFF5F0E8),
         borderRadius: BorderRadius.circular(28),
@@ -597,6 +604,13 @@ class _HomeTabState extends State<HomeTab> {
                       horizontal: horizontalPadding,
                     ),
                     child: Column(
+                      // FIX: crossAxisAlignment.start membuat child
+                      // (termasuk kotak logo) menyusut ke lebar isinya
+                      // sendiri alih-alih mengisi lebar penuh. Kotak logo
+                      // sekarang sudah punya width: double.infinity sendiri
+                      // sehingga tetap full-width walau alignment ini
+                      // tetap .start (dipakai supaya teks hero tetap rata
+                      // kiri seperti semula).
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildHeroText(),
