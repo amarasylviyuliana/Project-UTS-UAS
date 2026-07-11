@@ -38,6 +38,10 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   List<ProductModel> _sellerProducts = [];
   bool _sellerProductsLoaded = false;
   bool _loadingProducts = false;
+  // TAMBAHAN: simpan pesan error asli kalau _loadSellerProducts gagal, supaya
+  // tidak lagi terlihat sebagai "Belum ada produk" padahal sebenarnya request
+  // gagal (misal gagal ambil store_id, token invalid, dll).
+  String? _productsLoadError;
   List<OrderModel> _sellerOrders = [];
   bool _loadingOrders = false;
   FinancialReportModel? _financialReport;
@@ -100,11 +104,14 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     }
   }
 
-  Future<void> _loadSellerProducts() async {
+ Future<void> _loadSellerProducts() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (!auth.isAuthenticated || auth.token == null) return;
 
-    setState(() => _loadingProducts = true);
+    setState(() {
+      _loadingProducts = true;
+      _productsLoadError = null;
+    });
     try {
       final products = await _productService.fetchProductsByStore(auth.token!);
       if (mounted) {
@@ -120,6 +127,8 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
         setState(() {
           _loadingProducts = false;
           _sellerProductsLoaded = true;
+          // TAMBAHAN: simpan pesan error asli supaya bisa ditampilkan di UI.
+          _productsLoadError = e.toString();
         });
       }
     }
@@ -1077,26 +1086,56 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           child: _loadingProducts && !_sellerProductsLoaded
               ? const Center(child: CircularProgressIndicator())
               : filteredProducts.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.shopping_bag_outlined,
-                        size: 64,
-                        color: Colors.grey[300],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _sellerProducts.isEmpty
-                            ? 'Belum ada produk'
-                            : 'Tidak ada produk sesuai pencarian',
-                        style: const TextStyle(
-                          color: Colors.black45,
-                          fontSize: 16,
+             ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          // TAMBAHAN: ikon beda kalau ini error, bukan sekadar kosong
+                          _productsLoadError != null
+                              ? Icons.error_outline
+                              : Icons.shopping_bag_outlined,
+                          size: 64,
+                          color: _productsLoadError != null
+                              ? Colors.red[300]
+                              : Colors.grey[300],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        Text(
+                          _productsLoadError != null
+                              ? 'Gagal memuat produk'
+                              : (_sellerProducts.isEmpty
+                                  ? 'Belum ada produk'
+                                  : 'Tidak ada produk sesuai pencarian'),
+                          style: const TextStyle(
+                            color: Colors.black45,
+                            fontSize: 16,
+                          ),
+                        ),
+                        // TAMBAHAN: tampilkan pesan error asli + tombol coba lagi,
+                        // supaya kita tahu PERSIS kenapa produk tidak muncul,
+                        // bukan cuma dugaan "belum ada produk".
+                        if (_productsLoadError != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            _productsLoadError!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _loadSellerProducts,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Coba Lagi'),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 )
               : RefreshIndicator(
@@ -1124,7 +1163,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                           crossAxisCount: crossAxisCount,
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
-                          childAspectRatio: 0.62,
+                          childAspectRatio: 0.56,
                         ),
                         itemCount: filteredProducts.length,
                         itemBuilder: (context, index) {

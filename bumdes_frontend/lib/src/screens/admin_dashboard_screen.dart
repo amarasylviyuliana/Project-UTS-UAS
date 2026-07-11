@@ -799,11 +799,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // ── TAMBAHAN: helper avatar dari URL foto ────────────────────────────────
-  // Dipakai untuk avatar Pembeli, Penjual, dan Toko di dashboard Admin.
-  // Kalau [photoUrl] ada dan gambarnya berhasil dimuat, tampilkan foto asli
-  // (dibulatkan). Kalau tidak ada atau gagal dimuat, tampilkan [fallback]
-  // (inisial huruf atau icon generik) seperti sebelumnya.
+  // ── HELPER AVATAR DARI URL FOTO ────────────────────────────────────────────
+  // Dipakai untuk avatar Pembeli, Penjual, Toko, dan foto Produk di dashboard
+  // Admin. Kalau [photoUrl] ada dan gambarnya berhasil dimuat, tampilkan foto
+  // asli (dibulatkan). Kalau tidak ada atau gagal dimuat, tampilkan [fallback]
+  // (inisial huruf atau icon generik).
   Widget _buildAvatarFromUrl(
     String? photoUrl, {
     required Widget fallback,
@@ -840,12 +840,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _parseDouble(store['total_revenue'] ?? store['revenue']),
     );
     final storeId = store['id'] as int?;
-    // FIX: sebelumnya cuma baca store['store_photo_url'] yang biasanya
-    // belum diisi backend, jadi selalu jatuh ke ikon toko generik.
-    // Sekarang diutamakan foto pemilik toko (user['photo_url']) — ini
-    // yang sama dipakai di halaman Akun/Pengguna dan sudah terbukti ada
-    // datanya (mis. foto BUMDes Garut) — baru fallback ke store_photo_url
-    // kalau suatu saat backend punya foto toko sendiri yang terpisah.
+    // Kartu ini mewakili identitas TOKO (bukan produk), jadi tetap benar
+    // menampilkan foto profil pemilik toko sebagai identitas visualnya,
+    // dengan fallback ke store_photo_url kalau backend suatu saat punya
+    // foto toko yang terpisah dari foto profil pribadi penjual.
     final storePhotoUrl =
         (store['user']?['photo_url'] as String?) ??
         (store['store_photo_url'] as String?);
@@ -1139,17 +1137,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // TAMBAHAN: card produk untuk layar HP.
+  // FIX: sebelumnya avatar di sini pakai foto profil PEMILIK TOKO
+  // (store.user.photo_url), jadi semua produk dari toko yang sama tampil
+  // dengan foto yang sama persis (bug "foto produk kok sama semua").
+  // Sekarang pakai foto PRODUK itu sendiri (image_url, dikirim backend
+  // lewat mapProductForResponse -> resolvePhotoUrl), konsisten dengan
+  // fungsi tabel ini yaitu "Manajemen Produk", bukan manajemen toko.
   Widget _buildProductCardMobile(Map<String, dynamic> p) {
     final productId = p['id'] as int?;
     final name = p['name'] ?? '-';
     final storeName = p['store']?['store_name'] ?? '-';
-    // TAMBAHAN: foto profil penjual (pemilik toko) diambil dari
-    // store.user.photo_url yang sekarang ikut dikirim backend.
-  final sellerName = (p['store']?['user']?['name'] as String?) ?? storeName;
-    // FIX: sebelumnya pakai foto profil PEMILIK TOKO (sellerPhotoUrl) sebagai
-    // thumbnail produk, jadi semua produk dari toko yang sama tampil dengan
-    // foto yang sama. Sekarang pakai foto PRODUK itu sendiri (image_url,
-    // dikirim backend lewat mapProductForResponse -> resolvePhotoUrl).
     final productImageUrl = p['image_url'] as String?;
     final price = _formatRupiah(_parseDouble(p['price']));
     final status =
@@ -1161,7 +1158,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-         CircleAvatar(
+          CircleAvatar(
             radius: 20,
             backgroundColor: const Color(0xFFE8F5E9),
             child: _buildAvatarFromUrl(
@@ -1260,13 +1257,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // TAMBAHAN: baris tabel produk untuk layar lebar, sekarang dengan avatar
-  // foto profil penjual di samping nama produk.
+  // TAMBAHAN: baris tabel produk untuk layar lebar.
+  // FIX: sama seperti _buildProductCardMobile — sebelumnya avatar di sini
+  // pakai sellerPhotoUrl (foto profil pemilik toko), sekarang diseragamkan
+  // memakai foto PRODUK (image_url) supaya konsisten dengan versi mobile
+  // dan dengan fungsi tabel "Manajemen Produk" itu sendiri.
   Widget _buildProductRowDesktop(Map<String, dynamic> p) {
     final productId = p['id'] as int?;
     final storeName = p['store']?['store_name'] ?? '-';
-    final sellerName = (p['store']?['user']?['name'] as String?) ?? storeName;
-    final sellerPhotoUrl = p['store']?['user']?['photo_url'] as String?;
+    final productImageUrl = p['image_url'] as String?;
 
     return Padding(
       padding: const EdgeInsets.all(12),
@@ -1280,17 +1279,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   radius: 16,
                   backgroundColor: const Color(0xFFE8F5E9),
                   child: _buildAvatarFromUrl(
-                    sellerPhotoUrl,
+                    productImageUrl,
                     radius: 16,
-                    fallback: Text(
-                      sellerName.isNotEmpty
-                          ? sellerName[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF2A7F41),
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fallback: const Icon(
+                      Icons.shopping_bag_outlined,
+                      color: Color(0xFF2A7F41),
+                      size: 14,
                     ),
                   ),
                 ),

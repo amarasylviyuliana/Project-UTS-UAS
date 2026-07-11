@@ -623,6 +623,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
 
               const SizedBox(height: 20),
+              // FIX: tombol "Bayar Sekarang" sekarang diberi
+              // foregroundColor: Colors.white secara eksplisit, supaya
+              // teksnya tidak lagi ikut warna hijau default dari theme
+              // (yang sebelumnya nyaris tak terlihat di atas background
+              // tombol yang juga hijau).
               if ((order.status.toLowerCase().contains('pembayaran') ||
                       order.status.toLowerCase().contains('pending')) &&
                   Provider.of<AuthProvider>(context, listen: false).user?.role != 'seller' &&
@@ -642,6 +647,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2A7F41),
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(18),
@@ -649,7 +655,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     ),
                     child: const Text(
                       'Bayar Sekarang',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -696,6 +706,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             ? null
                             : _confirmReceipt,
                         style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
@@ -712,7 +723,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               )
                             : const Text(
                                 'Konfirmasi Penerimaan',
-                                style: TextStyle(fontSize: 16),
+                                style: TextStyle(fontSize: 16, color: Colors.white),
                               ),
                       ),
                     ),
@@ -741,6 +752,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                 : () => _updateOrderStatus('Dikonfirmasi'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18),
@@ -757,7 +769,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                   )
                                 : const Text(
                                     'Konfirmasi Pesanan',
-                                    style: TextStyle(fontSize: 16),
+                                    style: TextStyle(fontSize: 16, color: Colors.white),
                                   ),
                           ),
                         ),
@@ -798,6 +810,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                 : () => _updateOrderStatus('Dikirim'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.indigo,
+                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18),
@@ -814,7 +827,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                   )
                                 : const Text(
                                     'Kirim Pesanan',
-                                    style: TextStyle(fontSize: 16),
+                                    style: TextStyle(fontSize: 16, color: Colors.white),
                                   ),
                           ),
                         ),
@@ -834,6 +847,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                   : () => _updateOrderStatus('Selesai'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(18),
@@ -850,7 +864,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                     )
                                   : const Text(
                                       'Tandai Selesai',
-                                      style: TextStyle(fontSize: 16),
+                                      style: TextStyle(fontSize: 16, color: Colors.white),
                                     ),
                             ),
                           ),

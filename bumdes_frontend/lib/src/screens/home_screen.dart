@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/product_model.dart';
 import '../providers/product_provider.dart';
 import '../providers/auth_provider.dart';
@@ -263,6 +264,30 @@ class _HomeTabState extends State<HomeTab> {
     });
   }
 
+  // TAMBAHAN: buka aplikasi email default dengan alamat sudah terisi.
+  Future<void> _openEmail(String email) async {
+    final uri = Uri(scheme: 'mailto', path: email);
+    final launched = await launchUrl(uri);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tidak bisa membuka aplikasi email')),
+      );
+    }
+  }
+
+  // TAMBAHAN: buka Google Maps dengan query lokasi.
+  Future<void> _openMaps(String query) async {
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}',
+    );
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tidak bisa membuka peta')),
+      );
+    }
+  }
+
   Widget _buildHeroText() {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,6 +319,8 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
+  // FIX: logo diberi padding vertikal & ukuran sedikit lebih kecil supaya
+  // tidak lagi terlihat "kepotong"/mepet ke tepi container krem di splash.
   Widget _buildHeroIllustration() {
     return Container(
       height: 300,
@@ -312,10 +339,10 @@ class _HomeTabState extends State<HomeTab> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final imageSize = constraints.maxWidth < 360 ? 170.0 : 200.0;
+                final imageSize = constraints.maxWidth < 360 ? 150.0 : 180.0;
                 return Image.asset(
                   'assets/logo.jpeg',
                   height: imageSize,
@@ -514,7 +541,7 @@ class _HomeTabState extends State<HomeTab> {
             crossAxisCount: crossAxisCount,
             mainAxisSpacing: 14,
             crossAxisSpacing: 14,
-            childAspectRatio: 0.62,
+            childAspectRatio: 0.56,
           ),
           itemBuilder: (context, index) =>
               ProductCard(product: products[index]),
@@ -611,7 +638,7 @@ class _HomeTabState extends State<HomeTab> {
               )
             else
               SizedBox(
-                height: 320,
+                height: 350,
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   scrollDirection: Axis.horizontal,
@@ -746,21 +773,73 @@ class _HomeTabState extends State<HomeTab> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  // FIX: email & lokasi sekarang bisa diklik.
+                  // - Lokasi -> buka Google Maps.
+                  // - Email  -> buka aplikasi Mail dengan alamat terisi.
+                  // Dibungkus Wrap (bukan Row) supaya tidak overflow di
+                  // layar HP yang sempit, dan diberi garis bawah tipis
+                  // sebagai penanda visual bahwa teks ini bisa disentuh.
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    runSpacing: 8,
                     children: [
-                      Icon(Icons.location_on, color: Colors.white54, size: 16),
-                      SizedBox(width: 4),
-                      Text(
-                        'Jawa Barat, Indonesia',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      InkWell(
+                        onTap: () => _openMaps('Jawa Barat, Indonesia'),
+                        borderRadius: BorderRadius.circular(8),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 4,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.location_on,
+                                color: Colors.white70,
+                                size: 16,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Jawa Barat, Indonesia',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: Colors.white38,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      SizedBox(width: 16),
-                      Icon(Icons.email, color: Colors.white54, size: 16),
-                      SizedBox(width: 4),
-                      Text(
-                        'info@bumdesjabar.id',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      InkWell(
+                        onTap: () => _openEmail('bumdesjabar5@gmail.com'),
+                        borderRadius: BorderRadius.circular(8),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 4,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.email, color: Colors.white70, size: 16),
+                              SizedBox(width: 4),
+                              Text(
+                                'bumdesjabar5@gmail.com',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: Colors.white38,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -941,7 +1020,7 @@ class _SearchTabState extends State<SearchTab> {
                                 crossAxisCount: crossAxisCount,
                                 mainAxisSpacing: 14,
                                 crossAxisSpacing: 14,
-                                childAspectRatio: 0.62,
+                                childAspectRatio: 0.56,
                               ),
                           itemBuilder: (context, index) =>
                               ProductCard(product: provider.products[index]),

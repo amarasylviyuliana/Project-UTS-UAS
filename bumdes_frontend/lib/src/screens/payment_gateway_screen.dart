@@ -324,7 +324,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                     'Tekan "Bayar Sekarang" untuk membuka halaman pembayaran Midtrans. Anda dapat memilih berbagai metode pembayaran seperti transfer bank, e-wallet, dan lainnya.',
                     style: TextStyle(fontSize: 13, color: Colors.black87),
                   ),
-                ],
+                 ],
               ),
             ),
             const SizedBox(height: 24),
