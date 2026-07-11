@@ -43,16 +43,32 @@ class _FinancialReportDetailScreenState
 
     setState(() => _loading = true);
     try {
-      // Load orders
+      // Load orders (tetap dibutuhkan untuk tab Produk Terlaris & Analisis,
+      // yang memang dihitung dari daftar order, bukan dari laporan keuangan).
       final orders = await _orderService.getSellerOrders(auth.token!);
       setState(() => _orders = orders);
 
-      // Calculate report from orders
-      final report = _reportService.calculateFromOrders(
-        orders,
-        startDate: _startDate,
-        endDate: _endDate,
-      );
+      // FIX: Ringkasan keuangan (Pendapatan/Pengeluaran/Laba Bersih/Margin)
+      // sekarang diambil dari GET /reports/store — data ASLI dari
+      // wallet_transactions di backend (pengeluaran = admin fee 5% yang
+      // benar-benar tercatat, bukan tebakan 25% seperti sebelumnya).
+      // calculateFromOrders() hanya dipakai sebagai fallback kalau API
+      // gagal (mis. tidak ada koneksi), supaya layar tidak kosong.
+      FinancialReportModel report;
+      try {
+        report = await _reportService.getStoreReport(
+          token: auth.token!,
+          startDate: _startDate.toIso8601String(),
+          endDate: _endDate.toIso8601String(),
+        );
+      } catch (e) {
+        debugPrint('getStoreReport gagal, pakai kalkulasi lokal sebagai fallback: $e');
+        report = _reportService.calculateFromOrders(
+          orders,
+          startDate: _startDate,
+          endDate: _endDate,
+        );
+      }
 
       setState(() {
         _report = report;
@@ -236,7 +252,7 @@ class _FinancialReportDetailScreenState
               const SizedBox(width: 12),
               Expanded(
                 child: _buildMetricCard(
-                  'Pengeluaran',
+                  'Pengeluaran (Admin Fee)',
                   FormatHelper.formatCurrency(_report!.totalExpense),
                   Colors.red,
                   Icons.trending_down,
@@ -426,7 +442,7 @@ class _FinancialReportDetailScreenState
           const SizedBox(height: 16),
           _buildSummaryRow('Pendapatan Total', FormatHelper.formatCurrency(_report!.totalRevenue)),
           const SizedBox(height: 12),
-          _buildSummaryRow('Biaya Operasional', FormatHelper.formatCurrency(_report!.totalExpense)),
+          _buildSummaryRow('Biaya Admin (Platform Fee)', FormatHelper.formatCurrency(_report!.totalExpense)),
           const Divider(height: 20),
           _buildSummaryRow(
             'Laba Bersih',
