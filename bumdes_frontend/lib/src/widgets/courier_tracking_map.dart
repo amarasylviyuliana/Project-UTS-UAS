@@ -56,6 +56,22 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
   DateTime? _animStartedAt;
   late final Ticker _ticker;
 
+  // FIX (penyebab web freeze / tidak bisa diklik): Ticker sebelumnya
+  // memanggil setState() DAN _mapController.move() di SETIAP frame
+  // (~60x/detik) selama animasi berjalan. Karena durasi animasi sama
+  // dengan refreshInterval, animasi baru langsung menyambung begitu yang
+  // lama selesai — jadi update 60x/detik itu berjalan TERUS-MENERUS tanpa
+  // jeda selama halaman ini dibuka. Setiap update memaksa seluruh pohon
+  // widget peta (tile layer, polyline, semua marker) rebuild, dan
+  // memindah kamera peta 60x/detik itu berat di web. Akibatnya thread UI
+  // kewalahan sampai tidak sempat memproses tap/klik sama sekali.
+  //
+  // Fix: throttle jadi ~8 update/detik (masih terlihat halus, tapi beban
+  // kerja turun drastis). Frame terakhir animasi (t >= 1.0) tetap selalu
+  // diproses supaya posisi akhirnya presisi.
+  static const Duration _minTickInterval = Duration(milliseconds: 120);
+  DateTime? _lastAnimTickAt;
+
   @override
   void initState() {
     super.initState();
@@ -102,6 +118,7 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
         _animStart = _displayedCurrent;
         _animEnd = newCurrent;
         _animStartedAt = DateTime.now();
+        _lastAnimTickAt = null;
       } else {
         _displayedCurrent = newCurrent;
         _animStart = null;
@@ -119,9 +136,22 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
     if (_animStart == null || _animEnd == null || _animStartedAt == null) {
       return;
     }
-    final elapsed = DateTime.now().difference(_animStartedAt!);
+
+    final now = DateTime.now();
+    final elapsed = now.difference(_animStartedAt!);
     final t = (elapsed.inMilliseconds / widget.refreshInterval.inMilliseconds)
         .clamp(0.0, 1.0);
+    final isFinalFrame = t >= 1.0;
+
+    // Throttle: lewati frame ini kalau belum cukup waktu sejak update
+    // terakhir, KECUALI ini frame terakhir animasi (biar posisi akhir
+    // selalu presisi, tidak "kepotong" gara-gara throttle).
+    if (!isFinalFrame &&
+        _lastAnimTickAt != null &&
+        now.difference(_lastAnimTickAt!) < _minTickInterval) {
+      return;
+    }
+    _lastAnimTickAt = now;
 
     final lat = _animStart!.latitude +
         (_animEnd!.latitude - _animStart!.latitude) * t;
@@ -141,7 +171,7 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
       }
     }
 
-    if (t >= 1.0) {
+    if (isFinalFrame) {
       _animStart = null;
       _animEnd = null;
       _animStartedAt = null;

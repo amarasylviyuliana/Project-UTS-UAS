@@ -275,11 +275,33 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   // Dipanggil oleh CourierTrackingMap setiap kali data lokasi kurir
-  // ter-update (polling). Dipakai untuk menentukan apakah tombol
-  // "Tandai Selesai" / "Konfirmasi Penerimaan" sudah boleh ditekan.
+  // ter-update (polling, tiap ~8 detik). Dipakai untuk menentukan apakah
+  // tombol "Tandai Selesai" / "Konfirmasi Penerimaan" sudah boleh ditekan.
+  //
+  // FIX (optimasi lanjutan): sebelumnya setState() dipanggil di SETIAP
+  // update tracking (tiap 8 detik), padahal itu me-rebuild SELURUH
+  // OrderDetailScreen — daftar produk, info pengiriman, semua tombol —
+  // padahal yang benar-benar dibutuhkan halaman ini cuma tahu apakah
+  // status "kurir sudah sampai" berubah atau belum (progress 7% -> 15%
+  // -> 23% dst tidak perlu bikin seluruh halaman render ulang).
+  // Sekarang setState() cuma dipanggil kalau status itu benar-benar
+  // berpindah (dari belum sampai -> sudah sampai, atau sebaliknya).
   void _handleTrackingUpdate(OrderTrackingModel tracking) {
     if (!mounted) return;
-    setState(() => _tracking = tracking);
+
+    final wasComplete =
+        _tracking != null && (_tracking!.isCompleted || _tracking!.progress >= 1.0);
+    final isComplete = tracking.isCompleted || tracking.progress >= 1.0;
+
+    if (_tracking == null || wasComplete != isComplete) {
+      // Data pertama kali masuk, atau status delivery-complete berubah:
+      // perlu rebuild supaya tombol aksi enable/disable dengan benar.
+      setState(() => _tracking = tracking);
+    } else {
+      // Cuma progress/posisi yang berubah, status belum sampai/sudah
+      // sampai tetap sama -> update data tanpa memicu rebuild halaman.
+      _tracking = tracking;
+    }
   }
 
   /// True hanya jika kurir sudah benar-benar sampai (progress 100% atau
