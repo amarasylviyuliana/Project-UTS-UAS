@@ -411,10 +411,16 @@ class AdminController extends Controller
 
     /**
      * Get all products (admin)
+     *
+     * TAMBAHAN: sekarang eager-load 'store.user' dan menyertakan
+     * `store.user.name` + `store.user.photo_url` (foto profil PENJUAL
+     * pemilik toko, URL LENGKAP lewat formatPhotoUrl) di setiap produk.
+     * Sebelumnya field ini tidak dikirim sama sekali, jadi Manajemen
+     * Produk di Admin tidak pernah bisa menampilkan foto penjualnya.
      */
     public function getAllProducts(Request $request)
     {
-        $products = \App\Models\Product::with(['store', 'category', 'productApproval'])
+        $products = \App\Models\Product::with(['store.user', 'category', 'productApproval'])
             ->orderBy('created_at', 'desc')
             ->paginate(15)
             ->through(function ($product) {
@@ -429,6 +435,11 @@ class AdminController extends Controller
                     'store' => $product->store ? [
                         'id'         => $product->store->id,
                         'store_name' => $product->store->store_name,
+                        'user' => $product->store->user ? [
+                            'id'        => $product->store->user->id,
+                            'name'      => $product->store->user->name,
+                            'photo_url' => $this->formatPhotoUrl($product->store->user->photo_url),
+                        ] : null,
                     ] : null,
                     'category' => $product->category?->name,
                 ];

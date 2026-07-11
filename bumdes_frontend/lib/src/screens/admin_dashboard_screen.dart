@@ -625,7 +625,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildRecentActivity() {
-    final recentOrders = _orders.take(5).toList();
     if (_isLoadingOrders) {
       return const Center(
         child: Padding(
@@ -634,7 +633,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
       );
     }
-    if (recentOrders.isEmpty) {
+    if (_orders.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
@@ -663,18 +662,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ],
       ),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: recentOrders.length,
+      // FIX: sebelumnya cuma nampilin 5 pesanan teratas (take(5)) dan tidak
+      // bisa lihat sisanya. Sekarang pakai PaginatedListView (sama seperti
+      // tab lain) supaya SEMUA pesanan bisa dilihat lewat halaman-halaman.
+      child: PaginatedListView<Map<String, dynamic>>(
+        items: _orders,
+        pageSize: 5,
         separatorBuilder: (_, __) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final order = recentOrders[index];
-          // FIX: crossAxisAlignment.start + nomor pesanan dibatasi 1 baris
-          // (ellipsis). Sebelumnya Row tanpa batas baris membuat nomor
-          // pesanan yang panjang wrap ke 2-3 baris, dan karena Row
-          // default-nya center, badge status jadi kelihatan naik/tidak
-          // sejajar dengan teksnya.
+        itemBuilder: (context, order, index) {
+          // FIX: nomor pesanan (resi) SEKARANG TIDAK PERNAH KEPOTONG lagi.
+          // Sebelumnya pakai maxLines: 1 + overflow: ellipsis, jadi nomor
+          // pesanan yang panjang selalu jadi "Pesanan #ORD-2...". Sekarang
+          // teks dibiarkan wrap apa adanya (tanpa batas baris/ellipsis),
+          // dan badge status dipindah ke bawah sendiri (bukan sejajar di
+          // kanan) supaya tidak jadi sempit ketika nomor pesanannya panjang.
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -700,24 +701,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         '${order['recipient_name'] ?? order['user']?['name'] ?? 'Pembeli'} • ${_formatRupiah(_parseDouble(order['total'] ?? order['total_price']))}',
                         style: const TextStyle(
                           color: Colors.black54,
                           fontSize: 12,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _buildStatusChip(order['status'] ?? '-'),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                _buildStatusChip(order['status'] ?? '-'),
               ],
             ),
           );
@@ -1125,6 +1127,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final productId = p['id'] as int?;
     final name = p['name'] ?? '-';
     final storeName = p['store']?['store_name'] ?? '-';
+    // TAMBAHAN: foto profil penjual (pemilik toko) diambil dari
+    // store.user.photo_url yang sekarang ikut dikirim backend.
+    final sellerName = (p['store']?['user']?['name'] as String?) ?? storeName;
+    final sellerPhotoUrl = p['store']?['user']?['photo_url'] as String?;
     final price = _formatRupiah(_parseDouble(p['price']));
     final status =
         p['product_approval']?['status'] ??
@@ -1135,6 +1141,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: const Color(0xFFE8F5E9),
+            child: _buildAvatarFromUrl(
+              sellerPhotoUrl,
+              radius: 20,
+              fallback: Text(
+                sellerName.isNotEmpty ? sellerName[0].toUpperCase() : '?',
+                style: const TextStyle(
+                  color: Color(0xFF2A7F41),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1220,26 +1242,56 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // TAMBAHAN: baris tabel produk untuk layar lebar (logika sama seperti semula).
+  // TAMBAHAN: baris tabel produk untuk layar lebar, sekarang dengan avatar
+  // foto profil penjual di samping nama produk.
   Widget _buildProductRowDesktop(Map<String, dynamic> p) {
     final productId = p['id'] as int?;
+    final storeName = p['store']?['store_name'] ?? '-';
+    final sellerName = (p['store']?['user']?['name'] as String?) ?? storeName;
+    final sellerPhotoUrl = p['store']?['user']?['photo_url'] as String?;
+
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
           Expanded(
             flex: 3,
-            child: Text(
-              p['name'] ?? '-',
-              style: const TextStyle(fontWeight: FontWeight.w500),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: const Color(0xFFE8F5E9),
+                  child: _buildAvatarFromUrl(
+                    sellerPhotoUrl,
+                    radius: 16,
+                    fallback: Text(
+                      sellerName.isNotEmpty
+                          ? sellerName[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF2A7F41),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    p['name'] ?? '-',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
             flex: 2,
             child: Text(
-              p['store']?['store_name'] ?? '-',
+              storeName,
               style: const TextStyle(color: Colors.black54, fontSize: 13),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
