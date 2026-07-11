@@ -144,6 +144,49 @@ class BumdesApp extends StatelessWidget {
           }
           return null;
         },
+        // Global back-button handler: intercept system/browser/device
+        // back actions so they behave as expected:
+        // - If navigator can pop, pop to previous route.
+        // - If cannot pop and current route is a dashboard, go to Login.
+        // - Otherwise, allow default system/browser behavior (e.g., history back).
+        builder: (context, child) {
+          Future<bool> _onWillPop() async {
+            final nav = navigatorKey.currentState;
+            final ctx = navigatorKey.currentContext;
+            if (nav == null) return true; // fallback to system
+
+            // If there is a route to pop in our Navigator, pop it.
+            if (nav.canPop()) {
+              nav.pop();
+              return false; // we've handled the pop
+            }
+
+            // Determine current route name (if available)
+            final currentName = ctx != null
+                ? (ModalRoute.of(ctx)?.settings.name ?? '')
+                : '';
+
+            // If currently at any dashboard, redirect to Login instead of
+            // letting the system/back button navigate away from the app.
+            const dashboardRoutes = {
+              HomeScreen.routeName,
+              StoreDashboardScreen.routeName,
+              AdminDashboardScreen.routeName,
+            };
+            if (dashboardRoutes.contains(currentName)) {
+              nav.pushNamedAndRemoveUntil(LoginScreen.routeName, (r) => false);
+              return false;
+            }
+
+            // For other cases, allow the system/browser to handle back
+            return true;
+          }
+
+          return WillPopScope(
+            onWillPop: _onWillPop,
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
       ),
     );
   }

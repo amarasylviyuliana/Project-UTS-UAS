@@ -112,6 +112,15 @@ class _HomeScreenState extends State<HomeScreen> {
       canPop: false,
       onPopInvoked: (didPop) {
         if (didPop) return;
+
+        // If the user is on a secondary bottom tab (pencarian, keranjang,
+        // pesanan, profil), treat back press as "go to dashboard" by
+        // switching to the main tab (index 0).
+        if (_selectedIndex != 0) {
+          setState(() => _selectedIndex = 0);
+          return;
+        }
+
         final now = DateTime.now();
         final isSecondPress =
             _lastBackPressTime != null &&
@@ -1020,12 +1029,12 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
             ),
-            Expanded(
+            Flexible(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       product.name,

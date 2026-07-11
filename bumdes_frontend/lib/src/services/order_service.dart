@@ -170,8 +170,14 @@ class OrderService {
         message: 'Timeout memuat detail pesanan',
       );
     });
-    final orderData = response['data'] as Map<String, dynamic>;
-    return OrderModel.fromJson(Map<String, dynamic>.from(orderData));
+    final orderData = _extractOrderFromResponse(response);
+    if (orderData == null) {
+      throw ApiException(
+        statusCode: 500,
+        message: 'Respons detail pesanan tidak valid.',
+      );
+    }
+    return OrderModel.fromJson(orderData);
   }
 
 

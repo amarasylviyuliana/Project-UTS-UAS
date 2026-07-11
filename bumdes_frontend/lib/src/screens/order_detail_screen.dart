@@ -6,7 +6,6 @@ import '../providers/auth_provider.dart';
 import '../services/order_service.dart';
 import '../widgets/courier_tracking_map.dart';
 import 'payment_gateway_screen.dart';
-import 'order_history_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   static const routeName = '/order-detail';
@@ -235,17 +234,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     setState(() => _isPerformingAction = true);
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
+      final messenger = ScaffoldMessenger.of(context);
       final orderService = OrderService();
       await orderService.cancelOrder(auth.token!, _order!.id);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pesanan berhasil dibatalkan'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        await _refreshOrder();
-      }
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Pesanan berhasil dibatalkan'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      await _refreshOrder();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -299,7 +298,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         canPop: false,
         onPopInvoked: (didPop) async {
           if (didPop) return;
-          Navigator.pushReplacementNamed(context, OrderHistoryScreen.routeName);
+          // If possible, just pop to previous route. If not (opened
+          // as a standalone page), navigate back to Home's order tab.
+          final popped = await Navigator.maybePop(context);
+          if (!popped) {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
         },
         child: Scaffold(
           appBar: AppBar(
@@ -348,9 +352,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        Navigator.pushReplacementNamed(context, OrderHistoryScreen.routeName);
+        // Prefer to pop to the previous route so we don't create duplicate
+        // history entries. If there's nothing to pop (opened standalone),
+        // send user back to Home (orders tab).
+        final navigator = Navigator.of(context);
+        final popped = await navigator.maybePop();
+        if (!popped) {
+          navigator.pushReplacementNamed('/home');
+        }
       },
       child: Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),

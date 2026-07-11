@@ -247,6 +247,13 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
+        // If user is on a non-dashboard seller tab, treat back as "go to
+        // dashboard" by switching to index 0.
+        if (_selectedIndex != 0) {
+          setState(() => _selectedIndex = 0);
+          return;
+        }
+
         final popped = await Navigator.maybePop(context);
         if (!popped && mounted) {
           Navigator.pushNamedAndRemoveUntil(

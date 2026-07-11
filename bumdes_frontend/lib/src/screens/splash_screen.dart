@@ -109,7 +109,7 @@ class _SplashScreenState extends State<SplashScreen> {
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1B5E20))),
                 const SizedBox(height: 8),
-                const Text('Marketplace Produk & Jasa Desa',
+                const Text('Marketplace Produk & Jasa Antar BUMDes di Jawa Barat',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 16, color: Colors.black54)),
                 const SizedBox(height: 18),

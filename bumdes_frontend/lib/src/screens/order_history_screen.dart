@@ -68,6 +68,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     };
   }
 
+  // (intentionally no build here; the main build method below will be used)
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
