@@ -101,6 +101,16 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   Future<void> _pickImage() async {
     final picked = await _picker.pickImage(
       source: ImageSource.gallery,
+      // FIX: dibatasi lebar/tinggi maksimal + kualitas, sama seperti foto
+      // profil (lihat edit_profile_screen.dart). Sebelumnya pickImage
+      // dipanggil TANPA maxWidth/maxHeight, jadi foto langsung dari galeri
+      // HP (apalagi iPhone) bisa berukuran 5-10MB dan ditolak backend, yang
+      // membatasi ukuran foto produk maksimal 5120 KB (lihat validasi
+      // 'photo' => 'sometimes|image|mimes:jpeg,png,jpg|max:5120' di
+      // ProductController@store dan @update). Upload jadi gagal tanpa
+      // pesan yang jelas ke pengguna.
+      maxWidth: 1280,
+      maxHeight: 1280,
       imageQuality: 80,
     );
     if (picked == null || !mounted) return;

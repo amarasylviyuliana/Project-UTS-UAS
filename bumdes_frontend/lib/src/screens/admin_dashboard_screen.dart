@@ -1145,8 +1145,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final storeName = p['store']?['store_name'] ?? '-';
     // TAMBAHAN: foto profil penjual (pemilik toko) diambil dari
     // store.user.photo_url yang sekarang ikut dikirim backend.
-    final sellerName = (p['store']?['user']?['name'] as String?) ?? storeName;
-    final sellerPhotoUrl = p['store']?['user']?['photo_url'] as String?;
+  final sellerName = (p['store']?['user']?['name'] as String?) ?? storeName;
+    // FIX: sebelumnya pakai foto profil PEMILIK TOKO (sellerPhotoUrl) sebagai
+    // thumbnail produk, jadi semua produk dari toko yang sama tampil dengan
+    // foto yang sama. Sekarang pakai foto PRODUK itu sendiri (image_url,
+    // dikirim backend lewat mapProductForResponse -> resolvePhotoUrl).
+    final productImageUrl = p['image_url'] as String?;
     final price = _formatRupiah(_parseDouble(p['price']));
     final status =
         p['product_approval']?['status'] ??
@@ -1157,18 +1161,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
+         CircleAvatar(
             radius: 20,
             backgroundColor: const Color(0xFFE8F5E9),
             child: _buildAvatarFromUrl(
-              sellerPhotoUrl,
+              productImageUrl,
               radius: 20,
-              fallback: Text(
-                sellerName.isNotEmpty ? sellerName[0].toUpperCase() : '?',
-                style: const TextStyle(
-                  color: Color(0xFF2A7F41),
-                  fontWeight: FontWeight.bold,
-                ),
+              fallback: const Icon(
+                Icons.shopping_bag_outlined,
+                color: Color(0xFF2A7F41),
+                size: 18,
               ),
             ),
           ),
