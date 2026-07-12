@@ -46,31 +46,50 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
   Timer? _timer;
   bool _mapReady = false;
 
-  // Titik yang benar-benar ditampilkan di peta. Beda dengan
-  // `_tracking.current` (posisi mentah dari server), titik ini bergerak
-  // halus dari posisi lama ke posisi baru tiap kali data di-poll, alih-alih
-  // langsung loncat (teleport) ke posisi baru.
-  LatLng? _displayedCurrent;
+  // BUG UTAMA (web tidak bisa diklik sama sekali / freeze total):
+  //
+  // Versi sebelumnya menaruh posisi marker yang sedang dianimasikan
+  // (`_displayedCurrent`) di dalam state yang dipakai `setState()`, dan
+  // setiap tick animasi (throttled ~8x/detik, TAPI TERUS-MENERUS selama
+  // widget ini ada di layar) memanggil:
+  //   1. setState() -> me-rebuild SELURUH widget CourierTrackingMap,
+  //      termasuk TileLayer, PolylineLayer (rute penuh hasil OSRM, bisa
+  //      ratusan titik), dan semua Marker -- bukan cuma marker kurirnya.
+  //   2. _mapController.move() -> memindah kamera peta, yang memaksa
+  //      flutter_map menghitung ulang tile mana saja yang perlu
+  //      dimuat/digambar.
+  //
+  // Di Flutter Web, semuanya jalan di SATU thread yang sama dengan yang
+  // memproses event klik/tap. Kalau thread itu terus-menerus sibuk
+  // me-repaint tile peta + rute + kamera 8x/detik TANPA JEDA selama
+  // halaman ini dibuka, event klik di MANA PUN di halaman (bukan cuma di
+  // peta) jadi ikut tertahan di antrian dan terasa seperti "web-nya
+  // freeze, tidak bisa diklik apa-apa".
+  //
+  // FIX:
+  // - Posisi marker yang beranimasi sekarang disimpan di
+  //   `ValueNotifier<LatLng>` terpisah (`_displayedCurrentNotifier`),
+  //   BUKAN lewat setState() pada widget ini. Cuma bagian marker kurir
+  //   (dibungkus ValueListenableBuilder) yang rebuild tiap tick --
+  //   TileLayer, PolylineLayer, dan marker toko/tujuan TIDAK ikut
+  //   di-rebuild ataupun di-repaint.
+  // - Kamera peta TIDAK lagi dipindah otomatis di SETIAP tick animasi
+  //   (yang sebelumnya bisa puluhan/ratusan kali selama widget ini
+  //   dibuka). Kamera cukup disesuaikan sekali tiap kali data baru
+  //   selesai di-poll (tiap [refreshInterval]), bukan tiap frame animasi.
+  final ValueNotifier<LatLng?> _displayedCurrentNotifier = ValueNotifier(null);
   LatLng? _animStart;
   LatLng? _animEnd;
   DateTime? _animStartedAt;
   late final Ticker _ticker;
 
-  // FIX (penyebab web freeze / tidak bisa diklik): Ticker sebelumnya
-  // memanggil setState() DAN _mapController.move() di SETIAP frame
-  // (~60x/detik) selama animasi berjalan. Karena durasi animasi sama
-  // dengan refreshInterval, animasi baru langsung menyambung begitu yang
-  // lama selesai — jadi update 60x/detik itu berjalan TERUS-MENERUS tanpa
-  // jeda selama halaman ini dibuka. Setiap update memaksa seluruh pohon
-  // widget peta (tile layer, polyline, semua marker) rebuild, dan
-  // memindah kamera peta 60x/detik itu berat di web. Akibatnya thread UI
-  // kewalahan sampai tidak sempat memproses tap/klik sama sekali.
-  //
-  // Fix: throttle jadi ~8 update/detik (masih terlihat halus, tapi beban
-  // kerja turun drastis). Frame terakhir animasi (t >= 1.0) tetap selalu
-  // diproses supaya posisi akhirnya presisi.
+  // Throttle tambahan supaya animasi tetap halus dilihat mata (~8
+  // update/detik) tanpa membebani main thread. Frame terakhir animasi
+  // (t >= 1.0) tetap selalu diproses supaya posisi akhirnya presisi.
   static const Duration _minTickInterval = Duration(milliseconds: 120);
   DateTime? _lastAnimTickAt;
+
+  LatLng? get _displayedCurrent => _displayedCurrentNotifier.value;
 
   @override
   void initState() {
@@ -84,6 +103,7 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
   void dispose() {
     _timer?.cancel();
     _ticker.dispose();
+    _displayedCurrentNotifier.dispose();
     super.dispose();
   }
 
@@ -100,32 +120,46 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
     if (!mounted) return;
 
     final newCurrent = LatLng(data.current.lat, data.current.lng);
+    final wasFirstLoad = _displayedCurrent == null;
 
+    // `_tracking`/`_error` memang perlu setState karena mempengaruhi
+    // tampilan (label progress, ikon selesai, dll). Ini cuma terjadi
+    // sekali per [refreshInterval] (bukan per-frame), jadi jauh lebih
+    // ringan dibanding rebuild per-tick animasi yang lama.
     setState(() {
       _tracking = data;
       _error = null;
-
-      if (_displayedCurrent == null) {
-        // Load pertama kali: langsung tampilkan tanpa animasi.
-        _displayedCurrent = newCurrent;
-        _animStart = null;
-        _animEnd = null;
-        _animStartedAt = null;
-      } else if (!data.isCompleted) {
-        // Load berikutnya: animasikan dari posisi yang sedang ditampilkan
-        // menuju posisi baru, selama kurang lebih durasi refreshInterval,
-        // supaya gerakannya kelihatan halus/kontinu, bukan lompat instan.
-        _animStart = _displayedCurrent;
-        _animEnd = newCurrent;
-        _animStartedAt = DateTime.now();
-        _lastAnimTickAt = null;
-      } else {
-        _displayedCurrent = newCurrent;
-        _animStart = null;
-        _animEnd = null;
-        _animStartedAt = null;
-      }
     });
+
+    if (wasFirstLoad) {
+      // Load pertama kali: langsung tampilkan tanpa animasi.
+      _animStart = null;
+      _animEnd = null;
+      _animStartedAt = null;
+      _displayedCurrentNotifier.value = newCurrent;
+    } else if (!data.isCompleted) {
+      // Load berikutnya: animasikan dari posisi yang sedang ditampilkan
+      // menuju posisi baru, selama kurang lebih durasi refreshInterval,
+      // supaya gerakannya kelihatan halus/kontinu, bukan lompat instan.
+      _animStart = _displayedCurrent;
+      _animEnd = newCurrent;
+      _animStartedAt = DateTime.now();
+      _lastAnimTickAt = null;
+    } else {
+      _animStart = null;
+      _animEnd = null;
+      _animStartedAt = null;
+      _displayedCurrentNotifier.value = newCurrent;
+    }
+
+    // Sesuaikan kamera SEKALI per poll (bukan per-frame animasi).
+    if (_mapReady) {
+      try {
+        _mapController.move(newCurrent, _mapController.camera.zoom);
+      } catch (_) {
+        // Peta belum sepenuhnya siap; abaikan.
+      }
+    }
 
     // Beri tahu widget induk (mis. OrderDetailScreen) soal progress
     // terbaru, supaya ia bisa mengatur enable/disable tombol aksi.
@@ -157,19 +191,13 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
         (_animEnd!.latitude - _animStart!.latitude) * t;
     final lng = _animStart!.longitude +
         (_animEnd!.longitude - _animStart!.longitude) * t;
-    final interpolated = LatLng(lat, lng);
 
-    if (mounted) {
-      setState(() => _displayedCurrent = interpolated);
-    }
-
-    if (_mapReady) {
-      try {
-        _mapController.move(interpolated, _mapController.camera.zoom);
-      } catch (_) {
-        // Peta belum sepenuhnya siap; abaikan, akan menyusul tick berikutnya.
-      }
-    }
+    // Cuma update ValueNotifier -- TIDAK setState() pada widget ini, dan
+    // TIDAK memindah kamera peta di sini. Ini yang membuat tile layer,
+    // polyline, dan marker toko/tujuan tidak ikut rebuild/repaint tiap
+    // tick, sehingga main thread tidak tersumbat dan klik/tap di
+    // manapun di halaman tetap responsif.
+    _displayedCurrentNotifier.value = LatLng(lat, lng);
 
     if (isFinalFrame) {
       _animStart = null;
@@ -185,8 +213,8 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
     }
 
     final tracking = _tracking;
-    final displayedCurrent = _displayedCurrent;
-    if (tracking == null || displayedCurrent == null) {
+    final initialCenter = _displayedCurrent;
+    if (tracking == null || initialCenter == null) {
       return const SizedBox(
         height: 220,
         child: Center(child: CircularProgressIndicator()),
@@ -206,7 +234,7 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
             child: FlutterMap(
               mapController: _mapController,
               options: MapOptions(
-                initialCenter: displayedCurrent,
+                initialCenter: initialCenter,
                 initialZoom: 13,
                 onMapReady: () {
                   if (mounted) {
@@ -215,7 +243,7 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
                 },
               ),
               children: [
-                TileLayer(
+                const TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.bumdesjabar.app',
                 ),
@@ -247,15 +275,31 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
                       height: 34,
                       child: const Icon(Icons.home, color: Colors.redAccent, size: 30),
                     ),
-                    Marker(
-                      point: displayedCurrent,
-                      width: 40,
-                      height: 40,
-                      child: tracking.isCompleted
-                          ? const Icon(Icons.check_circle, color: Colors.green, size: 32)
-                          : const _PulsingCourierIcon(),
-                    ),
                   ],
+                ),
+                // Marker kurir dipisah ke MarkerLayer-nya sendiri dan
+                // dibungkus ValueListenableBuilder, supaya cuma LAPISAN
+                // INI yang rebuild tiap tick animasi (~8x/detik) -- bukan
+                // TileLayer/PolylineLayer/marker toko & tujuan di atas.
+                ValueListenableBuilder<LatLng?>(
+                  valueListenable: _displayedCurrentNotifier,
+                  builder: (context, displayedCurrent, _) {
+                    if (displayedCurrent == null) {
+                      return const SizedBox.shrink();
+                    }
+                    return MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: displayedCurrent,
+                          width: 40,
+                          height: 40,
+                          child: tracking.isCompleted
+                              ? const Icon(Icons.check_circle, color: Colors.green, size: 32)
+                              : const _PulsingCourierIcon(),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -274,7 +318,7 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
               child: Text(
                 tracking.isCompleted
                     ? 'Paket sudah sampai tujuan'
-                    : 'Kurir sedang dalam perjalanan (${(tracking.progress * 100).clamp(0, 100).toStringAsFixed(0)}%)',
+                    : 'Kurir sedang dalam perjalanan (${_displayProgressPercent(tracking.progress)}%)',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
@@ -283,6 +327,25 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
       ],
     );
   }
+}
+
+/// Menghitung persentase yang ditampilkan ke user untuk progress kurir
+/// yang BELUM selesai (`tracking.isCompleted == false`).
+///
+/// FIX BUG: sebelumnya teks ini pakai `toStringAsFixed(0)`, yang MEMBULATKAN
+/// (bukan membulatkan ke bawah). Akibatnya kalau progress asli mis. 0.996
+/// (99.6%), teks yang tampil jadi "100%" -- padahal `tracking.isCompleted`
+/// masih false (progress belum benar-benar >= 1.0), sehingga marker di peta
+/// masih di tengah rute dan tombol "Konfirmasi Penerimaan" masih terkunci.
+/// Ini yang bikin tampilan kelihatan "nyangkut"/bug: teks bilang 100% tapi
+/// semua hal lain berperilaku seperti belum sampai.
+///
+/// Fix: bulatkan ke BAWAH (floor), dan selama belum benar-benar
+/// `isCompleted`, cap tampilan di 99% supaya angka "100%" hanya pernah
+/// muncul lewat label "Paket sudah sampai tujuan", tidak pernah lewat sini.
+int _displayProgressPercent(double progress) {
+  final raw = (progress * 100).clamp(0, 100).floor();
+  return raw >= 100 ? 99 : raw;
 }
 
 class _PulsingCourierIcon extends StatefulWidget {
