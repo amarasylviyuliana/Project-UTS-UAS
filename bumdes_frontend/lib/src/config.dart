@@ -8,7 +8,7 @@ String get backendUrl {
   // Untuk Flutter Web, gunakan backend produksi jika API_URL tidak di-set.
   // Ini mencegah browser mencoba fetch ke localhost saat server lokal tidak aktif.
   if (kIsWeb) {
-    return 'https://project-uts-uas-production.up.railway.app';
+    return 'https://bumdes-api-production.up.railway.app';
   }
 
   // Ketika debug di device/mobile, gunakan backend lokal jika tersedia.
@@ -16,7 +16,7 @@ String get backendUrl {
     return 'http://127.0.0.1:8000';
   }
 
-  return 'https://project-uts-uas-production.up.railway.app';
+  return 'https://bumdes-api-production.up.railway.app';
 }
 
 const String apiPrefix = '/api';
