@@ -135,7 +135,7 @@ docker-compose.yml
     php artisan serve
     ```
 
-Server akan berjalan di `https://project-uts-uas-production.up.railway.app`
+Server akan berjalan di `https://bumdes-api-production.up.railway.app`
 
 ### Opsi 2: Jalankan dengan Docker Compose
 
@@ -150,7 +150,7 @@ Server akan berjalan di `https://project-uts-uas-production.up.railway.app`
    ```
 
 3. **Akses layanan**
-   - Backend API: https://project-uts-uas-production.up.railway.app
+   - Backend API: https://bumdes-api-production.up.railway.app
    - phpMyAdmin: http://localhost:8080
    - Database MySQL: localhost:3306
 
@@ -168,7 +168,7 @@ Server akan berjalan di `https://project-uts-uas-production.up.railway.app`
 
 ### Base URL
 ```
-https://project-uts-uas-production.up.railway.app/api
+https://bumdes-api-production.up.railway.app/api
 ```
 
 ### Authentication
@@ -181,7 +181,7 @@ Authorization: Bearer {token}
 
 **Register User**
 ```bash
-curl -X POST https://project-uts-uas-production.up.railway.app/api/auth/register \
+curl -X POST https://bumdes-api-production.up.railway.app/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "John Doe",
@@ -194,7 +194,7 @@ curl -X POST https://project-uts-uas-production.up.railway.app/api/auth/register
 
 **Login**
 ```bash
-curl -X POST https://project-uts-uas-production.up.railway.app/api/auth/login \
+curl -X POST https://bumdes-api-production.up.railway.app/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "john@example.com",
@@ -207,7 +207,7 @@ Response akan berisi token yang digunakan untuk permintaan berikutnya.
 ### Example: Search Products
 
 ```bash
-curl -X GET "hhttps://project-uts-uas-production.up.railway.app/api/products/search?q=padi&category_id=1" \
+curl -X GET "https://bumdes-api-production.up.railway.app/api/products/search?q=padi&category_id=1" \
   -H "Accept: application/json"
 ```
 
@@ -300,7 +300,7 @@ Files are stored in `storage/app/public/` and served via `{APP_URL}/storage/{pat
 APP_NAME=BUMDes Jabar
 APP_ENV=local
 APP_DEBUG=true
-APP_URL=https://project-uts-uas-production.up.railway.app
+APP_URL=https://bumdes-api-production.up.railway.app
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -364,7 +364,7 @@ FILESYSTEM_DISK=public
 
 ### Using cURL
 ```bash
-curl -X GET https://project-uts-uas-production.up.railway.app/api/categories \
+curl -X GET https://bumdes-api-production.up.railway.app/api/categories \
   -H "Authorization: Bearer {token}" \
   -H "Accept: application/json"
 ```

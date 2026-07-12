@@ -27,9 +27,9 @@ class AdminController extends Controller
             return null;
         }
 
-        $baseUrl = rtrim(env('APP_URL', 'https://project-uts-uas-production.up.railway.app'), '/');
+        $baseUrl = rtrim(env('APP_URL', 'https://bumdes-api-production.up.railway.app'), '/');
         if (str_contains($baseUrl, 'localhost') || str_contains($baseUrl, '127.0.0.1')) {
-            $baseUrl = 'https://project-uts-uas-production.up.railway.app';
+            $baseUrl = 'https://bumdes-api-production.up.railway.app';
         }
 
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {

@@ -58,18 +58,18 @@ class Product extends Model
 
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             if (preg_match('#/storage/(.+)$#', $path, $m)) {
-                $baseUrl = rtrim(env('APP_URL', 'https://project-uts-uas-production.up.railway.app'), '/');
+                $baseUrl = rtrim(env('APP_URL', 'https://bumdes-api-production.up.railway.app'), '/');
                 if (str_contains($baseUrl, 'localhost') || str_contains($baseUrl, '127.0.0.1')) {
-                    $baseUrl = 'https://project-uts-uas-production.up.railway.app';
+                    $baseUrl = 'https://bumdes-api-production.up.railway.app';
                 }
                 return $baseUrl . '/api/image/' . $m[1];
             }
             return $path;
         }
 
-        $baseUrl = rtrim(env('APP_URL', 'https://project-uts-uas-production.up.railway.app'), '/');
+        $baseUrl = rtrim(env('APP_URL', 'https://bumdes-api-production.up.railway.app'), '/');
         if (str_contains($baseUrl, 'localhost') || str_contains($baseUrl, '127.0.0.1')) {
-            $baseUrl = 'https://project-uts-uas-production.up.railway.app';
+            $baseUrl = 'https://bumdes-api-production.up.railway.app';
         }
         $cleanPath = preg_replace('#^/?storage/#', '', $path);
         return $baseUrl . '/api/image/' . ltrim($cleanPath, '/');

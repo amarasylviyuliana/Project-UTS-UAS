@@ -117,7 +117,7 @@ static const Duration orderSyncMaxJitter = Duration(seconds: 5);
 class AppConfig {
   // API Configuration
   static String get apiBaseUrl {
-    if (isProduction) return 'https://project-uts-uas-production.up.railway.app/api';
+    if (isProduction) return 'https://bumdes-api-production.up.railway.app/api';
     return 'http://localhost:8000/api';
   }
 

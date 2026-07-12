@@ -92,21 +92,42 @@ class ReportController extends Controller
             'estimated_revenue' => $orders->whereIn('status', ['Dikonfirmasi', 'Diproses', 'Dikirim', 'Selesai'])->sum('total_price'),
         ];
 
-        // Get monthly breakdown
+        // FIX: sebelumnya baris ini memanggil $order->completed_at->format('Y-m')
+        // TANPA null-check. Kalau ADA SATU SAJA order berstatus 'Selesai' yang
+        // completed_at-nya null (data lama / status diubah manual / bug lain
+        // yang lupa set timestamp), baris ini FATAL ERROR dan membuat SELURUH
+        // endpoint /reports/store gagal dengan HTTP 500.
+        //
+        // Efeknya ke Flutter: getStoreReport() melempar exception, lalu SEMUA
+        // layar yang memanggilnya diam-diam fallback ke calculateFromOrders()
+        // (kalkulasi lokal dengan pengeluaran ditaksir 25%, bukan admin fee
+        // asli). Karena fallback ini terjadi tanpa pemberitahuan ke user, hasil
+        // laporan yang tampil bisa berganti-ganti antara "data asli backend"
+        // dan "data taksiran lokal" tergantung ada-tidaknya satu order
+        // bermasalah di periode yang dipilih — inilah salah satu penyebab
+        // laporan terasa "gak selaras" antar sesi/refresh.
+        //
+        // Sekarang: kalau completed_at null, fallback ke created_at supaya
+        // order itu tetap masuk grouping bulanan (bukan bikin seluruh request
+        // gagal), dan endpoint ini SELALU berhasil selama query dasarnya
+        // valid — sehingga Flutter tidak perlu jatuh ke fallback lokal kecuali
+        // benar-benar tidak ada koneksi.
         $monthlyRevenue = $orders
             ->where('status', 'Selesai')
             ->groupBy(function ($order) {
-                return $order->completed_at->format('Y-m');
+                $date = $order->completed_at ?? $order->created_at;
+                return $date->format('Y-m');
             })
             ->map(function ($group) {
+                $firstDate = $group->first()->completed_at ?? $group->first()->created_at;
                 return [
-                    'month' => $group->first()->completed_at->format('Y-m'),
+                    'month' => $firstDate->format('Y-m'),
                     'revenue' => $group->sum('total_price'),
                     'orders' => $group->count(),
                 ];
             });
 
-        // FIX: hitung biaya admin/pajak dari data ASLI di wallet_transactions
+        // Hitung biaya admin/pajak dari data ASLI di wallet_transactions
         // (bukan tebakan 25% seperti sebelumnya di frontend).
         $completedOrderIds = $orders->where('status', 'Selesai')->pluck('id');
         $totalExpense = (float) \App\Models\WalletTransaction::whereNull('store_id')
@@ -116,13 +137,18 @@ class ReportController extends Controller
         $totalRevenue = (float) $summary['total_revenue'];
         $netProfit = $totalRevenue - $totalExpense;
 
+        // FIX: sama seperti di atas, 'date' di sini pakai completed_at yang
+        // sudah dilindungi optional(), tapi supaya konsisten dan tetap
+        // menampilkan tanggal yang masuk akal walau completed_at null,
+        // fallback juga ke created_at (bukan string kosong).
         $transactions = $orders->where('status', 'Selesai')->map(function ($order) {
+            $date = $order->completed_at ?? $order->created_at;
             return [
                 'id' => $order->id,
                 'type' => 'income',
                 'description' => "Penjualan - {$order->order_number}",
                 'amount' => (float) $order->total_price,
-                'date' => optional($order->completed_at)->toIso8601String(),
+                'date' => optional($date)->toIso8601String(),
                 'category' => 'Penjualan',
                 'order_id' => (string) $order->id,
             ];
@@ -134,10 +160,7 @@ class ReportController extends Controller
             'summary' => $summary,
             'monthly_breakdown' => $monthlyRevenue->values(),
             'recent_orders' => $orders->take(10)->load('buyer', 'orderItems'),
-            // FIX: struktur "data" ini yang dibaca FinancialReportModel di
-            // frontend — sebelumnya tidak pernah dikirim, jadi frontend
-            // SELALU jatuh ke perhitungan dummy (pengeluaran = 25% asal
-            // tebak). Sekarang angkanya asli dari wallet_transactions.
+            // Struktur "data" ini yang dibaca FinancialReportModel di frontend.
             'data' => [
                 'total_revenue' => $totalRevenue,
                 'total_expense' => $totalExpense,
