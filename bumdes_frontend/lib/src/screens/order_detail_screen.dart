@@ -605,8 +605,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
               const SizedBox(height: 18),
 
-              if (order.status.toLowerCase() == 'dikirim' ||
-                  order.status.toLowerCase() == 'estimasi sampai') ...[
+              if (false) ...[   // <-- sementara, buat tes 
                 _buildSectionTitle('Lokasi Kurir'),
                 const SizedBox(height: 12),
                 Builder(

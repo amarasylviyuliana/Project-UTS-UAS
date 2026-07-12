@@ -108,11 +108,24 @@ class ReportService {
     );
   }
 
-  /// Data penjualan per bulan
+  /// Data penjualan per bulan.
+  //
+  // FIX: Sebelumnya method ini menjumlahkan SEMUA order (apapun statusnya:
+  // Menunggu Pembayaran, Diproses, Dikirim, Dibatalkan, dll) yang dibuat
+  // pada bulan tersebut. Akibatnya angka "Tren Penjualan" (mis. "10 order,
+  // Rp 2.305.000") tidak pernah cocok dengan angka Pendapatan resmi di
+  // kartu Laporan (yang hanya menghitung order berstatus 'Selesai', sama
+  // seperti WalletService::creditFromCompletedOrder di backend).
+  //
+  // Sekarang method ini HANYA menghitung order yang statusnya 'Selesai',
+  // supaya "order" dan "Rp" pada grafik konsisten dengan Pendapatan /
+  // Pesanan Selesai di kartu-kartu lain pada layar yang sama.
   List<MonthlySalesModel> getMonthlySalesData(List<OrderModel> orders) {
     final Map<String, MonthlySalesModel> monthlyData = {};
 
-    for (final order in orders) {
+    final completedOrders = orders.where((o) => o.status == 'Selesai');
+
+    for (final order in completedOrders) {
       final date = order.createdAt;
       final monthKey = '${date.year}-${date.month.toString().padLeft(2, '0')}';
 
@@ -144,11 +157,23 @@ class ReportService {
     return '${months[date.month]} ${date.year}';
   }
 
-  /// Produk terlaris dari daftar pesanan
+  /// Produk terlaris dari daftar pesanan.
+  //
+  // FIX: Sebelumnya method ini menghitung item dari SEMUA order (apapun
+  // statusnya), sehingga produk dari order yang belum lunas/masih
+  // diproses/bahkan sudah dibatalkan tetap dihitung sebagai "terjual".
+  // Itu sebabnya total nilai produk terlaris (2.000.000 + 180.000 +
+  // 125.000 = 2.305.000) persis sama dengan total SEMUA order (termasuk
+  // yang belum Selesai), bukan dengan Pendapatan resmi (280.000).
+  //
+  // Sekarang hanya order berstatus 'Selesai' yang dihitung, supaya
+  // "Produk Terlaris" konsisten dengan Pendapatan dan Tren Penjualan.
   Map<String, dynamic> getTopProducts(List<OrderModel> orders) {
     final productSales = <String, Map<String, dynamic>>{};
 
-    for (final order in orders) {
+    final completedOrders = orders.where((o) => o.status == 'Selesai');
+
+    for (final order in completedOrders) {
       for (final item in order.items) {
         final productName = item.product.name;
         if (productSales.containsKey(productName)) {

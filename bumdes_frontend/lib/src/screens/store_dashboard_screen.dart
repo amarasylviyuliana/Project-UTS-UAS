@@ -2162,7 +2162,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       'Pertanian & Perkebunan',
       'Kerajinan Tangan',
       'Jasa Lokal',
-    ];
+    ]; 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(

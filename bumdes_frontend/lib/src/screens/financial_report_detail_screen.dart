@@ -37,6 +37,24 @@ class _FinancialReportDetailScreenState
     _loadReportData();
   }
 
+  // FIX: _orders berisi SEMUA order milik toko sepanjang masa (hasil
+  // OrderService.getSellerOrders), tidak otomatis terfilter ke periode
+  // yang dipilih di "Periode Laporan". Sebelumnya tab Produk Terlaris dan
+  // Analisis (Penjualan Bulanan, Status Pembayaran) langsung memakai
+  // _orders mentah ini, sehingga datanya tidak pernah sesuai dengan
+  // rentang tanggal yang ditampilkan/dipilih user.
+  //
+  // Getter ini memfilter _orders ke rentang [_startDate, _endDate] saja
+  // (pakai logika yang sama seperti ReportService.calculateFromOrders),
+  // supaya semua tab konsisten dengan Periode Laporan yang aktif.
+  List<OrderModel> get _ordersInPeriod {
+    return _orders.where((order) {
+      final orderDate = order.createdAt;
+      return !orderDate.isBefore(_startDate) &&
+          !orderDate.isAfter(_endDate.add(const Duration(days: 1)));
+    }).toList();
+  }
+
   Future<void> _loadReportData() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (!auth.isAuthenticated || auth.token == null) return;
@@ -574,7 +592,7 @@ class _FinancialReportDetailScreenState
   }
 
   Widget _buildProductsTab() {
-    final topProducts = _reportService.getTopProducts(_orders);
+    final topProducts = _reportService.getTopProducts(_ordersInPeriod);
     final products = (topProducts['products'] as Map<String, dynamic>);
 
     if (products.isEmpty) {
@@ -678,9 +696,10 @@ class _FinancialReportDetailScreenState
   Widget _buildInsightsTab() {
     if (_report == null) return const SizedBox.shrink();
 
-    final monthlySales = _reportService.getMonthlySalesData(_orders);
+    final ordersInPeriod = _ordersInPeriod;
+    final monthlySales = _reportService.getMonthlySalesData(ordersInPeriod);
     final paymentStatus =
-        _reportService.getPaymentStatusDistribution(_orders);
+        _reportService.getPaymentStatusDistribution(ordersInPeriod);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -692,7 +711,10 @@ class _FinancialReportDetailScreenState
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          ...paymentStatus.entries.map((entry) {
+          if (paymentStatus.isEmpty)
+            const Text('Belum ada data pembayaran pada periode ini')
+          else
+            ...paymentStatus.entries.map((entry) {
             final total = paymentStatus.values.fold(0, (a, b) => a + b);
             final percentage =
                 total > 0 ? (entry.value / total * 100).toStringAsFixed(1) : '0';
