@@ -605,7 +605,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
               const SizedBox(height: 18),
 
-              if (false) ...[   // <-- sementara, buat tes 
+              // FIX: sebelumnya kondisi ini di-hardcode jadi `if (false)`
+              // (kemungkinan sisa dari testing manual), yang bikin section
+              // "Lokasi Kurir" TIDAK PERNAH muncul apapun status
+              // pesanannya. Dikembalikan ke kondisi yang benar: peta
+              // hanya tampil kalau status pesanan "Dikirim" atau
+              // "Estimasi Sampai".
+              if (order.status.toLowerCase() == 'dikirim' ||
+                  order.status.toLowerCase() == 'estimasi sampai') ...[
                 _buildSectionTitle('Lokasi Kurir'),
                 const SizedBox(height: 12),
                 Builder(

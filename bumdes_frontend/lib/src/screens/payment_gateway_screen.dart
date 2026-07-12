@@ -26,6 +26,16 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
     _initializeMidtrans();
   }
 
+  // FIX: lepas script Midtrans (snap.js) saat pengguna meninggalkan
+  // halaman ini, supaya tidak terus aktif di background selama pengguna
+  // menjelajah halaman lain di app (itu yang sebelumnya menyebabkan web
+  // freeze/tidak bisa diklik).
+  @override
+  void dispose() {
+    MidtransService.teardownWeb();
+    super.dispose();
+  }
+
   Future<void> _initializeMidtrans() async {
     final initialized = await MidtransService.initialize();
     if (!initialized && mounted) {
