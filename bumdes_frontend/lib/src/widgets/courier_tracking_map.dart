@@ -243,7 +243,7 @@ class _CourierTrackingMapState extends State<CourierTrackingMap>
                 },
               ),
               children: [
-                const TileLayer(
+                TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.bumdesjabar.app',
                 ),
