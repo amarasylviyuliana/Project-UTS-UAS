@@ -54,14 +54,42 @@ class MidtransService {
     );
   }
 
-  /// Lepas script Midtrans dari halaman. Panggil ini saat meninggalkan
-  /// halaman pembayaran (mis. di dispose()), supaya snap.js tidak terus
-  /// aktif di background selama pengguna menjelajah halaman lain.
+  /// Lepas script Midtrans dari halaman. Panggil ini setiap kali alur
+  /// pembayaran selesai (sukses/pending/gagal/dibatalkan) ATAU saat
+  /// meninggalkan halaman pembayaran (dispose()), supaya snap.js tidak
+  /// terus aktif di background selama pengguna menjelajah halaman lain.
+  ///
+  /// FIX (penyebab web freeze / tidak bisa diklik & scroll SAMA SEKALI di
+  /// halaman manapun, termasuk Detail Pesanan): menghapus <script>
+  /// snap.js saja TIDAK cukup. Saat window.snap.pay() dipanggil, snap.js
+  /// menyuntikkan elemen overlay/iframe pembayarannya sendiri ke DOM
+  /// (mis. <div id="snap-midtrans"> berisi iframe, posisinya fixed
+  /// menutupi SELURUH layar). Elemen ini transparan/tidak kelihatan tapi
+  /// tetap menangkap semua event klik & scroll di atas seluruh app.
+  /// Kalau pengguna berhasil bayar lalu berpindah halaman via
+  /// `Navigator.pushNamed` (bukan pop/replace), `PaymentGatewayScreen`
+  /// tidak pernah di-dispose, sehingga overlay ini tidak pernah
+  /// dibersihkan dan menempel selamanya sampai browser di-hard-refresh.
+  /// Sekarang kita hapus juga semua elemen sisa Snap tersebut secara
+  /// eksplisit lewat query selector, bukan cuma tag <script>-nya.
   static void teardownWeb() {
     if (!kIsWeb) return;
     try {
-      final existing = html.document.getElementById('midtrans-snap-script');
-      existing?.remove();
+      html.document.getElementById('midtrans-snap-script')?.remove();
+
+      const overlaySelectors = [
+        '[id^="snap-midtrans"]',
+        '[class*="snap-midtrans"]',
+        '[id*="snap-container"]',
+        'iframe[src*="midtrans"]',
+        'iframe[src*="veritrans"]',
+      ];
+      for (final selector in overlaySelectors) {
+        final nodes = html.document.querySelectorAll(selector);
+        for (final node in List<html.Element>.from(nodes)) {
+          node.remove();
+        }
+      }
     } catch (_) {}
   }
 

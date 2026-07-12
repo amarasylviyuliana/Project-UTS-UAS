@@ -37,16 +37,12 @@ class _FinancialReportDetailScreenState
     _loadReportData();
   }
 
-  // FIX: _orders berisi SEMUA order milik toko sepanjang masa (hasil
-  // OrderService.getSellerOrders), tidak otomatis terfilter ke periode
-  // yang dipilih di "Periode Laporan". Sebelumnya tab Produk Terlaris dan
-  // Analisis (Penjualan Bulanan, Status Pembayaran) langsung memakai
-  // _orders mentah ini, sehingga datanya tidak pernah sesuai dengan
-  // rentang tanggal yang ditampilkan/dipilih user.
-  //
-  // Getter ini memfilter _orders ke rentang [_startDate, _endDate] saja
-  // (pakai logika yang sama seperti ReportService.calculateFromOrders),
-  // supaya semua tab konsisten dengan Periode Laporan yang aktif.
+  // _orders berisi SEMUA order milik toko sepanjang masa. Getter ini
+  // memfilter ke rentang [_startDate, _endDate] saja (pakai batas yang
+  // SAMA PERSIS dengan ReportService.calculateFromOrders: inklusif sampai
+  // endDate + 1 hari), supaya tab Produk Terlaris & Analisis konsisten
+  // dengan Periode Laporan yang aktif dan dengan tab Ringkasan saat
+  // fallback lokal dipakai.
   List<OrderModel> get _ordersInPeriod {
     return _orders.where((order) {
       final orderDate = order.createdAt;
@@ -61,17 +57,14 @@ class _FinancialReportDetailScreenState
 
     setState(() => _loading = true);
     try {
-      // Load orders (tetap dibutuhkan untuk tab Produk Terlaris & Analisis,
-      // yang memang dihitung dari daftar order, bukan dari laporan keuangan).
       final orders = await _orderService.getSellerOrders(auth.token!);
       setState(() => _orders = orders);
 
-      // FIX: Ringkasan keuangan (Pendapatan/Pengeluaran/Laba Bersih/Margin)
-      // sekarang diambil dari GET /reports/store — data ASLI dari
-      // wallet_transactions di backend (pengeluaran = admin fee 5% yang
-      // benar-benar tercatat, bukan tebakan 25% seperti sebelumnya).
-      // calculateFromOrders() hanya dipakai sebagai fallback kalau API
-      // gagal (mis. tidak ada koneksi), supaya layar tidak kosong.
+      // Ringkasan keuangan (Pendapatan/Pengeluaran/Laba Bersih/Margin)
+      // diambil dari GET /reports/store (data resmi dari backend).
+      // calculateFromOrders() hanya fallback kalau API gagal, dan
+      // definisinya SAMA (hanya order 'Selesai') dengan yang dipakai di
+      // tab Produk Terlaris & Analisis — lihat ReportService.
       FinancialReportModel report;
       try {
         report = await _reportService.getStoreReport(
@@ -251,6 +244,24 @@ class _FinancialReportDetailScreenState
   Widget _buildOverviewTab() {
     if (_report == null) return const SizedBox.shrink();
 
+    // FIX: "Rata-rata Transaksi" sebelumnya = totalRevenue / totalOrders.
+    // totalRevenue HANYA menjumlahkan order berstatus 'Selesai' (lihat
+    // ReportService._isRevenueCounted), sementara totalOrders adalah
+    // SEMUA order termasuk yang Menunggu/Diproses/Dibatalkan — jadi
+    // pembilang dan penyebutnya berasal dari dua himpunan data yang
+    // berbeda, menghasilkan angka rata-rata yang menyesatkan (selalu
+    // lebih kecil dari nilai transaksi sebenarnya).
+    //
+    // Sekarang dibagi dengan completedOrders, supaya artinya jadi "rata-
+    // rata nilai per pesanan yang benar-benar Selesai" — konsisten
+    // dengan bagaimana totalRevenue dihitung. Ditambah guard supaya
+    // tidak crash / menampilkan Infinity kalau belum ada pesanan Selesai
+    // sama sekali.
+    final hasCompletedOrders = _report!.completedOrders > 0;
+    final averageTransaction = hasCompletedOrders
+        ? _report!.totalRevenue / _report!.completedOrders
+        : 0.0;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
@@ -327,12 +338,16 @@ class _FinancialReportDetailScreenState
             ],
           ),
           const SizedBox(height: 12),
-          if (_report!.totalOrders > 0)
-            _buildOrderMetricCard(
-              'Rata-rata Transaksi',
-              FormatHelper.formatCurrency(_report!.totalRevenue / _report!.totalOrders),
-              Colors.orange,
-            ),
+          // FIX: label diperjelas jadi "per pesanan Selesai" supaya tidak
+          // disalahartikan sebagai rata-rata dari SEMUA pesanan, dan
+          // ditampilkan '-' (bukan error/NaN) kalau belum ada pesanan Selesai.
+          _buildOrderMetricCard(
+            'Rata-rata Transaksi (per pesanan Selesai)',
+            hasCompletedOrders
+                ? FormatHelper.formatCurrency(averageTransaction)
+                : '-',
+            Colors.orange,
+          ),
           const SizedBox(height: 24),
           // Summary section
           _buildSummarySection(),
@@ -397,6 +412,7 @@ class _FinancialReportDetailScreenState
 
   Widget _buildOrderMetricCard(String label, String value, Color color) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -602,6 +618,15 @@ class _FinancialReportDetailScreenState
       );
     }
 
+    // Precompute sekali di luar itemBuilder, bukan dihitung ulang untuk
+    // setiap item (sebelumnya fold() dipanggil 2x di dalam setiap
+    // itemBuilder — cukup boros untuk list panjang, dan rawan salah kalau
+    // salah satu foldnya lupa disamakan).
+    final totalAllProducts = products.values.fold<double>(
+      0.0,
+      (prev, curr) => prev + ((curr['total'] as num?)?.toDouble() ?? 0.0),
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
@@ -672,9 +697,9 @@ class _FinancialReportDetailScreenState
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: LinearProgressIndicator(
-                        value: total / (products.values.fold<double>(0.0,
-                                (prev, curr) => prev + ((curr['total'] as num?)?.toDouble() ?? 0.0)) > 0 ? products.values.fold<double>(0.0,
-                                (prev, curr) => prev + ((curr['total'] as num?)?.toDouble() ?? 0.0)) : 1.0),
+                        value: totalAllProducts > 0
+                            ? total / totalAllProducts
+                            : 0.0,
                         minHeight: 6,
                         backgroundColor: Colors.grey.withAlpha(50),
                         valueColor: const AlwaysStoppedAnimation<Color>(
@@ -700,6 +725,8 @@ class _FinancialReportDetailScreenState
     final monthlySales = _reportService.getMonthlySalesData(ordersInPeriod);
     final paymentStatus =
         _reportService.getPaymentStatusDistribution(ordersInPeriod);
+    final totalPaymentStatus =
+        paymentStatus.values.fold<int>(0, (a, b) => a + b);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -715,9 +742,9 @@ class _FinancialReportDetailScreenState
             const Text('Belum ada data pembayaran pada periode ini')
           else
             ...paymentStatus.entries.map((entry) {
-            final total = paymentStatus.values.fold(0, (a, b) => a + b);
-            final percentage =
-                total > 0 ? (entry.value / total * 100).toStringAsFixed(1) : '0';
+            final percentage = totalPaymentStatus > 0
+                ? (entry.value / totalPaymentStatus * 100).toStringAsFixed(1)
+                : '0';
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -751,7 +778,9 @@ class _FinancialReportDetailScreenState
                     ClipRRect(
                       borderRadius: BorderRadius.circular(6),
                       child: LinearProgressIndicator(
-                        value: entry.value / total,
+                        value: totalPaymentStatus > 0
+                            ? entry.value / totalPaymentStatus
+                            : 0.0,
                         minHeight: 8,
                         backgroundColor: Colors.grey.withAlpha(50),
                         valueColor: const AlwaysStoppedAnimation<Color>(

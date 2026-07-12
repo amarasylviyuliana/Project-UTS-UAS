@@ -16,7 +16,6 @@ class ReportService {
     String? endDate,
   }) async {
     try {
-      // FIX: Hilangkan /api/ di depan — ApiService sudah tambah base URL sendiri
       String url = '/reports/store';
       final params = <String, String>{};
 
@@ -39,13 +38,30 @@ class ReportService {
           response['data'] as Map<String, dynamic>,
         );
       }
-      // Jika API tidak ada endpoint ini, fallback ke kalkulasi lokal
       throw Exception('No data in response');
     } catch (e) {
       debugPrint('getStoreReport error (akan pakai kalkulasi lokal): $e');
       rethrow;
     }
   }
+
+  // ── DEFINISI TUNGGAL: order dihitung sebagai pendapatan HANYA kalau
+  // statusnya 'Selesai'. Ini SAMA PERSIS dengan definisi yang dipakai di
+  // getMonthlySalesData() dan getTopProducts() di bawah, dan sesuai dengan
+  // logika backend (WalletService::creditFromCompletedOrder mengkredit
+  // saldo toko saat order berubah jadi 'Selesai', bukan saat 'Dikonfirmasi'
+  // atau baru berstatus pembayaran 'Lunas').
+  //
+  // SEBELUMNYA method calculateFromOrders() di bawah punya definisi
+  // SENDIRI yang berbeda (status Selesai ATAU Dikonfirmasi ATAU
+  // paymentStatus Lunas), sehingga saat endpoint /reports/store gagal dan
+  // fallback ini aktif, kartu "Pendapatan" bisa menghitung order yang
+  // belum genap 'Selesai' — padahal grafik Tren Penjualan & Produk
+  // Terlaris di bawahnya cuma mengakui order 'Selesai'. Akibatnya angka
+  // Pendapatan tidak pernah sinkron dengan Tren Penjualan / Produk
+  // Terlaris. Sekarang SEMUA method di file ini memanggil helper yang
+  // sama, supaya tidak mungkin lagi berbeda definisi.
+  bool _isRevenueCounted(OrderModel order) => order.status == 'Selesai';
 
   /// Hitung laporan keuangan dari daftar pesanan (fallback / offline)
   FinancialReportModel calculateFromOrders(
@@ -67,29 +83,33 @@ class ReportService {
     int completedOrders = 0;
 
     for (final order in filteredOrders) {
-      // Hitung sebagai pendapatan jika status Selesai atau Dikonfirmasi atau sudah Lunas
-      final isDone = order.status == 'Selesai' ||
-          order.status == 'Dikonfirmasi' ||
-          order.paymentStatus == 'Lunas';
-      if (isDone) {
+      if (_isRevenueCounted(order)) {
         totalRevenue += order.total;
         completedOrders++;
       }
     }
 
-    // Estimasi biaya operasional 25% dari pendapatan
+    // Estimasi biaya operasional 25% dari pendapatan (HANYA dipakai kalau
+    // /reports/store gagal total — bukan angka resmi dari backend).
     final totalExpense = totalRevenue * 0.25;
     final netProfit = totalRevenue - totalExpense;
 
-    // Buat daftar transaksi
+    // Daftar transaksi: tetap tampilkan SEMUA order dalam periode (bukan
+    // cuma yang Selesai) supaya tab "Transaksi" tetap informatif, tapi
+    // beri kategori yang jelas mana yang sudah dihitung sebagai
+    // pendapatan riil dan mana yang belum, supaya tidak disalahartikan
+    // sebagai uang yang sudah masuk.
     final transactions = filteredOrders.map((order) {
+      final counted = _isRevenueCounted(order);
       return TransactionModel(
         id: order.id,
         type: 'income',
-        description: 'Penjualan - ${order.orderNumber}',
+        description: counted
+            ? 'Penjualan - ${order.orderNumber}'
+            : 'Penjualan (belum selesai) - ${order.orderNumber}',
         amount: order.total,
         date: order.createdAt,
-        category: 'Penjualan',
+        category: counted ? 'Penjualan' : 'Belum Selesai',
         orderId: order.id.toString(),
       );
     }).toList()
@@ -108,22 +128,11 @@ class ReportService {
     );
   }
 
-  /// Data penjualan per bulan.
-  //
-  // FIX: Sebelumnya method ini menjumlahkan SEMUA order (apapun statusnya:
-  // Menunggu Pembayaran, Diproses, Dikirim, Dibatalkan, dll) yang dibuat
-  // pada bulan tersebut. Akibatnya angka "Tren Penjualan" (mis. "10 order,
-  // Rp 2.305.000") tidak pernah cocok dengan angka Pendapatan resmi di
-  // kartu Laporan (yang hanya menghitung order berstatus 'Selesai', sama
-  // seperti WalletService::creditFromCompletedOrder di backend).
-  //
-  // Sekarang method ini HANYA menghitung order yang statusnya 'Selesai',
-  // supaya "order" dan "Rp" pada grafik konsisten dengan Pendapatan /
-  // Pesanan Selesai di kartu-kartu lain pada layar yang sama.
+  /// Data penjualan per bulan — hanya order 'Selesai' (lihat _isRevenueCounted).
   List<MonthlySalesModel> getMonthlySalesData(List<OrderModel> orders) {
     final Map<String, MonthlySalesModel> monthlyData = {};
 
-    final completedOrders = orders.where((o) => o.status == 'Selesai');
+    final completedOrders = orders.where(_isRevenueCounted);
 
     for (final order in completedOrders) {
       final date = order.createdAt;
@@ -157,21 +166,12 @@ class ReportService {
     return '${months[date.month]} ${date.year}';
   }
 
-  /// Produk terlaris dari daftar pesanan.
-  //
-  // FIX: Sebelumnya method ini menghitung item dari SEMUA order (apapun
-  // statusnya), sehingga produk dari order yang belum lunas/masih
-  // diproses/bahkan sudah dibatalkan tetap dihitung sebagai "terjual".
-  // Itu sebabnya total nilai produk terlaris (2.000.000 + 180.000 +
-  // 125.000 = 2.305.000) persis sama dengan total SEMUA order (termasuk
-  // yang belum Selesai), bukan dengan Pendapatan resmi (280.000).
-  //
-  // Sekarang hanya order berstatus 'Selesai' yang dihitung, supaya
-  // "Produk Terlaris" konsisten dengan Pendapatan dan Tren Penjualan.
+  /// Produk terlaris — hanya order 'Selesai' (lihat _isRevenueCounted),
+  /// konsisten dengan getMonthlySalesData dan calculateFromOrders.
   Map<String, dynamic> getTopProducts(List<OrderModel> orders) {
     final productSales = <String, Map<String, dynamic>>{};
 
-    final completedOrders = orders.where((o) => o.status == 'Selesai');
+    final completedOrders = orders.where(_isRevenueCounted);
 
     for (final order in completedOrders) {
       for (final item in order.items) {
@@ -201,25 +201,45 @@ class ReportService {
     };
   }
 
-  /// Distribusi status pembayaran
+  // ── FIX: Distribusi status pembayaran sekarang HANYA punya 3 bucket
+  // tetap (Lunas / Belum Lunas / Ditolak), dan SETIAP order pasti masuk
+  // ke salah satunya — tidak ada lagi bucket liar dengan key sembarang.
+  //
+  // SEBELUMNYA: kalau order.paymentStatus berisi nilai mentah yang tidak
+  // persis cocok dengan 'Lunas'/'Belum Lunas'/'Pending'/'Ditolak' (bisa
+  // terjadi karena OrderModel._parsePaymentStatus mengembalikan status
+  // asli untuk kasus yang tidak dikenali), method ini membuat KATEGORI
+  // BARU dengan nama status mentah itu. Kalau layar Analisis cuma
+  // menampilkan baris "Lunas" dan "Belum Lunas" secara hardcoded, order
+  // yang masuk kategori liar itu jadi tidak pernah muncul di layar —
+  // padahal tetap terhitung di 'Total Pesanan'. Ini penyebab jumlah
+  // "Lunas + Belum Lunas" di tab Analisis bisa lebih kecil dari
+  // "Total Pesanan" di kartu lain.
+  //
+  // Sekarang: status apa pun yang bukan persis 'Lunas' atau 'Ditolak'
+  // (termasuk null dan status mentah yang belum sempat dinormalisasi)
+  // dikelompokkan sebagai 'Belum Lunas' — pilihan paling aman karena
+  // artinya "belum terbukti sudah dibayar", bukan diam-diam dihilangkan
+  // dari perhitungan.
   Map<String, int> getPaymentStatusDistribution(List<OrderModel> orders) {
     final distribution = <String, int>{
       'Lunas': 0,
       'Belum Lunas': 0,
-      'Pending': 0,
       'Ditolak': 0,
     };
 
     for (final order in orders) {
-      final status = order.paymentStatus ?? 'Pending';
-      if (distribution.containsKey(status)) {
-        distribution[status] = distribution[status]! + 1;
+      final status = order.paymentStatus;
+      if (status == 'Lunas') {
+        distribution['Lunas'] = distribution['Lunas']! + 1;
+      } else if (status == 'Ditolak') {
+        distribution['Ditolak'] = distribution['Ditolak']! + 1;
       } else {
-        distribution[status] = 1;
+        distribution['Belum Lunas'] = distribution['Belum Lunas']! + 1;
       }
     }
 
-    // Hapus status dengan nilai 0 supaya UI lebih bersih
+    // Hapus status dengan nilai 0 supaya UI lebih bersih.
     distribution.removeWhere((key, value) => value == 0);
 
     return distribution;

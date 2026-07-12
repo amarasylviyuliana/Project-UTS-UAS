@@ -316,16 +316,35 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   Widget build(BuildContext context) {
     if (_order == null) {
+      // FIX (penyebab freeze TOTAL setelah klik tombol back — gabisa
+      // diklik/discroll SAMA SEKALI, sampai tombol minimize jendela
+      // browser pun tidak merespon): sebelumnya `canPop` di-hardcode
+      // `false`, lalu di dalam `onPopInvoked` kita panggil
+      // `Navigator.maybePop(context)` LAGI. Karena `canPop` masih
+      // `false`, panggilan pop itu JUGA langsung diblokir oleh
+      // `PopScope` yang sama, yang memicu `onPopInvoked` lagi, yang
+      // manggil `maybePop()` lagi — berulang tanpa henti (infinite
+      // recursive loop), secepat mungkin, tanpa pernah selesai. Ini yang
+      // membuat event loop browser kepenuhan dan tidak sempat memproses
+      // klik/scroll apapun lagi.
+      //
+      // Sekarang `canPop` dihitung dinamis: kalau memang ada halaman
+      // sebelumnya untuk di-pop, izinkan pop terjadi secara normal
+      // (tidak perlu campur tangan custom logic sama sekali, jadi tidak
+      // ada risiko rekursi). Custom logic (redirect ke Home) HANYA
+      // dijalankan kalau benar-benar tidak ada apa-apa untuk di-pop, dan
+      // kita pakai `pushReplacementNamed` (bukan pop lagi) supaya tidak
+      // memicu `PopScope` ini berulang.
+      final canPopNow = Navigator.of(context).canPop();
       return PopScope(
-        canPop: false,
-        onPopInvoked: (didPop) async {
+        canPop: canPopNow,
+        onPopInvoked: (didPop) {
           if (didPop) return;
-          // If possible, just pop to previous route. If not (opened
-          // as a standalone page), navigate back to Home's order tab.
-          final popped = await Navigator.maybePop(context);
-          if (!popped) {
-            Navigator.pushReplacementNamed(context, '/home');
-          }
+          // Titik ini hanya tercapai kalau canPopNow == false (tidak ada
+          // apa-apa untuk di-pop, mis. halaman dibuka langsung via deep
+          // link). pushReplacementNamed BUKAN operasi pop, jadi aman —
+          // tidak memicu PopScope ini lagi.
+          Navigator.pushReplacementNamed(context, '/home');
         },
         child: Scaffold(
           appBar: AppBar(
@@ -372,18 +391,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final statusColor = _getStatusColor(order.status);
     final deliveryComplete = _isDeliveryComplete;
 
+    // FIX: sama seperti di atas — canPop dihitung dinamis, bukan
+    // di-hardcode false + manggil maybePop() lagi di dalam handler
+    // (itu yang menyebabkan infinite loop & freeze total setelah klik
+    // tombol back).
+    final canPopNow = Navigator.of(context).canPop();
     return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
+      canPop: canPopNow,
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        // Prefer to pop to the previous route so we don't create duplicate
-        // history entries. If there's nothing to pop (opened standalone),
-        // send user back to Home (orders tab).
-        final navigator = Navigator.of(context);
-        final popped = await navigator.maybePop();
-        if (!popped) {
-          navigator.pushReplacementNamed('/home');
-        }
+        // Hanya tercapai kalau canPopNow == false. pushReplacementNamed
+        // BUKAN operasi pop, jadi aman, tidak memicu PopScope ini lagi.
+        Navigator.of(context).pushReplacementNamed('/home');
       },
       child: Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),

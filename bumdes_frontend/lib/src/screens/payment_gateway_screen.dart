@@ -92,6 +92,17 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
 
           debugPrint('💳 Payment result: $paymentResult');
 
+          // FIX: sebelumnya pembersihan script/overlay Midtrans (snap.js)
+          // hanya dilakukan di dispose(), tapi setelah pembayaran
+          // sukses/pending kita pindah halaman pakai Navigator.pushNamed
+          // (BUKAN pop/replace) — artinya PaymentGatewayScreen tidak
+          // pernah di-dispose, dan snap.js beserta overlay-nya tertinggal
+          // aktif SELAMANYA di background, mengunci klik & scroll di
+          // SELURUH halaman lain (termasuk Detail Pesanan). Sekarang kita
+          // langsung bersihkan begitu hasil pembayaran didapat, tidak
+          // menunggu dispose().
+          MidtransService.teardownWeb();
+
           if (!mounted) return;
 
           if (paymentResult?['success'] == true ||
