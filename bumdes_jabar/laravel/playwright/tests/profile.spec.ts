@@ -1,3 +1,6 @@
+// Test suite: Edit Profile - BUMDes Jabar
+// Finalized by Yunita Nur Aini - all test cases passed
+
 import { test, expect, Page } from '@playwright/test';
 
 const BASE_URL = 'http://localhost:49800';
