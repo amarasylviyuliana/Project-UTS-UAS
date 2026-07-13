@@ -132,6 +132,10 @@ class ProductService {
     String description,
     XFile? imageFile, {
     Uint8List? imageBytes,
+    // TAMBAHAN: status aktif. Dipakai sebagai toggle "Tersedia/Tidak
+    // Tersedia" untuk Jasa (form yang mengontrol nilai ini), dan tetap
+    // true default untuk Produk.
+    bool isActive = true,
   }) async {
     final uri = Uri.parse(apiUrl('/products'));
     final request = http.MultipartRequest('POST', uri);
@@ -144,6 +148,9 @@ class ProductService {
     request.fields['price'] = price.toString();
     request.fields['stock'] = stock.toString();
     request.fields['description'] = description;
+    // TAMBAHAN: kirim is_active ke backend. Laravel 'boolean' rule
+    // menerima string "1"/"0".
+    request.fields['is_active'] = isActive ? '1' : '0';
 
     await _attachPhoto(request, imageFile, imageBytes);
 
@@ -171,6 +178,9 @@ class ProductService {
     String description,
     XFile? imageFile, {
     Uint8List? imageBytes,
+    // TAMBAHAN: sama seperti createProduct — dipakai untuk toggle
+    // Tersedia/Tidak Tersedia pada Jasa.
+    bool isActive = true,
   }) async {
     final uri = Uri.parse(apiUrl('/products/$productId'));
     final request = http.MultipartRequest('POST', uri);
@@ -183,6 +193,7 @@ class ProductService {
     request.fields['price'] = price.toString();
     request.fields['stock'] = stock.toString();
     request.fields['description'] = description;
+    request.fields['is_active'] = isActive ? '1' : '0';
 
     await _attachPhoto(request, imageFile, imageBytes);
 
