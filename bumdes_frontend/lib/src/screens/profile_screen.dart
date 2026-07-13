@@ -248,7 +248,10 @@ class ProfileScreen extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.logout),
-                    label: const Text('Keluar'),
+                    label: const Text(
+                      'Keluar',
+                      style: TextStyle(color: Colors.white),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red.shade500,
                       foregroundColor: Colors.white,
@@ -277,7 +280,10 @@ class ProfileScreen extends StatelessWidget {
         if (didPop) return;
         Navigator.pushReplacementNamed(context, '/home');
       },
-      child: Padding(padding: const EdgeInsets.all(20.0), child: profileContent),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: profileContent,
+      ),
     );
   }
 }
