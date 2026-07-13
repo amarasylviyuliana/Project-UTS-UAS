@@ -569,7 +569,11 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                     ),
                   )
                 : SizedBox(
-                    height: 200,
+                    // TAMBAHAN: tinggi kartu dinaikkan sedikit (200 -> 224)
+                    // untuk menampung 1 baris tambahan info Stok/Jasa,
+                    // supaya penjual bisa langsung lihat stok tanpa harus
+                    // buka halaman Ubah Produk.
+                    height: 224,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: _sellerProducts.take(5).length,
@@ -625,6 +629,14 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
+                                    const SizedBox(height: 2),
+                                    // TAMBAHAN: info Stok pada kartu produk
+                                    // di Dashboard. Untuk produk Jasa tidak
+                                    // ada konsep stok, jadi tampilkan label
+                                    // "Jasa" saja. Untuk produk fisik dengan
+                                    // stok 0, tampilkan warna merah supaya
+                                    // langsung kelihatan kalau sudah habis.
+                                    _buildStockBadge(product),
                                   ],
                                 ),
                               ),
@@ -797,6 +809,37 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
             const SizedBox(height: 24),
           ],
         ),
+      ),
+    );
+  }
+
+  // TAMBAHAN: Badge kecil untuk menampilkan status stok pada kartu produk.
+  // - Produk Jasa       -> karena tidak ada konsep "stok" untuk layanan,
+  //                        tampilkan status ketersediaan (aktif/nonaktif)
+  //                        sebagai gantinya: "Tersedia" (hijau) atau
+  //                        "Tidak Tersedia" (merah).
+  // - Stok 0            -> label merah "Stok: Habis" biar langsung kelihatan
+  // - Stok > 0          -> label hijau "Stok: <jumlah>"
+  Widget _buildStockBadge(ProductModel product) {
+    if (product.isService) {
+      final isAvailable = product.isActive;
+      return Text(
+        isAvailable ? 'Tersedia' : 'Tidak Tersedia',
+        style: TextStyle(
+          color: isAvailable ? Colors.green : Colors.red,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
+
+    final isOutOfStock = product.stock <= 0;
+    return Text(
+      isOutOfStock ? 'Stok: Habis' : 'Stok: ${product.stock}',
+      style: TextStyle(
+        color: isOutOfStock ? Colors.red : Colors.grey[700],
+        fontSize: 10,
+        fontWeight: FontWeight.w600,
       ),
     );
   }
@@ -1163,7 +1206,10 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                           crossAxisCount: crossAxisCount,
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
-                          childAspectRatio: 0.56,
+                          // TAMBAHAN: aspect ratio sedikit disesuaikan
+                          // (0.56 -> 0.52) supaya ada ruang ekstra untuk
+                          // baris info Stok tanpa membuat kartu overflow.
+                          childAspectRatio: 0.52,
                         ),
                         itemCount: filteredProducts.length,
                         itemBuilder: (context, index) {
@@ -2443,6 +2489,32 @@ class _ProductCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 2),
+                // TAMBAHAN: info Stok pada kartu produk di tab Katalog,
+                // sama seperti di Dashboard, supaya penjual bisa langsung
+                // lihat stok masing-masing produk dari daftar tanpa perlu
+                // buka form Ubah Produk satu per satu.
+                product.isService
+                    ? Text(
+                        product.isActive ? 'Tersedia' : 'Tidak Tersedia',
+                        style: TextStyle(
+                          color: product.isActive ? Colors.green : Colors.red,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                    : Text(
+                        product.stock <= 0
+                            ? 'Stok: Habis'
+                            : 'Stok: ${product.stock}',
+                        style: TextStyle(
+                          color: product.stock <= 0
+                              ? Colors.red
+                              : Colors.grey[700],
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ],
             ),
           ),
