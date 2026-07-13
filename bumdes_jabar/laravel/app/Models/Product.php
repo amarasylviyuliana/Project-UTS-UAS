@@ -31,24 +31,6 @@ class Product extends Model
 
     protected $appends = ['image_url'];
 
-    /**
-     * Accessor: image_url selalu full URL, dipakai otomatis setiap kali
-     * Product di-serialize ke JSON (order, cart, product list, dll).
-     *
-     * FIX: sebelumnya method ini membangun URL lewat "/storage/{path}"
-     * langsung, BEDA dengan ProductController::resolvePhotoUrl() yang
-     * dipakai di endpoint produk (index/search/show) yang membangun URL
-     * lewat proxy "/api/image/{path}". Akibatnya, tiap kali Product
-     * di-serialize di konteks lain (mis. Order->orderItems->product di
-     * Riwayat Pesanan), field 'image_url' yang dikirim jadi URL yang
-     * beda skema dan seringkali gagal dimuat (foto blank), padahal di
-     * halaman daftar produk (yang lewat ProductController) foto yang
-     * sama tampil normal.
-     *
-     * Sekarang logic-nya disamakan persis dengan resolvePhotoUrl() di
-     * ProductController, supaya field 'image_url' SELALU konsisten di
-     * mana pun Product di-serialize.
-     */
     public function getImageUrlAttribute(): ?string
     {
         $path = $this->photo_url;
@@ -75,7 +57,6 @@ class Product extends Model
         return $baseUrl . '/api/image/' . ltrim($cleanPath, '/');
     }
 
-    // Relationships
     public function store(): BelongsTo
     {
         return $this->belongsTo(Store::class);
@@ -106,7 +87,6 @@ class Product extends Model
         return $this->hasMany(Review::class);
     }
 
-    // Helper methods
     public function isApproved(): bool
     {
         return $this->productApproval?->status === 'Disetujui';

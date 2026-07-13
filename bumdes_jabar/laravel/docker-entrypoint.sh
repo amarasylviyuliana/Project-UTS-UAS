@@ -6,9 +6,6 @@ echo "=== Starting Laravel Application ==="
 echo ">>> Running migrations..."
 php artisan migrate --force
 
-echo ">>> Seeding database..."
-php artisan db:seed --force
-
 echo ">>> Clearing old cache..."
 php artisan config:clear
 php artisan cache:clear

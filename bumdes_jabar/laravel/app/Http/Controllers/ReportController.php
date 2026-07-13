@@ -11,10 +11,6 @@ use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
-    /**
-     * Get buyer's transaction report
-     * REQ-31
-     */
     public function buyerReport(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -47,10 +43,6 @@ class ReportController extends Controller
         ]);
     }
 
-    /**
-     * Get store report (seller)
-     * REQ-32
-     */
     public function storeReport(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -92,26 +84,8 @@ class ReportController extends Controller
             'estimated_revenue' => $orders->whereIn('status', ['Dikonfirmasi', 'Diproses', 'Dikirim', 'Selesai'])->sum('total_price'),
         ];
 
-        // FIX: sebelumnya baris ini memanggil $order->completed_at->format('Y-m')
-        // TANPA null-check. Kalau ADA SATU SAJA order berstatus 'Selesai' yang
-        // completed_at-nya null (data lama / status diubah manual / bug lain
-        // yang lupa set timestamp), baris ini FATAL ERROR dan membuat SELURUH
-        // endpoint /reports/store gagal dengan HTTP 500.
-        //
-        // Efeknya ke Flutter: getStoreReport() melempar exception, lalu SEMUA
-        // layar yang memanggilnya diam-diam fallback ke calculateFromOrders()
-        // (kalkulasi lokal dengan pengeluaran ditaksir 25%, bukan admin fee
-        // asli). Karena fallback ini terjadi tanpa pemberitahuan ke user, hasil
-        // laporan yang tampil bisa berganti-ganti antara "data asli backend"
-        // dan "data taksiran lokal" tergantung ada-tidaknya satu order
-        // bermasalah di periode yang dipilih — inilah salah satu penyebab
-        // laporan terasa "gak selaras" antar sesi/refresh.
-        //
-        // Sekarang: kalau completed_at null, fallback ke created_at supaya
-        // order itu tetap masuk grouping bulanan (bukan bikin seluruh request
-        // gagal), dan endpoint ini SELALU berhasil selama query dasarnya
-        // valid — sehingga Flutter tidak perlu jatuh ke fallback lokal kecuali
-        // benar-benar tidak ada koneksi.
+        // FIX: null-safe completed_at, fallback ke created_at supaya endpoint
+        // tidak 500 kalau ada order Selesai dengan completed_at kosong.
         $monthlyRevenue = $orders
             ->where('status', 'Selesai')
             ->groupBy(function ($order) {
@@ -127,8 +101,6 @@ class ReportController extends Controller
                 ];
             });
 
-        // Hitung biaya admin/pajak dari data ASLI di wallet_transactions
-        // (bukan tebakan 25% seperti sebelumnya di frontend).
         $completedOrderIds = $orders->where('status', 'Selesai')->pluck('id');
         $totalExpense = (float) \App\Models\WalletTransaction::whereNull('store_id')
             ->where('category', 'tax')
@@ -137,10 +109,6 @@ class ReportController extends Controller
         $totalRevenue = (float) $summary['total_revenue'];
         $netProfit = $totalRevenue - $totalExpense;
 
-        // FIX: sama seperti di atas, 'date' di sini pakai completed_at yang
-        // sudah dilindungi optional(), tapi supaya konsisten dan tetap
-        // menampilkan tanggal yang masuk akal walau completed_at null,
-        // fallback juga ke created_at (bukan string kosong).
         $transactions = $orders->where('status', 'Selesai')->map(function ($order) {
             $date = $order->completed_at ?? $order->created_at;
             return [
@@ -160,7 +128,6 @@ class ReportController extends Controller
             'summary' => $summary,
             'monthly_breakdown' => $monthlyRevenue->values(),
             'recent_orders' => $orders->take(10)->load('buyer', 'orderItems'),
-            // Struktur "data" ini yang dibaca FinancialReportModel di frontend.
             'data' => [
                 'total_revenue' => $totalRevenue,
                 'total_expense' => $totalExpense,
@@ -175,10 +142,6 @@ class ReportController extends Controller
         ]);
     }
 
-    /**
-     * Get platform report (admin only)
-     * REQ-33
-     */
     public function platformReport(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -192,16 +155,13 @@ class ReportController extends Controller
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
 
-        // User statistics
         $totalUsers = User::count();
         $buyers = User::where('role', 'Pembeli')->count();
         $sellers = User::where('role', 'Penjual')->count();
 
-        // Store statistics
         $totalStores = Store::count();
         $activeStores = Store::where('is_active', true)->count();
 
-        // Transaction statistics
         $orderQuery = Order::query();
 
         if ($startDate) {
@@ -228,7 +188,6 @@ class ReportController extends Controller
             'current_balance' => $activeSales->sum('total_price'),
         ];
 
-        // Daily breakdown
         $dailyTransactions = $orders
             ->groupBy(function ($order) {
                 return $order->created_at->format('Y-m-d');
@@ -243,7 +202,6 @@ class ReportController extends Controller
                 ];
             });
 
-        // Top stores
         $topStores = DB::table('stores')
             ->leftJoin('orders', 'stores.id', '=', 'orders.store_id')
             ->select('stores.id', 'stores.store_name', DB::raw('COUNT(orders.id) as order_count'), DB::raw('SUM(orders.total_price) as total_value'))

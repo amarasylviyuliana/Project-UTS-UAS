@@ -35,26 +35,12 @@ class ProductController extends Controller
         return $baseUrl . '/api/image/' . ltrim($cleanPath, '/');
     }
 
-    // TAMBAHAN: data toko (id, nama, foto toko, lokasi) dipisah jadi helper
-    // sendiri, dipakai baik oleh listing produk maupun detail produk, supaya
-    // Flutter bisa menampilkan kartu toko ala Shopee (foto toko + nama +
-    // lokasi) di halaman detail produk.
-    //
-    // FIX: banyak toko belum pernah upload store_photo_url-nya sendiri
-    // (field ini terpisah dari foto profil pribadi penjual), sehingga kartu
-    // toko di sisi pembeli selalu fallback ke icon generik walau penjualnya
-    // sudah punya foto profil. Sekarang: kalau store_photo_url kosong, kita
-    // fallback ke foto profil PRIBADI pemilik toko (user->photo_url) supaya
-    // pembeli tetap melihat identitas visual tokonya. Kalau seller nanti
-    // upload foto toko sendiri lewat menu "Profil Toko", foto itu yang akan
-    // dipakai (foto toko selalu diprioritaskan di atas foto pribadi).
     private function mapStoreForResponse($store): ?array
     {
         if (!$store) return null;
 
         $storePhoto = $this->resolvePhotoUrl($store->store_photo_url);
         if (!$storePhoto) {
-            // Fallback: pakai foto profil pribadi pemilik toko, kalau ada.
             $storePhoto = $this->resolvePhotoUrl($store->user?->photo_url);
         }
 
@@ -75,7 +61,6 @@ class ProductController extends Controller
             'name' => $product->name,
             'store_name' => $product->store?->store_name ?? 'Unknown Store',
             'location' => $product->store?->village ?? '',
-            // TAMBAHAN: store_id + object store lengkap (termasuk foto toko)
             'store_id' => $product->store?->id,
             'store' => $this->mapStoreForResponse($product->store),
             'category' => $product->category?->name ?? '',
@@ -90,9 +75,6 @@ class ProductController extends Controller
 
     public function index(): JsonResponse
     {
-        // DIUBAH: eager load 'store.user' (bukan cuma 'store'), supaya
-        // mapStoreForResponse bisa fallback ke foto profil pemilik toko
-        // tanpa memicu query tambahan per produk (N+1).
         $products = Product::where('is_active', true)
             ->with('store.user', 'category')
             ->latest()
@@ -105,22 +87,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * TAMBAHAN: Produk unggulan berdasarkan popularitas asli (total
-     * quantity terjual dari order_items), bukan sekadar produk terbaru.
-     *
-     * Sebelumnya "Produk Unggulan" di Flutter (ProductProvider.featured)
-     * hanya mengambil 6 produk pertama dari daftar produk biasa (yang
-     * di-order berdasarkan created_at terbaru), jadi tidak benar-benar
-     * mencerminkan produk yang paling banyak dibeli.
-     *
-     * Endpoint ini menghitung total quantity yang pernah dipesan untuk
-     * tiap produk (LEFT JOIN supaya produk yang belum pernah terjual
-     * tetap ikut terhitung dengan total_sold = 0), lalu diurutkan
-     * menurun. Sebagai tie-breaker (produk yang sama-sama belum pernah
-     * terjual), diurutkan berdasarkan produk terbaru supaya list tidak
-     * terasa acak.
-     */
     public function getFeaturedProducts(): JsonResponse
     {
         $products = Product::where('products.is_active', true)
@@ -164,7 +130,6 @@ class ProductController extends Controller
         $min_price = $request->query('min_price');
         $max_price = $request->query('max_price');
 
-        // DIUBAH: eager load 'store.user' (bukan cuma 'store').
         $query = Product::where('is_active', true)
             ->with('store.user', 'category');
 
@@ -200,23 +165,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Get product details
-     *
-     * FIX: sebelumnya method ini return `$product` mentah (hasil Eloquent
-     * toArray otomatis), yang berarti `store.store_photo_url` dikirim
-     * sebagai PATH RELATIF tanpa lewat resolvePhotoUrl() — persis masalah
-     * CORS/gagal-load yang sama seperti foto profil user, hanya saja belum
-     * ketahuan karena Flutter belum pernah menampilkan foto toko di halaman
-     * ini. Sekarang responsnya dibentuk manual lewat mapProductForResponse()
-     * (konsisten dengan index/search/getByStore) + reviews, supaya
-     * store_photo_url selalu berupa URL proxy yang valid dan bisa dimuat
-     * oleh Image.network() di Flutter.
-     *
-     * DIUBAH: eager load 'store.user' juga, supaya mapStoreForResponse bisa
-     * fallback ke foto profil pribadi pemilik toko kalau store_photo_url
-     * kosong.
-     */
     public function show($id): JsonResponse
     {
         $product = Product::with(['store.user', 'category', 'reviews.buyer'])->find($id);
@@ -470,7 +418,6 @@ class ProductController extends Controller
 
     public function getByStore($store_id): JsonResponse
     {
-        // DIUBAH: eager load 'store.user' (bukan cuma 'store').
         $products = Product::where('store_id', $store_id)
             ->where('is_active', true)
             ->with('store.user', 'category')

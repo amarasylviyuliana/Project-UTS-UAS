@@ -51,16 +51,6 @@ class ReportService {
   // logika backend (WalletService::creditFromCompletedOrder mengkredit
   // saldo toko saat order berubah jadi 'Selesai', bukan saat 'Dikonfirmasi'
   // atau baru berstatus pembayaran 'Lunas').
-  //
-  // SEBELUMNYA method calculateFromOrders() di bawah punya definisi
-  // SENDIRI yang berbeda (status Selesai ATAU Dikonfirmasi ATAU
-  // paymentStatus Lunas), sehingga saat endpoint /reports/store gagal dan
-  // fallback ini aktif, kartu "Pendapatan" bisa menghitung order yang
-  // belum genap 'Selesai' — padahal grafik Tren Penjualan & Produk
-  // Terlaris di bawahnya cuma mengakui order 'Selesai'. Akibatnya angka
-  // Pendapatan tidak pernah sinkron dengan Tren Penjualan / Produk
-  // Terlaris. Sekarang SEMUA method di file ini memanggil helper yang
-  // sama, supaya tidak mungkin lagi berbeda definisi.
   bool _isRevenueCounted(OrderModel order) => order.status == 'Selesai';
 
   /// Hitung laporan keuangan dari daftar pesanan (fallback / offline)
@@ -72,7 +62,6 @@ class ReportService {
     startDate ??= DateTime.now().subtract(const Duration(days: 30));
     endDate ??= DateTime.now();
 
-    // Filter berdasarkan rentang tanggal
     final filteredOrders = orders.where((order) {
       final orderDate = order.createdAt;
       return !orderDate.isBefore(startDate!) &&
@@ -89,16 +78,9 @@ class ReportService {
       }
     }
 
-    // Estimasi biaya operasional 25% dari pendapatan (HANYA dipakai kalau
-    // /reports/store gagal total — bukan angka resmi dari backend).
     final totalExpense = totalRevenue * 0.25;
     final netProfit = totalRevenue - totalExpense;
 
-    // Daftar transaksi: tetap tampilkan SEMUA order dalam periode (bukan
-    // cuma yang Selesai) supaya tab "Transaksi" tetap informatif, tapi
-    // beri kategori yang jelas mana yang sudah dihitung sebagai
-    // pendapatan riil dan mana yang belum, supaya tidak disalahartikan
-    // sebagai uang yang sudah masuk.
     final transactions = filteredOrders.map((order) {
       final counted = _isRevenueCounted(order);
       return TransactionModel(
@@ -113,7 +95,7 @@ class ReportService {
         orderId: order.id.toString(),
       );
     }).toList()
-      ..sort((a, b) => b.date.compareTo(a.date)); // terbaru di atas
+      ..sort((a, b) => b.date.compareTo(a.date));
 
     return FinancialReportModel(
       totalRevenue: totalRevenue,
@@ -128,7 +110,6 @@ class ReportService {
     );
   }
 
-  /// Data penjualan per bulan — hanya order 'Selesai' (lihat _isRevenueCounted).
   List<MonthlySalesModel> getMonthlySalesData(List<OrderModel> orders) {
     final Map<String, MonthlySalesModel> monthlyData = {};
 
@@ -166,8 +147,6 @@ class ReportService {
     return '${months[date.month]} ${date.year}';
   }
 
-  /// Produk terlaris — hanya order 'Selesai' (lihat _isRevenueCounted),
-  /// konsisten dengan getMonthlySalesData dan calculateFromOrders.
   Map<String, dynamic> getTopProducts(List<OrderModel> orders) {
     final productSales = <String, Map<String, dynamic>>{};
 
@@ -201,26 +180,6 @@ class ReportService {
     };
   }
 
-  // ── FIX: Distribusi status pembayaran sekarang HANYA punya 3 bucket
-  // tetap (Lunas / Belum Lunas / Ditolak), dan SETIAP order pasti masuk
-  // ke salah satunya — tidak ada lagi bucket liar dengan key sembarang.
-  //
-  // SEBELUMNYA: kalau order.paymentStatus berisi nilai mentah yang tidak
-  // persis cocok dengan 'Lunas'/'Belum Lunas'/'Pending'/'Ditolak' (bisa
-  // terjadi karena OrderModel._parsePaymentStatus mengembalikan status
-  // asli untuk kasus yang tidak dikenali), method ini membuat KATEGORI
-  // BARU dengan nama status mentah itu. Kalau layar Analisis cuma
-  // menampilkan baris "Lunas" dan "Belum Lunas" secara hardcoded, order
-  // yang masuk kategori liar itu jadi tidak pernah muncul di layar —
-  // padahal tetap terhitung di 'Total Pesanan'. Ini penyebab jumlah
-  // "Lunas + Belum Lunas" di tab Analisis bisa lebih kecil dari
-  // "Total Pesanan" di kartu lain.
-  //
-  // Sekarang: status apa pun yang bukan persis 'Lunas' atau 'Ditolak'
-  // (termasuk null dan status mentah yang belum sempat dinormalisasi)
-  // dikelompokkan sebagai 'Belum Lunas' — pilihan paling aman karena
-  // artinya "belum terbukti sudah dibayar", bukan diam-diam dihilangkan
-  // dari perhitungan.
   Map<String, int> getPaymentStatusDistribution(List<OrderModel> orders) {
     final distribution = <String, int>{
       'Lunas': 0,
@@ -239,7 +198,6 @@ class ReportService {
       }
     }
 
-    // Hapus status dengan nilai 0 supaya UI lebih bersih.
     distribution.removeWhere((key, value) => value == 0);
 
     return distribution;

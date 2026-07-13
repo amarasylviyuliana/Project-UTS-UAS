@@ -26,7 +26,7 @@ class _FinancialReportDetailScreenState
   FinancialReportModel? _report;
   List<OrderModel> _orders = [];
   bool _loading = true;
-  String _selectedTab = 'overview'; // overview, transactions, products, insights
+  String _selectedTab = 'overview';
 
   @override
   void initState() {
@@ -37,12 +37,6 @@ class _FinancialReportDetailScreenState
     _loadReportData();
   }
 
-  // _orders berisi SEMUA order milik toko sepanjang masa. Getter ini
-  // memfilter ke rentang [_startDate, _endDate] saja (pakai batas yang
-  // SAMA PERSIS dengan ReportService.calculateFromOrders: inklusif sampai
-  // endDate + 1 hari), supaya tab Produk Terlaris & Analisis konsisten
-  // dengan Periode Laporan yang aktif dan dengan tab Ringkasan saat
-  // fallback lokal dipakai.
   List<OrderModel> get _ordersInPeriod {
     return _orders.where((order) {
       final orderDate = order.createdAt;
@@ -60,11 +54,6 @@ class _FinancialReportDetailScreenState
       final orders = await _orderService.getSellerOrders(auth.token!);
       setState(() => _orders = orders);
 
-      // Ringkasan keuangan (Pendapatan/Pengeluaran/Laba Bersih/Margin)
-      // diambil dari GET /reports/store (data resmi dari backend).
-      // calculateFromOrders() hanya fallback kalau API gagal, dan
-      // definisinya SAMA (hanya order 'Selesai') dengan yang dipakai di
-      // tab Produk Terlaris & Analisis — lihat ReportService.
       FinancialReportModel report;
       try {
         report = await _reportService.getStoreReport(
@@ -244,19 +233,6 @@ class _FinancialReportDetailScreenState
   Widget _buildOverviewTab() {
     if (_report == null) return const SizedBox.shrink();
 
-    // FIX: "Rata-rata Transaksi" sebelumnya = totalRevenue / totalOrders.
-    // totalRevenue HANYA menjumlahkan order berstatus 'Selesai' (lihat
-    // ReportService._isRevenueCounted), sementara totalOrders adalah
-    // SEMUA order termasuk yang Menunggu/Diproses/Dibatalkan — jadi
-    // pembilang dan penyebutnya berasal dari dua himpunan data yang
-    // berbeda, menghasilkan angka rata-rata yang menyesatkan (selalu
-    // lebih kecil dari nilai transaksi sebenarnya).
-    //
-    // Sekarang dibagi dengan completedOrders, supaya artinya jadi "rata-
-    // rata nilai per pesanan yang benar-benar Selesai" — konsisten
-    // dengan bagaimana totalRevenue dihitung. Ditambah guard supaya
-    // tidak crash / menampilkan Infinity kalau belum ada pesanan Selesai
-    // sama sekali.
     final hasCompletedOrders = _report!.completedOrders > 0;
     final averageTransaction = hasCompletedOrders
         ? _report!.totalRevenue / _report!.completedOrders
@@ -267,7 +243,6 @@ class _FinancialReportDetailScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Main metrics
           Row(
             children: [
               Expanded(
@@ -312,7 +287,6 @@ class _FinancialReportDetailScreenState
             ],
           ),
           const SizedBox(height: 24),
-          // Order metrics
           const Text(
             'Metrik Pesanan',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -338,9 +312,6 @@ class _FinancialReportDetailScreenState
             ],
           ),
           const SizedBox(height: 12),
-          // FIX: label diperjelas jadi "per pesanan Selesai" supaya tidak
-          // disalahartikan sebagai rata-rata dari SEMUA pesanan, dan
-          // ditampilkan '-' (bukan error/NaN) kalau belum ada pesanan Selesai.
           _buildOrderMetricCard(
             'Rata-rata Transaksi (per pesanan Selesai)',
             hasCompletedOrders
@@ -349,7 +320,6 @@ class _FinancialReportDetailScreenState
             Colors.orange,
           ),
           const SizedBox(height: 24),
-          // Summary section
           _buildSummarySection(),
           const SizedBox(height: 24),
         ],
@@ -618,10 +588,6 @@ class _FinancialReportDetailScreenState
       );
     }
 
-    // Precompute sekali di luar itemBuilder, bukan dihitung ulang untuk
-    // setiap item (sebelumnya fold() dipanggil 2x di dalam setiap
-    // itemBuilder — cukup boros untuk list panjang, dan rawan salah kalau
-    // salah satu foldnya lupa disamakan).
     final totalAllProducts = products.values.fold<double>(
       0.0,
       (prev, curr) => prev + ((curr['total'] as num?)?.toDouble() ?? 0.0),
