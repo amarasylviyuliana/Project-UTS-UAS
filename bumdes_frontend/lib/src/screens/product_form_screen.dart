@@ -486,6 +486,12 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               ],
               const SizedBox(height: 14),
 
+              // Stok hanya relevan untuk Produk Fisik. Jasa/layanan tidak
+              // memiliki stok, jadi field ini disembunyikan untuk tipe
+              // 'service' — bukan bug/hilang, tapi memang tidak diperlukan.
+              // TAMBAHAN: kalau tipe-nya Jasa, tampilkan info singkat supaya
+              // pengguna tidak bingung kenapa field Stok tidak ada (dulu
+              // sempat dikira bug karena tidak ada penjelasan sama sekali).
               if (_type == 'product') ...[
                 TextFormField(
                   controller: _stockController,
@@ -502,6 +508,32 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                     if (p == null || p < 0) return 'Stok tidak valid';
                     return null;
                   },
+                ),
+                const SizedBox(height: 14),
+              ] else ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.blueGrey.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blueGrey.shade100),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline, size: 16, color: Colors.blueGrey.shade400),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Jasa/layanan tidak memerlukan stok, jadi field ini '
+                          'tidak ditampilkan. Ubah Tipe ke "Produk Fisik" jika '
+                          'ingin mengatur jumlah stok.',
+                          style: TextStyle(fontSize: 11.5, color: Colors.blueGrey.shade600),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 14),
               ],
