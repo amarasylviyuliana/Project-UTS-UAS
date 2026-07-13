@@ -130,56 +130,64 @@ class _HomeScreenState extends State<HomeScreen> {
           SystemNavigator.pop();
         } else {
           _lastBackPressTime = now;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Tekan sekali lagi untuk keluar aplikasi'),
-              duration: Duration(seconds: 2),
-            ),
-          );
+          // Intentional: removed the visible "Tekan sekali lagi" SnackBar
+          // so back press won't show a snackbar. Behavior remains double
+          // press to exit but without the notification.
         }
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF6F6F6),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF1B5E20),
-          elevation: 0,
-          toolbarHeight: isNarrow ? 60 : 68,
-          titleSpacing: 16,
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.16),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Image.asset(
-                  'assets/logo.jpeg',
-                  width: 24,
-                  height: 24,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) =>
-                      const Icon(Icons.eco, color: Colors.white, size: 22),
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Flexible(
-                child: Text(
-                  'BUMDES JABAR',
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
+        // Pindahkan header AppBar ke SliverAppBar supaya ikut digulung
+        // bersama isi halaman. NestedScrollView akan mengkoordinasikan
+        // scroll header dan body sehingga header tidak lagi tetap.
+        body: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverAppBar(
+              backgroundColor: const Color(0xFF1B5E20),
+              elevation: 0,
+              pinned: false,
+              floating: false,
+              snap: false,
+              toolbarHeight: isNarrow ? 60 : 68,
+              titleSpacing: 16,
+              automaticallyImplyLeading: false,
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.16),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Image.asset(
+                      'assets/logo.jpeg',
+                      width: 24,
+                      height: 24,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.eco, color: Colors.white, size: 22),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  const Flexible(
+                    child: Text(
+                      'BUMDES JABAR',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
+          body: pages[_selectedIndex],
         ),
-        body: pages[_selectedIndex],
         bottomNavigationBar: SafeArea(
           top: false,
           child: NavigationBarTheme(
@@ -282,9 +290,9 @@ class _HomeTabState extends State<HomeTab> {
     );
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tidak bisa membuka peta')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Tidak bisa membuka peta')));
     }
   }
 
@@ -840,7 +848,11 @@ class _HomeTabState extends State<HomeTab> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.email, color: Colors.white70, size: 16),
+                              Icon(
+                                Icons.email,
+                                color: Colors.white70,
+                                size: 16,
+                              ),
                               SizedBox(width: 4),
                               Text(
                                 'bumdesjabar5@gmail.com',
