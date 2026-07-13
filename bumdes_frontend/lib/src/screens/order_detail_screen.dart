@@ -151,14 +151,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       _refreshError = null;
     });
 
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await OrderService().updateOrderStatus(auth.token!, _order!.id, status);
       await _refreshOrder();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Status pesanan diperbarui ke "$status".')),
-        );
-      }
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Status pesanan diperbarui ke "$status".')),
+      );
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -186,16 +186,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       _refreshError = null;
     });
 
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await OrderService().confirmReceipt(auth.token!, _order!.id);
       await _refreshOrder();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Penerimaan pesanan berhasil dikonfirmasi.'),
-          ),
-        );
-      }
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Penerimaan pesanan berhasil dikonfirmasi.'),
+        ),
+      );
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -212,6 +212,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _cancelOrder() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -231,10 +233,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       ),
     );
     if (confirm != true) return;
+    if (!auth.isAuthenticated || auth.token == null || _order == null) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Tidak dapat membatalkan pesanan karena status autentikasi tidak valid.'),
+        ),
+      );
+      return;
+    }
     setState(() => _isPerformingAction = true);
     try {
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      final messenger = ScaffoldMessenger.of(context);
       final orderService = OrderService();
       await orderService.cancelOrder(auth.token!, _order!.id);
       if (!mounted) return;
@@ -246,11 +255,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       );
       await _refreshOrder();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal membatalkan: $e')),
-        );
-      }
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Gagal membatalkan: $e')),
+      );
     } finally {
       if (mounted) setState(() => _isPerformingAction = false);
     }
@@ -296,13 +304,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     if (_order == null) {
       return PopScope(
         canPop: false,
-        onPopInvoked: (didPop) async {
+        onPopInvokedWithResult: (didPop, result) async {
           if (didPop) return;
           // If possible, just pop to previous route. If not (opened
           // as a standalone page), navigate back to Home's order tab.
-          final popped = await Navigator.maybePop(context);
+          final navigator = Navigator.of(context);
+          final popped = await navigator.maybePop();
           if (!popped) {
-            Navigator.pushReplacementNamed(context, '/home');
+            navigator.pushReplacementNamed('/home');
           }
         },
         child: Scaffold(
