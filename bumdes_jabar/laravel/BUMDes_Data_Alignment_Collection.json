@@ -599,7 +599,7 @@
   "variable": [
     {
       "key": "base_url",
-      "value": "https://project-uts-uas-production.up.railway.app",
+      "value": "https://bumdes-api-production.up.railway.app",
       "type": "string"
     },
     {

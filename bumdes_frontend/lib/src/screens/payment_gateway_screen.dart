@@ -26,6 +26,16 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
     _initializeMidtrans();
   }
 
+  // FIX: lepas script Midtrans (snap.js) saat pengguna meninggalkan
+  // halaman ini, supaya tidak terus aktif di background selama pengguna
+  // menjelajah halaman lain di app (itu yang sebelumnya menyebabkan web
+  // freeze/tidak bisa diklik).
+  @override
+  void dispose() {
+    MidtransService.teardownWeb();
+    super.dispose();
+  }
+
   Future<void> _initializeMidtrans() async {
     final initialized = await MidtransService.initialize();
     if (!initialized && mounted) {
@@ -81,6 +91,17 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
           );
 
           debugPrint('💳 Payment result: $paymentResult');
+
+          // FIX: sebelumnya pembersihan script/overlay Midtrans (snap.js)
+          // hanya dilakukan di dispose(), tapi setelah pembayaran
+          // sukses/pending kita pindah halaman pakai Navigator.pushNamed
+          // (BUKAN pop/replace) — artinya PaymentGatewayScreen tidak
+          // pernah di-dispose, dan snap.js beserta overlay-nya tertinggal
+          // aktif SELAMANYA di background, mengunci klik & scroll di
+          // SELURUH halaman lain (termasuk Detail Pesanan). Sekarang kita
+          // langsung bersihkan begitu hasil pembayaran didapat, tidak
+          // menunggu dispose().
+          MidtransService.teardownWeb();
 
           if (!mounted) return;
 
@@ -320,11 +341,14 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
+                  // FIX: teks sebelumnya berwarna putih di atas background
+                  // terang (Color(0xFFF0F8F6)) sehingga nyaris tak terbaca.
+                  // Diganti jadi warna gelap agar kontrasnya jelas.
                   const Text(
                     'Tekan "Bayar Sekarang" untuk membuka halaman pembayaran Midtrans. Anda dapat memilih berbagai metode pembayaran seperti transfer bank, e-wallet, dan lainnya.',
-                    style: TextStyle(fontSize: 13, color: Colors.black87),
+                    style: TextStyle(fontSize: 13, color: Color(0xFF2D5016)),
                   ),
-                ],
+                 ],
               ),
             ),
             const SizedBox(height: 24),
@@ -403,11 +427,16 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                 onPressed: _isSubmitting ? null : _payNow,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2A7F41),
+                  // FIX: foregroundColor tidak pernah di-set sebelumnya,
+                  // sehingga warna teks tombol ikut default theme (nyaris
+                  // sewarna dengan background hijau tombol → tidak kebaca).
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: const Color(0xFFBDBDBD),
+                  disabledForegroundColor: const Color(0xFF616161),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  disabledBackgroundColor: Colors.grey.shade400,
                 ),
                 child: _isSubmitting
                     ? const SizedBox(
@@ -423,6 +452,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
+                          color: Colors.white,
                         ),
                       ),
               ),

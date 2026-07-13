@@ -3,17 +3,32 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:midtrans_sdk/midtrans_sdk.dart';
 import 'midtrans_web_interop.dart';
+import 'midtrans_snap_loader.dart';
 
 class MidtransService {
   static const String _clientKey = 'Mid-client-5LTBgOeDFtKhl8OZ';
   static const bool _production = false;
+  static const String _snapScriptUrl =
+      'https://app.sandbox.midtrans.com/snap/snap.js';
+
+  static void teardownWeb() {
+    if (!kIsWeb) return;
+    MidtransSnapLoader.teardownWeb();
+  }
 
   static Future<bool> initialize() async {
     try {
       if (kIsWeb) {
-        // Web platform - Snap SDK will be loaded from HTML
-        debugPrint('Midtrans web initialized (Snap SDK from HTML)');
-        return true;
+        final loaded = await MidtransSnapLoader.ensureSnapScriptLoaded(
+          scriptUrl: _snapScriptUrl,
+          clientKey: _clientKey,
+        );
+        debugPrint(
+          loaded
+              ? 'Midtrans web initialized (Snap SDK loaded on demand)'
+              : 'Gagal memuat Snap SDK (cek koneksi/CSP)',
+        );
+        return loaded;
       }
 
       // Mobile platforms
@@ -43,7 +58,9 @@ class MidtransService {
     required String customerName,
   }) async {
     try {
-      debugPrint('Starting Midtrans payment with token: ${snapToken.substring(0, 20)}...');
+      debugPrint(
+        'Starting Midtrans payment with token: ${snapToken.substring(0, 20)}...',
+      );
 
       if (kIsWeb) {
         // Use web interop for web platform
@@ -104,4 +121,3 @@ class MidtransService {
     }
   }
 }
-

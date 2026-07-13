@@ -29,14 +29,24 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <!-- Midtrans Snap SDK for Web -->
-  <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="Mid-client-5LTBgOeDFtKhl8OZ"></script>
+  <!--
+    FIX: Midtrans Snap SDK TIDAK di-load di sini lagi.
+    Sebelumnya script ini di-load di SETIAP halaman (karena ada di
+    index.html), padahal snap.js hanya dibutuhkan di halaman pembayaran.
+    snap.js mencoba menjalankan sub-script internal (tracking/fraud
+    detection) yang diblokir oleh Content-Security-Policy browser
+    (lihat error "Executing inline script violates ... script-src" di
+    console) — dan karena script ini aktif terus-menerus di background
+    di SEMUA halaman, ini yang menyebabkan web jadi freeze/tidak bisa
+    diklik, bukan cuma di halaman pembayaran.
+    Sekarang snap.js baru di-load secara dinamis lewat kode Dart
+    (lib/src/services/midtrans_service.dart), HANYA saat pengguna benar-
+    benar membuka halaman pembayaran, dan sebaiknya dilepas lagi saat
+    meninggalkan halaman tersebut.
+  -->
 
   <title>bumdes_frontend</title>
   <link rel="manifest" href="manifest.json">
-  
-  <!-- Google Maps JavaScript API -->
-<script src="https://maps.googleapis.com/maps/api/js?key=API_KEY_KAMU"></script>
 </head>
 <body>
   <!--

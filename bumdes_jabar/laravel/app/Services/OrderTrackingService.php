@@ -130,7 +130,17 @@ class OrderTrackingService
         $destination = ['lat' => (float) $order->dest_lat, 'lng' => (float) $order->dest_lng];
 
         $progress = $this->calculateProgress($order);
-        $current = $this->interpolate($origin, $destination, $progress);
+        $route = $this->fetchRoute($origin, $destination);
+
+        if ($route !== null) {
+            // Kurir "berjalan" mengikuti bentuk jalan sesungguhnya.
+            $current = $this->interpolateAlongRoute($route['geometry'], $progress);
+            $routeGeometry = $route['geometry'];
+        } else {
+            // OSRM tidak tersedia -> fallback ke garis lurus seperti semula.
+            $current = $this->interpolate($origin, $destination, $progress);
+            $routeGeometry = [$origin, $destination];
+        }
 
         return [
             'order_id' => $order->id,
@@ -138,11 +148,235 @@ class OrderTrackingService
             'origin' => $origin,
             'destination' => $destination,
             'current' => $current,
+            // Daftar titik lat/lng yang membentuk rute (mengikuti jalan
+            // sesungguhnya kalau OSRM tersedia, atau cuma 2 titik/garis
+            // lurus sebagai fallback). Dipakai frontend untuk menggambar
+            // polyline yang mengikuti jalan, bukan lagi garis lurus.
+            'route' => $routeGeometry,
             'progress' => $progress,
             'estimated_delivery_minutes' => $order->estimated_delivery_minutes,
             'shipped_at' => optional($order->delivered_at)->toIso8601String(),
             'is_completed' => $progress >= 1,
         ];
+    }
+
+    // Endpoint OSRM publik (gratis, tanpa API key) untuk menghitung rute
+    // jalan sesungguhnya (bukan garis lurus) antara dua titik. Ini server
+    // demo publik milik proyek OSRM -- cocok untuk skala kecil/menengah,
+    // tapi TIDAK ada jaminan uptime/SLA. Kalau nanti trafiknya besar,
+    // sebaiknya self-host OSRM sendiri (masih gratis, open source).
+    private const OSRM_URL = 'https://router.project-osrm.org/route/v1/driving';
+
+    /**
+     * Ambil rute jalan sesungguhnya dari OSRM antara dua titik: jarak (km),
+     * durasi (menit versi mobil), dan geometry (daftar titik lat/lng yang
+     * mengikuti jalan raya). Hasil di-cache per pasangan koordinat supaya
+     * tidak membebani server OSRM publik dan supaya bentuk rute yang
+     * ditampilkan konsisten setiap kali di-polling.
+     *
+     * Return null kalau OSRM gagal/timeout -- pemanggil WAJIB fallback ke
+     * garis lurus (haversine), jangan biarkan fitur utama gagal gara-gara
+     * servis eksternal opsional ini bermasalah.
+     */
+    private function fetchRoute(array $origin, array $destination): ?array
+    {
+        $cacheKey = 'route:'
+            . round($origin['lat'], 5) . '_' . round($origin['lng'], 5) . ':'
+            . round($destination['lat'], 5) . '_' . round($destination['lng'], 5);
+
+        return Cache::remember($cacheKey, now()->addDays(14), function () use ($origin, $destination) {
+            try {
+                $url = self::OSRM_URL . "/{$origin['lng']},{$origin['lat']};{$destination['lng']},{$destination['lat']}";
+
+                $response = Http::timeout(8)->get($url, [
+                    'overview' => 'full',
+                    'geometries' => 'geojson',
+                ]);
+
+                if (!$response->successful()) {
+                    return null;
+                }
+
+                $data = $response->json();
+
+                if (($data['code'] ?? null) !== 'Ok' || empty($data['routes'][0])) {
+                    return null;
+                }
+
+                $route = $data['routes'][0];
+                $coordinates = $route['geometry']['coordinates'] ?? [];
+
+                // GeoJSON pakai urutan [lng, lat]; dibalik ke [lat, lng]
+                // supaya konsisten dengan format titik lain di service ini.
+                $geometry = array_map(
+                    fn (array $point) => ['lat' => $point[1], 'lng' => $point[0]],
+                    $coordinates,
+                );
+
+                if (count($geometry) < 2) {
+                    return null;
+                }
+
+                return [
+                    'distance_km' => $route['distance'] / 1000,
+                    'duration_minutes' => $route['duration'] / 60,
+                    'geometry' => $geometry,
+                ];
+            } catch (\Throwable $e) {
+                Log::warning('OSRM routing gagal, fallback ke garis lurus', [
+                    'origin' => $origin,
+                    'destination' => $destination,
+                    'error' => $e->getMessage(),
+                ]);
+                return null;
+            }
+        });
+    }
+
+    /**
+     * Cari titik pada rute (daftar koordinat hasil OSRM) yang berada pada
+     * proporsi `progress` (0..1) dari total panjang rute. Beda dengan
+     * interpolate() biasa (garis lurus antara 2 titik), ini berjalan
+     * MENGIKUTI bentuk jalan sesungguhnya, titik demi titik.
+     */
+    private function interpolateAlongRoute(array $geometry, float $progress): array
+    {
+        $count = count($geometry);
+        if ($count === 0) {
+            return ['lat' => 0.0, 'lng' => 0.0];
+        }
+        if ($count === 1) {
+            return $geometry[0];
+        }
+
+        $progress = max(0.0, min(1.0, $progress));
+
+        $segmentLengths = [];
+        $totalLength = 0.0;
+        for ($i = 0; $i < $count - 1; $i++) {
+            $length = $this->haversineDistanceKm(
+                $geometry[$i]['lat'],
+                $geometry[$i]['lng'],
+                $geometry[$i + 1]['lat'],
+                $geometry[$i + 1]['lng'],
+            );
+            $segmentLengths[] = $length;
+            $totalLength += $length;
+        }
+
+        if ($totalLength <= 0) {
+            return $geometry[$count - 1];
+        }
+
+        $targetDistance = $totalLength * $progress;
+        $walked = 0.0;
+
+        for ($i = 0; $i < count($segmentLengths); $i++) {
+            $segmentLength = $segmentLengths[$i];
+            $isLastSegment = $i === count($segmentLengths) - 1;
+
+            if ($walked + $segmentLength >= $targetDistance || $isLastSegment) {
+                $segmentProgress = $segmentLength > 0
+                    ? ($targetDistance - $walked) / $segmentLength
+                    : 0.0;
+                $segmentProgress = max(0.0, min(1.0, $segmentProgress));
+
+                return $this->interpolate($geometry[$i], $geometry[$i + 1], $segmentProgress);
+            }
+
+            $walked += $segmentLength;
+        }
+
+        return $geometry[$count - 1];
+    }
+
+    // Kecepatan rata-rata kurir motor, termasuk berhenti/macet/jalan desa
+    // campuran kota. Angka konservatif supaya estimasi tidak terlalu
+    // optimis dibanding kondisi nyata di lapangan.
+    private const AVERAGE_COURIER_SPEED_KMH = 30.0;
+
+    // Waktu tambahan di luar perjalanan murni: ambil paket dari toko,
+    // parkir, cari alamat, dll.
+    private const PICKUP_BUFFER_MINUTES = 10;
+
+    // Batas bawah/atas supaya estimasi tetap masuk akal walau jarak
+    // hasil geocode sangat kecil (dekat sekali) atau sangat besar
+    // (alamat ambigu / fallback jauh dari origin).
+    private const MIN_ESTIMATED_MINUTES = 10;
+    private const MAX_ESTIMATED_MINUTES = 240;
+
+    /**
+     * Hitung estimasi durasi pengiriman (menit) berdasarkan jarak lurus
+     * (haversine) antara toko (origin) dan alamat pembeli (destination).
+     * Dipanggil saat pesanan mulai dikirim, supaya progress "100%" nanti
+     * benar-benar merepresentasikan "sudah sampai", bukan angka tetap
+     * yang sama untuk semua pesanan.
+     */
+    public function calculateEstimatedMinutes(Order $order): int
+    {
+        $order = $this->ensureCoordinates($order);
+
+        $origin = ['lat' => (float) $order->origin_lat, 'lng' => (float) $order->origin_lng];
+        $destination = ['lat' => (float) $order->dest_lat, 'lng' => (float) $order->dest_lng];
+
+        $route = $this->fetchRoute($origin, $destination);
+
+        if ($route !== null) {
+            // Durasi OSRM diasumsikan mobil; kurir motor umumnya sedikit
+            // lebih gesit di jalan padat, tapi kita pakai apa adanya
+            // (lebih konservatif/aman) lalu tambah buffer ambil paket.
+            $totalMinutes = $route['duration_minutes'] + self::PICKUP_BUFFER_MINUTES;
+        } else {
+            // OSRM tidak tersedia -> fallback ke estimasi garis lurus.
+            $distanceKm = $this->haversineDistanceKm(
+                $origin['lat'],
+                $origin['lng'],
+                $destination['lat'],
+                $destination['lng'],
+            );
+            $travelMinutes = ($distanceKm / self::AVERAGE_COURIER_SPEED_KMH) * 60;
+            $totalMinutes = $travelMinutes + self::PICKUP_BUFFER_MINUTES;
+        }
+
+        return (int) round(max(
+            self::MIN_ESTIMATED_MINUTES,
+            min(self::MAX_ESTIMATED_MINUTES, $totalMinutes),
+        ));
+    }
+
+    /**
+     * Jarak garis lurus antara dua titik koordinat (km), pakai formula
+     * haversine. Ini jarak "burung terbang", bukan jarak jalan raya
+     * sesungguhnya -- cukup untuk estimasi kasar tanpa perlu API
+     * routing berbayar.
+     */
+    private function haversineDistanceKm(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earthRadiusKm = 6371.0;
+
+        $latDelta = deg2rad($lat2 - $lat1);
+        $lngDelta = deg2rad($lng2 - $lng1);
+
+        $a = sin($latDelta / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($lngDelta / 2) ** 2;
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadiusKm * $c;
+    }
+
+    /**
+     * Cek cepat apakah kurir sudah benar-benar sampai (progress >= 100%),
+     * tanpa perlu geocoding/koordinat sama sekali -- cukup pakai status &
+     * waktu order (lihat calculateProgress()). Dipakai sebagai gerbang
+     * validasi di backend sebelum mengizinkan order ditandai "Selesai"
+     * (baik oleh pembeli lewat confirmReceipt, maupun oleh penjual lewat
+     * updateStatus), supaya aturan "belum 100% tidak bisa ditandai
+     * selesai" tidak bisa dilewati lewat panggilan API langsung
+     * (mis. dari Postman / devtools), bukan cuma dikunci di UI.
+     */
+    public function isDeliveryComplete(Order $order): bool
+    {
+        return $this->calculateProgress($order) >= 1.0;
     }
 
     /**

@@ -80,7 +80,7 @@ Route::get('/debug/products', function () {
     ]);
 });
 Route::get('/products', [ProductController::class, 'index']);
-Route::get('/products/featured', [ProductController::class, 'getFeatured']);
+Route::get('/products/featured', [ProductController::class, 'getFeaturedProducts']);
 Route::get('/stores/popular', [ProductController::class, 'getPopularStores']);
 Route::get('/products/search', [ProductController::class, 'search']);
 Route::post('/products/ai-search', [ProductAISearchController::class, 'search']);

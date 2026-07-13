@@ -4,7 +4,7 @@ class UserModel {
   // relatif (contoh: "profile-photos/xxx.jpg") bukan URL lengkap.
   // Sesuaikan kalau base URL backend kamu beda / dipindah ke .env.
   static const String _storageBaseUrl =
-      'https://project-uts-uas-production.up.railway.app/storage';
+      'https://bumdes-api-production.up.railway.app/storage';
 
   final int? id;
   final String name;

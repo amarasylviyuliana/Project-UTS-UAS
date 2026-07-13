@@ -101,6 +101,27 @@ class ProductService {
     );
   }
 
+  // TAMBAHAN: ambil pesan error yang SEBENARNYA dari response validasi
+  // Laravel. Sebelumnya createProduct/updateProduct cuma baca data['message'],
+  // yang isinya generik ("The given data was invalid."). Alasan asli
+  // kegagalan (misal "The photo must not be greater than 5120 kilobytes.")
+  // ada di data['errors'], jadi tidak pernah terlihat oleh pengguna — ini
+  // salah satu penyebab keluhan "gagal upload foto produk" tanpa penjelasan.
+  String _extractErrorMessage(Map<String, dynamic> data, String fallback) {
+    final errors = data['errors'];
+    if (errors is Map<String, dynamic> && errors.isNotEmpty) {
+      final firstKey = errors.keys.first;
+      final firstValue = errors[firstKey];
+      if (firstValue is List && firstValue.isNotEmpty) {
+        return firstValue.first.toString();
+      }
+      if (firstValue is String && firstValue.isNotEmpty) {
+        return firstValue;
+      }
+    }
+    return (data['message'] as String?) ?? fallback;
+  }
+
   Future<ProductModel> createProduct(
     String token,
     String name,
@@ -111,6 +132,10 @@ class ProductService {
     String description,
     XFile? imageFile, {
     Uint8List? imageBytes,
+    // TAMBAHAN: status aktif. Dipakai sebagai toggle "Tersedia/Tidak
+    // Tersedia" untuk Jasa (form yang mengontrol nilai ini), dan tetap
+    // true default untuk Produk.
+    bool isActive = true,
   }) async {
     final uri = Uri.parse(apiUrl('/products'));
     final request = http.MultipartRequest('POST', uri);
@@ -123,6 +148,9 @@ class ProductService {
     request.fields['price'] = price.toString();
     request.fields['stock'] = stock.toString();
     request.fields['description'] = description;
+    // TAMBAHAN: kirim is_active ke backend. Laravel 'boolean' rule
+    // menerima string "1"/"0".
+    request.fields['is_active'] = isActive ? '1' : '0';
 
     await _attachPhoto(request, imageFile, imageBytes);
 
@@ -135,7 +163,7 @@ class ProductService {
       return ProductModel.fromJson(productData as Map<String, dynamic>);
     } else {
       final data = jsonDecode(resp.body);
-      throw Exception(data['message'] ?? 'Gagal membuat produk');
+      throw Exception(_extractErrorMessage(data, 'Gagal membuat produk'));
     }
   }
 
@@ -150,6 +178,9 @@ class ProductService {
     String description,
     XFile? imageFile, {
     Uint8List? imageBytes,
+    // TAMBAHAN: sama seperti createProduct — dipakai untuk toggle
+    // Tersedia/Tidak Tersedia pada Jasa.
+    bool isActive = true,
   }) async {
     final uri = Uri.parse(apiUrl('/products/$productId'));
     final request = http.MultipartRequest('POST', uri);
@@ -162,6 +193,7 @@ class ProductService {
     request.fields['price'] = price.toString();
     request.fields['stock'] = stock.toString();
     request.fields['description'] = description;
+    request.fields['is_active'] = isActive ? '1' : '0';
 
     await _attachPhoto(request, imageFile, imageBytes);
 
@@ -174,7 +206,7 @@ class ProductService {
       return ProductModel.fromJson(productData as Map<String, dynamic>);
     } else {
       final data = jsonDecode(resp.body);
-      throw Exception(data['message'] ?? 'Gagal memperbarui produk');
+      throw Exception(_extractErrorMessage(data, 'Gagal memperbarui produk'));
     }
   }
 

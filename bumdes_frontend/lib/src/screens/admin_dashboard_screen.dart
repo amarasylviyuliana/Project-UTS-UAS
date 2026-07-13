@@ -641,7 +641,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildRecentActivity() {
-    final recentOrders = _orders.take(5).toList();
     if (_isLoadingOrders) {
       return const Center(
         child: Padding(
@@ -650,7 +649,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
       );
     }
-    if (recentOrders.isEmpty) {
+    if (_orders.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
@@ -679,18 +678,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ],
       ),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: recentOrders.length,
+      // FIX: sebelumnya cuma nampilin 5 pesanan teratas (take(5)) dan tidak
+      // bisa lihat sisanya. Sekarang pakai PaginatedListView (sama seperti
+      // tab lain) supaya SEMUA pesanan bisa dilihat lewat halaman-halaman.
+      child: PaginatedListView<Map<String, dynamic>>(
+        items: _orders,
+        pageSize: 5,
         separatorBuilder: (_, __) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final order = recentOrders[index];
-          // FIX: crossAxisAlignment.start + nomor pesanan dibatasi 1 baris
-          // (ellipsis). Sebelumnya Row tanpa batas baris membuat nomor
-          // pesanan yang panjang wrap ke 2-3 baris, dan karena Row
-          // default-nya center, badge status jadi kelihatan naik/tidak
-          // sejajar dengan teksnya.
+        itemBuilder: (context, order, index) {
+          // FIX: nomor pesanan (resi) SEKARANG TIDAK PERNAH KEPOTONG lagi.
+          // Sebelumnya pakai maxLines: 1 + overflow: ellipsis, jadi nomor
+          // pesanan yang panjang selalu jadi "Pesanan #ORD-2...". Sekarang
+          // teks dibiarkan wrap apa adanya (tanpa batas baris/ellipsis),
+          // dan badge status dipindah ke bawah sendiri (bukan sejajar di
+          // kanan) supaya tidak jadi sempit ketika nomor pesanannya panjang.
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -716,24 +717,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         '${order['recipient_name'] ?? order['user']?['name'] ?? 'Pembeli'} • ${_formatRupiah(_parseDouble(order['total'] ?? order['total_price']))}',
                         style: const TextStyle(
                           color: Colors.black54,
                           fontSize: 12,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _buildStatusChip(order['status'] ?? '-'),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                _buildStatusChip(order['status'] ?? '-'),
               ],
             ),
           );
@@ -797,11 +799,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // ── TAMBAHAN: helper avatar dari URL foto ────────────────────────────────
-  // Dipakai untuk avatar Pembeli, Penjual, dan Toko di dashboard Admin.
-  // Kalau [photoUrl] ada dan gambarnya berhasil dimuat, tampilkan foto asli
-  // (dibulatkan). Kalau tidak ada atau gagal dimuat, tampilkan [fallback]
-  // (inisial huruf atau icon generik) seperti sebelumnya.
+  // ── HELPER AVATAR DARI URL FOTO ────────────────────────────────────────────
+  // Dipakai untuk avatar Pembeli, Penjual, Toko, dan foto Produk di dashboard
+  // Admin. Kalau [photoUrl] ada dan gambarnya berhasil dimuat, tampilkan foto
+  // asli (dibulatkan). Kalau tidak ada atau gagal dimuat, tampilkan [fallback]
+  // (inisial huruf atau icon generik).
   Widget _buildAvatarFromUrl(
     String? photoUrl, {
     required Widget fallback,
@@ -838,12 +840,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _parseDouble(store['total_revenue'] ?? store['revenue']),
     );
     final storeId = store['id'] as int?;
-    // FIX: sebelumnya cuma baca store['store_photo_url'] yang biasanya
-    // belum diisi backend, jadi selalu jatuh ke ikon toko generik.
-    // Sekarang diutamakan foto pemilik toko (user['photo_url']) — ini
-    // yang sama dipakai di halaman Akun/Pengguna dan sudah terbukti ada
-    // datanya (mis. foto BUMDes Garut) — baru fallback ke store_photo_url
-    // kalau suatu saat backend punya foto toko sendiri yang terpisah.
+    // Kartu ini mewakili identitas TOKO (bukan produk), jadi tetap benar
+    // menampilkan foto profil pemilik toko sebagai identitas visualnya,
+    // dengan fallback ke store_photo_url kalau backend suatu saat punya
+    // foto toko yang terpisah dari foto profil pribadi penjual.
     final storePhotoUrl =
         (store['user']?['photo_url'] as String?) ??
         (store['store_photo_url'] as String?);
@@ -1137,10 +1137,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // TAMBAHAN: card produk untuk layar HP.
+  // FIX: sebelumnya avatar di sini pakai foto profil PEMILIK TOKO
+  // (store.user.photo_url), jadi semua produk dari toko yang sama tampil
+  // dengan foto yang sama persis (bug "foto produk kok sama semua").
+  // Sekarang pakai foto PRODUK itu sendiri (image_url, dikirim backend
+  // lewat mapProductForResponse -> resolvePhotoUrl), konsisten dengan
+  // fungsi tabel ini yaitu "Manajemen Produk", bukan manajemen toko.
   Widget _buildProductCardMobile(Map<String, dynamic> p) {
     final productId = p['id'] as int?;
     final name = p['name'] ?? '-';
     final storeName = p['store']?['store_name'] ?? '-';
+    final productImageUrl = p['image_url'] as String?;
     final price = _formatRupiah(_parseDouble(p['price']));
     final status =
         p['product_approval']?['status'] ??
@@ -1151,6 +1158,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: const Color(0xFFE8F5E9),
+            child: _buildAvatarFromUrl(
+              productImageUrl,
+              radius: 20,
+              fallback: const Icon(
+                Icons.shopping_bag_outlined,
+                color: Color(0xFF2A7F41),
+                size: 18,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1236,26 +1257,53 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // TAMBAHAN: baris tabel produk untuk layar lebar (logika sama seperti semula).
+  // TAMBAHAN: baris tabel produk untuk layar lebar.
+  // FIX: sama seperti _buildProductCardMobile — sebelumnya avatar di sini
+  // pakai sellerPhotoUrl (foto profil pemilik toko), sekarang diseragamkan
+  // memakai foto PRODUK (image_url) supaya konsisten dengan versi mobile
+  // dan dengan fungsi tabel "Manajemen Produk" itu sendiri.
   Widget _buildProductRowDesktop(Map<String, dynamic> p) {
     final productId = p['id'] as int?;
+    final storeName = p['store']?['store_name'] ?? '-';
+    final productImageUrl = p['image_url'] as String?;
+
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
           Expanded(
             flex: 3,
-            child: Text(
-              p['name'] ?? '-',
-              style: const TextStyle(fontWeight: FontWeight.w500),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: const Color(0xFFE8F5E9),
+                  child: _buildAvatarFromUrl(
+                    productImageUrl,
+                    radius: 16,
+                    fallback: const Icon(
+                      Icons.shopping_bag_outlined,
+                      color: Color(0xFF2A7F41),
+                      size: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    p['name'] ?? '-',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
             flex: 2,
             child: Text(
-              p['store']?['store_name'] ?? '-',
+              storeName,
               style: const TextStyle(color: Colors.black54, fontSize: 13),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

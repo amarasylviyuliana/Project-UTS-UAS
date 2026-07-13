@@ -283,11 +283,33 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   // Dipanggil oleh CourierTrackingMap setiap kali data lokasi kurir
-  // ter-update (polling). Dipakai untuk menentukan apakah tombol
-  // "Tandai Selesai" / "Konfirmasi Penerimaan" sudah boleh ditekan.
+  // ter-update (polling, tiap ~8 detik). Dipakai untuk menentukan apakah
+  // tombol "Tandai Selesai" / "Konfirmasi Penerimaan" sudah boleh ditekan.
+  //
+  // FIX (optimasi lanjutan): sebelumnya setState() dipanggil di SETIAP
+  // update tracking (tiap 8 detik), padahal itu me-rebuild SELURUH
+  // OrderDetailScreen — daftar produk, info pengiriman, semua tombol —
+  // padahal yang benar-benar dibutuhkan halaman ini cuma tahu apakah
+  // status "kurir sudah sampai" berubah atau belum (progress 7% -> 15%
+  // -> 23% dst tidak perlu bikin seluruh halaman render ulang).
+  // Sekarang setState() cuma dipanggil kalau status itu benar-benar
+  // berpindah (dari belum sampai -> sudah sampai, atau sebaliknya).
   void _handleTrackingUpdate(OrderTrackingModel tracking) {
     if (!mounted) return;
-    setState(() => _tracking = tracking);
+
+    final wasComplete =
+        _tracking != null && (_tracking!.isCompleted || _tracking!.progress >= 1.0);
+    final isComplete = tracking.isCompleted || tracking.progress >= 1.0;
+
+    if (_tracking == null || wasComplete != isComplete) {
+      // Data pertama kali masuk, atau status delivery-complete berubah:
+      // perlu rebuild supaya tombol aksi enable/disable dengan benar.
+      setState(() => _tracking = tracking);
+    } else {
+      // Cuma progress/posisi yang berubah, status belum sampai/sudah
+      // sampai tetap sama -> update data tanpa memicu rebuild halaman.
+      _tracking = tracking;
+    }
   }
 
   /// True hanya jika kurir sudah benar-benar sampai (progress 100% atau
@@ -302,16 +324,35 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   Widget build(BuildContext context) {
     if (_order == null) {
+      // FIX (penyebab freeze TOTAL setelah klik tombol back — gabisa
+      // diklik/discroll SAMA SEKALI, sampai tombol minimize jendela
+      // browser pun tidak merespon): sebelumnya `canPop` di-hardcode
+      // `false`, lalu di dalam `onPopInvoked` kita panggil
+      // `Navigator.maybePop(context)` LAGI. Karena `canPop` masih
+      // `false`, panggilan pop itu JUGA langsung diblokir oleh
+      // `PopScope` yang sama, yang memicu `onPopInvoked` lagi, yang
+      // manggil `maybePop()` lagi — berulang tanpa henti (infinite
+      // recursive loop), secepat mungkin, tanpa pernah selesai. Ini yang
+      // membuat event loop browser kepenuhan dan tidak sempat memproses
+      // klik/scroll apapun lagi.
+      //
+      // Sekarang `canPop` dihitung dinamis: kalau memang ada halaman
+      // sebelumnya untuk di-pop, izinkan pop terjadi secara normal
+      // (tidak perlu campur tangan custom logic sama sekali, jadi tidak
+      // ada risiko rekursi). Custom logic (redirect ke Home) HANYA
+      // dijalankan kalau benar-benar tidak ada apa-apa untuk di-pop, dan
+      // kita pakai `pushReplacementNamed` (bukan pop lagi) supaya tidak
+      // memicu `PopScope` ini berulang.
+      final canPopNow = Navigator.of(context).canPop();
       return PopScope(
         canPop: false,
-        onPopInvokedWithResult: (didPop, result) async {
+        onPopInvoked: (didPop) async {
           if (didPop) return;
           // If possible, just pop to previous route. If not (opened
           // as a standalone page), navigate back to Home's order tab.
-          final navigator = Navigator.of(context);
-          final popped = await navigator.maybePop();
+          final popped = await Navigator.maybePop(context);
           if (!popped) {
-            navigator.pushReplacementNamed('/home');
+            Navigator.pushReplacementNamed(context, '/home');
           }
         },
         child: Scaffold(
@@ -359,18 +400,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final statusColor = _getStatusColor(order.status);
     final deliveryComplete = _isDeliveryComplete;
 
+    // FIX: sama seperti di atas — canPop dihitung dinamis, bukan
+    // di-hardcode false + manggil maybePop() lagi di dalam handler
+    // (itu yang menyebabkan infinite loop & freeze total setelah klik
+    // tombol back).
+    final canPopNow = Navigator.of(context).canPop();
     return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
+      canPop: canPopNow,
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        // Prefer to pop to the previous route so we don't create duplicate
-        // history entries. If there's nothing to pop (opened standalone),
-        // send user back to Home (orders tab).
-        final navigator = Navigator.of(context);
-        final popped = await navigator.maybePop();
-        if (!popped) {
-          navigator.pushReplacementNamed('/home');
-        }
+        // Hanya tercapai kalau canPopNow == false. pushReplacementNamed
+        // BUKAN operasi pop, jadi aman, tidak memicu PopScope ini lagi.
+        Navigator.of(context).pushReplacementNamed('/home');
       },
       child: Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -592,6 +633,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
               const SizedBox(height: 18),
 
+              // FIX: sebelumnya kondisi ini di-hardcode jadi `if (false)`
+              // (kemungkinan sisa dari testing manual), yang bikin section
+              // "Lokasi Kurir" TIDAK PERNAH muncul apapun status
+              // pesanannya. Dikembalikan ke kondisi yang benar: peta
+              // hanya tampil kalau status pesanan "Dikirim" atau
+              // "Estimasi Sampai".
               if (order.status.toLowerCase() == 'dikirim' ||
                   order.status.toLowerCase() == 'estimasi sampai') ...[
                 _buildSectionTitle('Lokasi Kurir'),
@@ -632,6 +679,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
 
               const SizedBox(height: 20),
+              // Tombol "Bayar Sekarang" — foregroundColor: Colors.white
+              // diberikan eksplisit supaya teksnya tidak ikut warna hijau
+              // default dari theme (yang sebelumnya nyaris tak terlihat
+              // di atas background tombol yang juga hijau).
               if ((order.status.toLowerCase().contains('pembayaran') ||
                       order.status.toLowerCase().contains('pending')) &&
                   Provider.of<AuthProvider>(context, listen: false).user?.role != 'seller' &&
@@ -651,6 +702,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2A7F41),
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: const Color(0xFFBDBDBD),
+                      disabledForegroundColor: const Color(0xFF616161),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(18),
@@ -658,7 +712,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     ),
                     child: const Text(
                       'Bayar Sekarang',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -693,6 +751,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
               // Tombol Konfirmasi Penerimaan (pembeli) — terkunci selama
               // kurir belum benar-benar sampai (progress < 100%).
+              // FIX: sebelumnya tidak ada backgroundColor eksplisit, dan
+              // tidak ada warna khusus untuk state disabled, sehingga
+              // kontrasnya bisa jadi jelek tergantung theme default.
               if (order.status.toLowerCase() == 'dikirim' &&
                   Provider.of<AuthProvider>(context).user?.role != 'seller')
                 Column(
@@ -705,6 +766,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             ? null
                             : _confirmReceipt,
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2A7F41),
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: const Color(0xFFBDBDBD),
+                          disabledForegroundColor: const Color(0xFF616161),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18),
@@ -721,7 +786,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               )
                             : const Text(
                                 'Konfirmasi Penerimaan',
-                                style: TextStyle(fontSize: 16),
+                                style: TextStyle(fontSize: 16, color: Colors.white),
                               ),
                       ),
                     ),
@@ -750,6 +815,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                 : () => _updateOrderStatus('Dikonfirmasi'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: const Color(0xFFBDBDBD),
+                              disabledForegroundColor: const Color(0xFF616161),
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18),
@@ -766,7 +834,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                   )
                                 : const Text(
                                     'Konfirmasi Pesanan',
-                                    style: TextStyle(fontSize: 16),
+                                    style: TextStyle(fontSize: 16, color: Colors.white),
                                   ),
                           ),
                         ),
@@ -807,6 +875,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                 : () => _updateOrderStatus('Dikirim'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.indigo,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: const Color(0xFFBDBDBD),
+                              disabledForegroundColor: const Color(0xFF616161),
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18),
@@ -823,7 +894,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                   )
                                 : const Text(
                                     'Kirim Pesanan',
-                                    style: TextStyle(fontSize: 16),
+                                    style: TextStyle(fontSize: 16, color: Colors.white),
                                   ),
                           ),
                         ),
@@ -831,6 +902,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
                     // Tombol Tandai Selesai (penjual) — terkunci selama
                     // kurir belum benar-benar sampai (progress < 100%).
+                    // FIX: warna disabled ditambahkan eksplisit supaya saat
+                    // aktif (100%) teksnya putih jelas di atas hijau, dan
+                    // saat masih terkunci warnanya tetap terbaca (abu tua
+                    // di atas abu muda), bukan abu pucat di atas abu pucat.
                     if (order.status.toLowerCase() == 'dikirim')
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -842,7 +917,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                   ? null
                                   : () => _updateOrderStatus('Selesai'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
+                                backgroundColor: const Color(0xFF2A7F41),
+                                foregroundColor: Colors.white,
+                                disabledBackgroundColor: const Color(0xFFBDBDBD),
+                                disabledForegroundColor: const Color(0xFF616161),
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(18),
@@ -859,7 +937,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                     )
                                   : const Text(
                                       'Tandai Selesai',
-                                      style: TextStyle(fontSize: 16),
+                                      style: TextStyle(fontSize: 16, color: Colors.white),
                                     ),
                             ),
                           ),

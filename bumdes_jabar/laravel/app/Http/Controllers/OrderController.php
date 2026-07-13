@@ -9,6 +9,7 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Services\XenditService;
 use App\Services\N8nNotificationService;
+use App\Services\OrderTrackingService;
 use App\Events\OrderCancelled;
 use App\Events\OrderStatusUpdated;
 use Illuminate\Database\QueryException;
@@ -280,7 +281,7 @@ class OrderController extends Controller
      * berbasis waktu). Dipanggil berkala oleh frontend (polling) supaya
      * marker kurir terlihat bergerak secara real-time.
      */
-    public function trackingLocation(Request $request, $id, \App\Services\OrderTrackingService $trackingService): JsonResponse
+    public function trackingLocation(Request $request, $id, OrderTrackingService $trackingService): JsonResponse
     {
         $order = Order::with('store')->find($id);
 
@@ -360,7 +361,7 @@ class OrderController extends Controller
      * Update order status
      * REQ-24
      */
-    public function updateStatus(Request $request, $id): JsonResponse
+    public function updateStatus(Request $request, $id, OrderTrackingService $trackingService): JsonResponse
     {
         $user = $request->user();
 
@@ -384,8 +385,25 @@ class OrderController extends Controller
 
         $previousStatus = $order->status;
 
+        // Penjual tidak boleh menandai pesanan "Selesai" selama kurir
+        // belum benar-benar sampai di tujuan (progress pengiriman < 100%).
+        // Ini mencegah klik "Tandai Selesai" dipaksa lewat API langsung
+        // walau tombolnya sudah dikunci di sisi UI.
+        if ($validated['status'] === 'Selesai'
+            && in_array($previousStatus, ['Dikirim', 'Estimasi Sampai'], true)
+            && !$trackingService->isDeliveryComplete($order)) {
+            return response()->json([
+                'message' => 'Pesanan belum bisa ditandai selesai karena kurir belum sampai di lokasi tujuan.',
+                'code' => 'DELIVERY_NOT_COMPLETE',
+            ], 422);
+        }
+
         if ($validated['status'] === 'Dikirim') {
             $order->delivered_at = now();
+            // Estimasi durasi pengiriman dihitung dari jarak toko ke
+            // alamat pembeli (bukan angka tetap), supaya progress 100%
+            // nanti benar-benar berarti "kurir sudah sampai".
+            $order->estimated_delivery_minutes = $trackingService->calculateEstimatedMinutes($order);
         } elseif ($validated['status'] === 'Selesai') {
             $order->completed_at = now();
         }
@@ -410,7 +428,7 @@ class OrderController extends Controller
      * Buyer confirms receipt
      * REQ-25
      */
-    public function confirmReceipt(Request $request, $id): JsonResponse
+    public function confirmReceipt(Request $request, $id, OrderTrackingService $trackingService): JsonResponse
     {
         $order = Order::find($id);
 
@@ -423,6 +441,17 @@ class OrderController extends Controller
         if ($order->status !== 'Dikirim') {
             return response()->json([
                 'message' => 'Status pesanan harus "Dikirim" untuk mengkonfirmasi penerimaan',
+            ], 422);
+        }
+
+        // Pembeli tidak boleh konfirmasi penerimaan selama kurir belum
+        // benar-benar sampai di tujuan (progress pengiriman < 100%). Ini
+        // mencegah klik "Konfirmasi Penerimaan" dipaksa lewat API langsung
+        // walau tombolnya sudah dikunci di sisi UI.
+        if (!$trackingService->isDeliveryComplete($order)) {
+            return response()->json([
+                'message' => 'Belum bisa mengkonfirmasi penerimaan karena kurir belum sampai di lokasi tujuan.',
+                'code' => 'DELIVERY_NOT_COMPLETE',
             ], 422);
         }
 

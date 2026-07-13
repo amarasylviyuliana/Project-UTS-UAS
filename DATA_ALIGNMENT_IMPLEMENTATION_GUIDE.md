@@ -301,7 +301,7 @@ GET    /api/admin/audit-logs/admin/{id}   # Get logs by admin
 ### Example: Verify Seller
 
 ```bash
-curl -X PUT https://project-uts-uas-production.up.railway.app:///api/admin/verifications/1 \
+curl -X PUT https://bumdes-api-production.up.railway.app:///api/admin/verifications/1 \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -313,7 +313,7 @@ curl -X PUT https://project-uts-uas-production.up.railway.app:///api/admin/verif
 ### Example: Approve Store
 
 ```bash
-curl -X PUThttps://project-uts-uas-production.up.railway.app/api/admin/store-approvals/1 \
+curl -X PUThttps://bumdes-api-production.up.railway.app/api/admin/store-approvals/1 \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -325,7 +325,7 @@ curl -X PUThttps://project-uts-uas-production.up.railway.app/api/admin/store-app
 ### Example: Reject Product
 
 ```bash
-curl -X PUT https://project-uts-uas-production.up.railway.app/api/admin/product-approvals/1 \
+curl -X PUT https://bumdes-api-production.up.railway.app/api/admin/product-approvals/1 \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{

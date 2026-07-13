@@ -35,6 +35,13 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
  bool _isSaving = false;
   bool _argsLoaded = false;
   double _platformFeePercentage = 0;
+  // TAMBAHAN: status Tersedia/Tidak Tersedia, khusus dipakai untuk tipe
+  // Jasa (menggantikan field Stok yang memang tidak relevan untuk Jasa).
+  // Untuk tipe Produk, nilai ini tetap diteruskan ke server apa adanya
+  // (default true untuk produk baru, atau status is_active yang sudah
+  // ada kalau sedang mengedit) supaya tidak diam-diam mengubah status
+  // aktif produk lewat form ini.
+  bool _isActive = true;
 
   static const List<String> _validCategories = [
     'Pertanian & Perkebunan',
@@ -78,6 +85,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       _stockController.text = _product!.stock.toString();
       _descriptionController.text = _product!.description;
       _type = _product!.isService ? 'service' : 'product';
+      // TAMBAHAN: bawa status aktif produk/jasa yang sedang diedit.
+      _isActive = _product!.isActive;
 
       final imageUrl = _product!.imageUrl;
       if (imageUrl.isNotEmpty) {
@@ -101,6 +110,16 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   Future<void> _pickImage() async {
     final picked = await _picker.pickImage(
       source: ImageSource.gallery,
+      // FIX: dibatasi lebar/tinggi maksimal + kualitas, sama seperti foto
+      // profil (lihat edit_profile_screen.dart). Sebelumnya pickImage
+      // dipanggil TANPA maxWidth/maxHeight, jadi foto langsung dari galeri
+      // HP (apalagi iPhone) bisa berukuran 5-10MB dan ditolak backend, yang
+      // membatasi ukuran foto produk maksimal 5120 KB (lihat validasi
+      // 'photo' => 'sometimes|image|mimes:jpeg,png,jpg|max:5120' di
+      // ProductController@store dan @update). Upload jadi gagal tanpa
+      // pesan yang jelas ke pengguna.
+      maxWidth: 1280,
+      maxHeight: 1280,
       imageQuality: 80,
     );
     if (picked == null || !mounted) return;
@@ -280,6 +299,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           _descriptionController.text.trim(),
           _imageFile,
           imageBytes: _imageBytes,
+          // TAMBAHAN: kirim status Tersedia/Tidak Tersedia (khusus Jasa,
+          // lewat switch di form). Untuk Produk baru, defaultnya true.
+          isActive: _isActive,
         );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -302,6 +324,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           _descriptionController.text.trim(),
           _imageFile,
           imageBytes: _imageBytes,
+          isActive: _isActive,
         );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -476,6 +499,11 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               ],
               const SizedBox(height: 14),
 
+              // Stok hanya relevan untuk Produk Fisik. Jasa/layanan tidak
+              // memiliki stok — sebagai gantinya, Jasa pakai toggle
+              // Tersedia/Tidak Tersedia (field is_active), karena yang
+              // relevan untuk Jasa bukan "berapa jumlahnya" tapi "lagi
+              // bisa diambil pesanan atau tidak".
               if (_type == 'product') ...[
                 TextFormField(
                   controller: _stockController,
@@ -492,6 +520,44 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                     if (p == null || p < 0) return 'Stok tidak valid';
                     return null;
                   },
+                ),
+                const SizedBox(height: 14),
+              ] else ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: (_isActive ? const Color(0xFF2A7F41) : Colors.grey)
+                        .withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: (_isActive
+                              ? const Color(0xFF2A7F41)
+                              : Colors.grey)
+                          .withOpacity(0.4),
+                    ),
+                  ),
+                  child: SwitchListTile(
+                    value: _isActive,
+                    onChanged: _isSaving
+                        ? null
+                        : (v) => setState(() => _isActive = v),
+                    activeColor: const Color(0xFF2A7F41),
+                    title: Text(
+                      _isActive ? 'Tersedia' : 'Tidak Tersedia',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      _isActive
+                          ? 'Jasa ini tampil dan bisa dipesan pembeli.'
+                          : 'Jasa ini disembunyikan sementara dan tidak bisa dipesan pembeli.',
+                      style: const TextStyle(fontSize: 11.5),
+                    ),
+                    secondary: Icon(
+                      _isActive ? Icons.check_circle_outline : Icons.pause_circle_outline,
+                      color: _isActive ? const Color(0xFF2A7F41) : Colors.grey,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 14),
               ],

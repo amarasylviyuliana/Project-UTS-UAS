@@ -17,7 +17,7 @@ class AppConfig {
   static String get apiBaseUrl {
     // Production backend
     if (isProduction) {
-      return 'https://project-uts-uas-production.up.railway.app/api';
+      return 'https://bumdes-api-production.up.railway.app/api';
     }
     // Development: gunakan localhost atau development server
     return 'http://localhost:8000/api';

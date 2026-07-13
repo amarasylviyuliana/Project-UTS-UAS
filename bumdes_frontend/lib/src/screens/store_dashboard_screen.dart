@@ -8,6 +8,7 @@ import '../providers/product_provider.dart';
 import '../services/order_service.dart';
 import '../services/product_service.dart';
 import '../services/report_service.dart';
+import '../services/wallet_service.dart';
 import '../utils/format_helper.dart';
 import 'home_screen.dart';
 import 'product_form_screen.dart';
@@ -37,11 +38,24 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   List<ProductModel> _sellerProducts = [];
   bool _sellerProductsLoaded = false;
   bool _loadingProducts = false;
+  // TAMBAHAN: simpan pesan error asli kalau _loadSellerProducts gagal, supaya
+  // tidak lagi terlihat sebagai "Belum ada produk" padahal sebenarnya request
+  // gagal (misal gagal ambil store_id, token invalid, dll).
+  String? _productsLoadError;
   List<OrderModel> _sellerOrders = [];
   bool _loadingOrders = false;
   FinancialReportModel? _financialReport;
   bool _loadingReport = false;
   final ReportService _reportService = ReportService();
+
+  // FIX: Saldo kas toko sekarang diambil dari WalletService (data ASLI
+  // dari wallet_transactions di backend), bukan dihitung sendiri dari
+  // jumlah order lokal seperti sebelumnya. Ini menyamakan angka dengan
+  // apa yang tercatat resmi di backend (mis. halaman Saldo & Penarikan).
+  final WalletService _walletService = WalletService();
+  double _walletBalance = 0.0;
+  bool _loadingWallet = false;
+  String? _walletError;
 
   // Status aktif/nonaktif toko (ditentukan Admin), bukan lagi status approval.
   // null  = toko belum dibuat Admin untuk akun ini
@@ -57,6 +71,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       _loadSellerOrders();
       _loadSellerProducts();
       _checkStoreApprovalStatus();
+      _loadWalletBalance();
     });
   }
 
@@ -89,11 +104,14 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     }
   }
 
-  Future<void> _loadSellerProducts() async {
+ Future<void> _loadSellerProducts() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (!auth.isAuthenticated || auth.token == null) return;
 
-    setState(() => _loadingProducts = true);
+    setState(() {
+      _loadingProducts = true;
+      _productsLoadError = null;
+    });
     try {
       final products = await _productService.fetchProductsByStore(auth.token!);
       if (mounted) {
@@ -109,6 +127,8 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
         setState(() {
           _loadingProducts = false;
           _sellerProductsLoaded = true;
+          // TAMBAHAN: simpan pesan error asli supaya bisa ditampilkan di UI.
+          _productsLoadError = e.toString();
         });
       }
     }
@@ -137,6 +157,42 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     }
   }
 
+  // FIX: Saldo kas toko sekarang ambil dari GET /wallet/balance (data asli
+  // dari wallet_transactions), bukan dari jumlah order 'Selesai'/'Dikonfirmasi'
+  // yang dihitung sendiri di HP. Angka ini yang dipakai sebagai kebenaran
+  // tunggal, sama seperti yang dipakai di halaman Saldo & Penarikan.
+  Future<void> _loadWalletBalance() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (!auth.isAuthenticated || auth.token == null) return;
+
+    setState(() {
+      _loadingWallet = true;
+      _walletError = null;
+    });
+    try {
+      final balance = await _walletService.getBalance(auth.token!);
+      if (mounted) {
+        setState(() {
+          _walletBalance = balance;
+          _loadingWallet = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading wallet balance: $e');
+      if (mounted) {
+        setState(() {
+          _loadingWallet = false;
+          _walletError = 'Gagal memuat saldo';
+        });
+      }
+    }
+  }
+
+  // FIX: Laporan keuangan sekarang mengutamakan data ASLI dari backend
+  // (GET /reports/store, yang menghitung pengeluaran/laba dari
+  // wallet_transactions kategori 'tax'). Hitungan lokal (calculateFromOrders,
+  // yang menebak pengeluaran = 25% dari pendapatan) sekarang HANYA dipakai
+  // sebagai fallback kalau API gagal/tidak tersedia, bukan jalur utama.
   Future<void> _loadFinancialReport() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (!auth.isAuthenticated || auth.token == null) return;
@@ -145,11 +201,23 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     try {
       final now = DateTime.now();
       final lastMonth = DateTime(now.year, now.month - 1, now.day);
-      final report = _reportService.calculateFromOrders(
-        _sellerOrders,
-        startDate: lastMonth,
-        endDate: now,
-      );
+
+      FinancialReportModel report;
+      try {
+        report = await _reportService.getStoreReport(
+          token: auth.token!,
+          startDate: lastMonth.toIso8601String(),
+          endDate: now.toIso8601String(),
+        );
+      } catch (e) {
+        debugPrint('getStoreReport gagal, pakai kalkulasi lokal sebagai fallback: $e');
+        report = _reportService.calculateFromOrders(
+          _sellerOrders,
+          startDate: lastMonth,
+          endDate: now,
+        );
+      }
+
       if (mounted) {
         setState(() {
           _financialReport = report;
@@ -329,6 +397,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
               _loadSellerOrders();
               _loadSellerProducts();
               _checkStoreApprovalStatus();
+              _loadWalletBalance();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Data diperbarui'),
@@ -458,6 +527,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
         await _loadSellerOrders();
         await _loadSellerProducts();
         await _checkStoreApprovalStatus();
+        await _loadWalletBalance();
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -499,7 +569,11 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                     ),
                   )
                 : SizedBox(
-                    height: 200,
+                    // TAMBAHAN: tinggi kartu dinaikkan sedikit (200 -> 224)
+                    // untuk menampung 1 baris tambahan info Stok/Jasa,
+                    // supaya penjual bisa langsung lihat stok tanpa harus
+                    // buka halaman Ubah Produk.
+                    height: 224,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: _sellerProducts.take(5).length,
@@ -555,6 +629,14 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
+                                    const SizedBox(height: 2),
+                                    // TAMBAHAN: info Stok pada kartu produk
+                                    // di Dashboard. Untuk produk Jasa tidak
+                                    // ada konsep stok, jadi tampilkan label
+                                    // "Jasa" saja. Untuk produk fisik dengan
+                                    // stok 0, tampilkan warna merah supaya
+                                    // langsung kelihatan kalau sudah habis.
+                                    _buildStockBadge(product),
                                   ],
                                 ),
                               ),
@@ -731,6 +813,37 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     );
   }
 
+  // TAMBAHAN: Badge kecil untuk menampilkan status stok pada kartu produk.
+  // - Produk Jasa       -> karena tidak ada konsep "stok" untuk layanan,
+  //                        tampilkan status ketersediaan (aktif/nonaktif)
+  //                        sebagai gantinya: "Tersedia" (hijau) atau
+  //                        "Tidak Tersedia" (merah).
+  // - Stok 0            -> label merah "Stok: Habis" biar langsung kelihatan
+  // - Stok > 0          -> label hijau "Stok: <jumlah>"
+  Widget _buildStockBadge(ProductModel product) {
+    if (product.isService) {
+      final isAvailable = product.stock > 0;
+      return Text(
+        isAvailable ? 'Tersedia' : 'Tidak Tersedia',
+        style: TextStyle(
+          color: isAvailable ? Colors.green : Colors.red,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
+
+    final isOutOfStock = product.stock <= 0;
+    return Text(
+      isOutOfStock ? 'Stok: Habis' : 'Stok: ${product.stock}',
+      style: TextStyle(
+        color: isOutOfStock ? Colors.red : Colors.grey[700],
+        fontSize: 10,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+
   // ── STORE STATUS BANNER ────────────────────────────────────────────────────
 
   Widget _buildStoreStatusBanner() {
@@ -826,13 +939,25 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     );
   }
 
+  // FIX: Kartu saldo sekarang menampilkan:
+  // 1) Saldo Kas Toko = _walletBalance, hasil dari GET /wallet/balance
+  //    (data ASLI dari wallet_transactions di backend — sama dengan yang
+  //    ditampilkan di halaman Saldo & Penarikan). BUKAN lagi hasil jumlah
+  //    manual dari order 'Selesai'/'Dikonfirmasi' di HP.
+  // 2) "Estimasi pesanan berjalan" = perkiraan nilai order yang statusnya
+  //    sudah dibayar tapi belum cair ke saldo (Dikonfirmasi/Diproses/Dikirim).
+  //    Label diubah dari "Dalam proses" jadi "Estimasi pesanan berjalan
+  //    (belum cair)" supaya jelas ini BUKAN bagian dari saldo di atasnya,
+  //    dan kriterianya sekarang konsisten dengan kartu status di tab
+  //    Pesanan (Sedang Diproses + Sedang Dikirim digabung).
   Widget _buildBalanceCard() {
-    final totalRevenue = _sellerOrders
-        .where((o) => o.status == 'Selesai' || o.status == 'Dikonfirmasi')
-        .fold(0.0, (sum, o) => sum + o.total);
-
     final pendingRevenue = _sellerOrders
-        .where((o) => o.status == 'Diproses' || o.status == 'Dikirim')
+        .where(
+          (o) =>
+              o.status == 'Dikonfirmasi' ||
+              o.status == 'Diproses' ||
+              o.status == 'Dikirim',
+        )
         .fold(0.0, (sum, o) => sum + o.total);
 
     final now = DateTime.now();
@@ -845,7 +970,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
         color: const Color(0xFF2A7F41),
         borderRadius: BorderRadius.circular(24),
       ),
-      child: _loadingOrders
+      child: _loadingWallet
           ? const Center(
               child: Padding(
                 padding: EdgeInsets.all(16),
@@ -861,7 +986,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Rp ${totalRevenue.toStringAsFixed(0)}',
+                  _walletError ?? 'Rp ${_walletBalance.toStringAsFixed(0)}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 28,
@@ -885,7 +1010,8 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      'Dalam proses: Rp ${pendingRevenue.toStringAsFixed(0)}',
+                      'Estimasi pesanan berjalan (belum cair): '
+                      'Rp ${pendingRevenue.toStringAsFixed(0)}',
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 12,
@@ -1003,26 +1129,56 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           child: _loadingProducts && !_sellerProductsLoaded
               ? const Center(child: CircularProgressIndicator())
               : filteredProducts.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.shopping_bag_outlined,
-                        size: 64,
-                        color: Colors.grey[300],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _sellerProducts.isEmpty
-                            ? 'Belum ada produk'
-                            : 'Tidak ada produk sesuai pencarian',
-                        style: const TextStyle(
-                          color: Colors.black45,
-                          fontSize: 16,
+             ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          // TAMBAHAN: ikon beda kalau ini error, bukan sekadar kosong
+                          _productsLoadError != null
+                              ? Icons.error_outline
+                              : Icons.shopping_bag_outlined,
+                          size: 64,
+                          color: _productsLoadError != null
+                              ? Colors.red[300]
+                              : Colors.grey[300],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        Text(
+                          _productsLoadError != null
+                              ? 'Gagal memuat produk'
+                              : (_sellerProducts.isEmpty
+                                  ? 'Belum ada produk'
+                                  : 'Tidak ada produk sesuai pencarian'),
+                          style: const TextStyle(
+                            color: Colors.black45,
+                            fontSize: 16,
+                          ),
+                        ),
+                        // TAMBAHAN: tampilkan pesan error asli + tombol coba lagi,
+                        // supaya kita tahu PERSIS kenapa produk tidak muncul,
+                        // bukan cuma dugaan "belum ada produk".
+                        if (_productsLoadError != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            _productsLoadError!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _loadSellerProducts,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Coba Lagi'),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 )
               : RefreshIndicator(
@@ -1050,7 +1206,10 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                           crossAxisCount: crossAxisCount,
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
-                          childAspectRatio: 0.62,
+                          // TAMBAHAN: aspect ratio sedikit disesuaikan
+                          // (0.56 -> 0.52) supaya ada ruang ekstra untuk
+                          // baris info Stok tanpa membuat kartu overflow.
+                          childAspectRatio: 0.52,
                         ),
                         itemCount: filteredProducts.length,
                         itemBuilder: (context, index) {
@@ -1413,7 +1572,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
             ),
             const SizedBox(height: 12),
             _buildClickableReportCard(
-              'Pengeluaran (Estimasi)',
+              'Pengeluaran (Admin Fee)',
               FormatHelper.formatCurrency(report.totalExpense),
               Colors.red,
               Icons.trending_down,
@@ -2049,7 +2208,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       'Pertanian & Perkebunan',
       'Kerajinan Tangan',
       'Jasa Lokal',
-    ];
+    ]; 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -2330,6 +2489,32 @@ class _ProductCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 2),
+                // TAMBAHAN: info Stok pada kartu produk di tab Katalog,
+                // sama seperti di Dashboard, supaya penjual bisa langsung
+                // lihat stok masing-masing produk dari daftar tanpa perlu
+                // buka form Ubah Produk satu per satu.
+                product.isService
+                    ? Text(
+                        product.stock > 0 ? 'Tersedia' : 'Tidak Tersedia',
+                        style: TextStyle(
+                          color: product.stock > 0 ? Colors.green : Colors.red,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                    : Text(
+                        product.stock <= 0
+                            ? 'Stok: Habis'
+                            : 'Stok: ${product.stock}',
+                        style: TextStyle(
+                          color: product.stock <= 0
+                              ? Colors.red
+                              : Colors.grey[700],
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ],
             ),
           ),

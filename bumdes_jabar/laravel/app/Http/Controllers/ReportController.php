@@ -11,10 +11,6 @@ use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
-    /**
-     * Get buyer's transaction report
-     * REQ-31
-     */
     public function buyerReport(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -47,10 +43,6 @@ class ReportController extends Controller
         ]);
     }
 
-    /**
-     * Get store report (seller)
-     * REQ-32
-     */
     public function storeReport(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -92,22 +84,23 @@ class ReportController extends Controller
             'estimated_revenue' => $orders->whereIn('status', ['Dikonfirmasi', 'Diproses', 'Dikirim', 'Selesai'])->sum('total_price'),
         ];
 
-        // Get monthly breakdown
+        // FIX: null-safe completed_at, fallback ke created_at supaya endpoint
+        // tidak 500 kalau ada order Selesai dengan completed_at kosong.
         $monthlyRevenue = $orders
             ->where('status', 'Selesai')
             ->groupBy(function ($order) {
-                return $order->completed_at->format('Y-m');
+                $date = $order->completed_at ?? $order->created_at;
+                return $date->format('Y-m');
             })
             ->map(function ($group) {
+                $firstDate = $group->first()->completed_at ?? $group->first()->created_at;
                 return [
-                    'month' => $group->first()->completed_at->format('Y-m'),
+                    'month' => $firstDate->format('Y-m'),
                     'revenue' => $group->sum('total_price'),
                     'orders' => $group->count(),
                 ];
             });
 
-        // FIX: hitung biaya admin/pajak dari data ASLI di wallet_transactions
-        // (bukan tebakan 25% seperti sebelumnya di frontend).
         $completedOrderIds = $orders->where('status', 'Selesai')->pluck('id');
         $totalExpense = (float) \App\Models\WalletTransaction::whereNull('store_id')
             ->where('category', 'tax')
@@ -117,12 +110,13 @@ class ReportController extends Controller
         $netProfit = $totalRevenue - $totalExpense;
 
         $transactions = $orders->where('status', 'Selesai')->map(function ($order) {
+            $date = $order->completed_at ?? $order->created_at;
             return [
                 'id' => $order->id,
                 'type' => 'income',
                 'description' => "Penjualan - {$order->order_number}",
                 'amount' => (float) $order->total_price,
-                'date' => optional($order->completed_at)->toIso8601String(),
+                'date' => optional($date)->toIso8601String(),
                 'category' => 'Penjualan',
                 'order_id' => (string) $order->id,
             ];
@@ -134,10 +128,6 @@ class ReportController extends Controller
             'summary' => $summary,
             'monthly_breakdown' => $monthlyRevenue->values(),
             'recent_orders' => $orders->take(10)->load('buyer', 'orderItems'),
-            // FIX: struktur "data" ini yang dibaca FinancialReportModel di
-            // frontend — sebelumnya tidak pernah dikirim, jadi frontend
-            // SELALU jatuh ke perhitungan dummy (pengeluaran = 25% asal
-            // tebak). Sekarang angkanya asli dari wallet_transactions.
             'data' => [
                 'total_revenue' => $totalRevenue,
                 'total_expense' => $totalExpense,
@@ -152,10 +142,6 @@ class ReportController extends Controller
         ]);
     }
 
-    /**
-     * Get platform report (admin only)
-     * REQ-33
-     */
     public function platformReport(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -169,16 +155,13 @@ class ReportController extends Controller
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
 
-        // User statistics
         $totalUsers = User::count();
         $buyers = User::where('role', 'Pembeli')->count();
         $sellers = User::where('role', 'Penjual')->count();
 
-        // Store statistics
         $totalStores = Store::count();
         $activeStores = Store::where('is_active', true)->count();
 
-        // Transaction statistics
         $orderQuery = Order::query();
 
         if ($startDate) {
@@ -205,7 +188,6 @@ class ReportController extends Controller
             'current_balance' => $activeSales->sum('total_price'),
         ];
 
-        // Daily breakdown
         $dailyTransactions = $orders
             ->groupBy(function ($order) {
                 return $order->created_at->format('Y-m-d');
@@ -220,7 +202,6 @@ class ReportController extends Controller
                 ];
             });
 
-        // Top stores
         $topStores = DB::table('stores')
             ->leftJoin('orders', 'stores.id', '=', 'orders.store_id')
             ->select('stores.id', 'stores.store_name', DB::raw('COUNT(orders.id) as order_count'), DB::raw('SUM(orders.total_price) as total_value'))

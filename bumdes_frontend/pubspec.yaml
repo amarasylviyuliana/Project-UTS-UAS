@@ -25,6 +25,7 @@ dependencies:
   midtrans_sdk: ^1.2.0
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
+  
 
 dev_dependencies:
   flutter_test:

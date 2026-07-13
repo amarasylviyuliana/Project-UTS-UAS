@@ -63,7 +63,7 @@ BUMDes Jabar adalah platform marketplace digital yang menghubungkan Badan Usaha 
    php artisan serve
    ```
 
-Server akan berjalan di `https://project-uts-uas-production.up.railway.app`
+Server akan berjalan di `https://bumdes-api-production.up.railway.app`
 
 ## API Endpoints
 
@@ -816,7 +816,7 @@ curl -X PUT http://127.0.0.1:8000/api/orders/3/confirm-receipt \
 APP_NAME=BUMDes Jabar
 APP_ENV=local
 APP_DEBUG=true
-APP_URL=https://project-uts-uas-production.up.railway.app
+APP_URL=https://bumdes-api-production.up.railway.app
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1

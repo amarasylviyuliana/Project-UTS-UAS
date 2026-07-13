@@ -12,7 +12,7 @@
 cd bumdes_jabar/laravel
 php artisan serve --port=8000
 ```
-Check: `https://project-uts-uas-production.up.railway.app/api/products` returns JSON
+Check: `https://bumdes-api-production.up.railway.app/api/products` returns JSON
 
 ### 2. Start Frontend
 ```bash

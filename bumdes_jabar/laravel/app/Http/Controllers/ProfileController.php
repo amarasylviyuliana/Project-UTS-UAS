@@ -12,6 +12,37 @@ use Illuminate\Http\JsonResponse;
 
 class ProfileController extends Controller
 {
+    // FIX UTAMA: sebelumnya formatUser()/formatStore() memakai
+    // Storage::disk('public')->url($path) langsung, menghasilkan URL
+    // "/storage/..." yang TERBUKTI gagal dimuat Image.network() di Flutter
+    // (CORS blocked + 404 — kemungkinan symlink storage tidak aktif di
+    // Railway). Sekarang disamakan persis dengan ProductController@resolvePhotoUrl
+    // dan AdminController@formatPhotoUrl: semua path diarahkan lewat proxy
+    // "/api/image/{path}", supaya konsisten dan benar-benar bisa dimuat.
+    private function resolvePhotoUrl(?string $path): ?string
+    {
+        if (!$path) {
+            return null;
+        }
+
+        $baseUrl = rtrim(env('APP_URL', 'https://bumdes-api-production.up.railway.app'), '/');
+        if (str_contains($baseUrl, 'localhost') || str_contains($baseUrl, '127.0.0.1')) {
+            $baseUrl = 'https://bumdes-api-production.up.railway.app';
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            if (preg_match('#/storage/(.+)$#', $path, $m)) {
+                return $baseUrl . '/api/image/' . $m[1];
+            }
+            // Sudah berupa URL lengkap non-storage (mis. sudah proxy /api/image/),
+            // biarkan apa adanya.
+            return $path;
+        }
+
+        $cleanPath = preg_replace('#^/?storage/#', '', $path);
+        return $baseUrl . '/api/image/' . ltrim($cleanPath, '/');
+    }
+
     public function show(Request $request): JsonResponse
     {
         $user = $request->user()->load('store');
@@ -54,7 +85,9 @@ class ProfileController extends Controller
 
         return response()->json([
             'message'   => 'Foto profil berhasil diperbarui',
-            'photo_url' => Storage::disk('public')->url($path), // ← URL LENGKAP dikirim ke Flutter
+            // FIX: dulu Storage::disk('public')->url($path) → URL "/storage/..."
+            // yang gagal dimuat Flutter. Sekarang lewat proxy /api/image/.
+            'photo_url' => $this->resolvePhotoUrl($path),
             'user'      => $this->formatUser($user->fresh()),
         ]);
     }
@@ -169,13 +202,14 @@ class ProfileController extends Controller
     }
 
     /**
-     * Ubah path relatif di kolom photo_url jadi URL lengkap sebelum dikirim ke Flutter.
+     * Ubah path relatif di kolom photo_url jadi URL proxy (/api/image/...)
+     * sebelum dikirim ke Flutter, sama seperti ProductController & AdminController.
      */
     private function formatUser($user): array
     {
         $data = $user->toArray();
-        if (!empty($data['photo_url']) && !str_starts_with($data['photo_url'], 'http')) {
-            $data['photo_url'] = Storage::disk('public')->url($data['photo_url']);
+        if (!empty($data['photo_url'])) {
+            $data['photo_url'] = $this->resolvePhotoUrl($data['photo_url']);
         }
         if (!empty($data['store'])) {
             $data['store'] = $this->formatStore($user->store);
@@ -186,8 +220,8 @@ class ProfileController extends Controller
     private function formatStore($store): array
     {
         $data = $store->toArray();
-        if (!empty($data['store_photo_url']) && !str_starts_with($data['store_photo_url'], 'http')) {
-            $data['store_photo_url'] = Storage::disk('public')->url($data['store_photo_url']);
+        if (!empty($data['store_photo_url'])) {
+            $data['store_photo_url'] = $this->resolvePhotoUrl($data['store_photo_url']);
         }
         return $data;
     }

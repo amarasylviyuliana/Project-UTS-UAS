@@ -75,12 +75,16 @@ class ProfileScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // FIX: tambahkan decoration: TextDecoration.none secara
+                // eksplisit supaya tidak lagi mewarisi underline (garis
+                // kuning) dari theme global aplikasi.
                 const Text(
                   'Profil Saya',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF2D5016),
+                    decoration: TextDecoration.none,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -136,11 +140,15 @@ class ProfileScreen extends StatelessWidget {
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF2D5016),
+                        decoration: TextDecoration.none,
                       ),
                     ),
                     subtitle: Text(
                       user.email,
-                      style: const TextStyle(color: Colors.black54),
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        decoration: TextDecoration.none,
+                      ),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -168,11 +176,15 @@ class ProfileScreen extends StatelessWidget {
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF2D5016),
+                        decoration: TextDecoration.none,
                       ),
                     ),
                     subtitle: Text(
                       user.role == 'seller' ? 'Penjual BUMDes' : 'Pembeli Umum',
-                      style: const TextStyle(color: Colors.black54),
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        decoration: TextDecoration.none,
+                      ),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,

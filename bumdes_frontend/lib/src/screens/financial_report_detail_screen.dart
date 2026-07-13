@@ -26,7 +26,7 @@ class _FinancialReportDetailScreenState
   FinancialReportModel? _report;
   List<OrderModel> _orders = [];
   bool _loading = true;
-  String _selectedTab = 'overview'; // overview, transactions, products, insights
+  String _selectedTab = 'overview';
 
   @override
   void initState() {
@@ -37,22 +37,38 @@ class _FinancialReportDetailScreenState
     _loadReportData();
   }
 
+  List<OrderModel> get _ordersInPeriod {
+    return _orders.where((order) {
+      final orderDate = order.createdAt;
+      return !orderDate.isBefore(_startDate) &&
+          !orderDate.isAfter(_endDate.add(const Duration(days: 1)));
+    }).toList();
+  }
+
   Future<void> _loadReportData() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (!auth.isAuthenticated || auth.token == null) return;
 
     setState(() => _loading = true);
     try {
-      // Load orders
       final orders = await _orderService.getSellerOrders(auth.token!);
       setState(() => _orders = orders);
 
-      // Calculate report from orders
-      final report = _reportService.calculateFromOrders(
-        orders,
-        startDate: _startDate,
-        endDate: _endDate,
-      );
+      FinancialReportModel report;
+      try {
+        report = await _reportService.getStoreReport(
+          token: auth.token!,
+          startDate: _startDate.toIso8601String(),
+          endDate: _endDate.toIso8601String(),
+        );
+      } catch (e) {
+        debugPrint('getStoreReport gagal, pakai kalkulasi lokal sebagai fallback: $e');
+        report = _reportService.calculateFromOrders(
+          orders,
+          startDate: _startDate,
+          endDate: _endDate,
+        );
+      }
 
       setState(() {
         _report = report;
@@ -217,12 +233,16 @@ class _FinancialReportDetailScreenState
   Widget _buildOverviewTab() {
     if (_report == null) return const SizedBox.shrink();
 
+    final hasCompletedOrders = _report!.completedOrders > 0;
+    final averageTransaction = hasCompletedOrders
+        ? _report!.totalRevenue / _report!.completedOrders
+        : 0.0;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Main metrics
           Row(
             children: [
               Expanded(
@@ -236,7 +256,7 @@ class _FinancialReportDetailScreenState
               const SizedBox(width: 12),
               Expanded(
                 child: _buildMetricCard(
-                  'Pengeluaran',
+                  'Pengeluaran (Admin Fee)',
                   FormatHelper.formatCurrency(_report!.totalExpense),
                   Colors.red,
                   Icons.trending_down,
@@ -267,7 +287,6 @@ class _FinancialReportDetailScreenState
             ],
           ),
           const SizedBox(height: 24),
-          // Order metrics
           const Text(
             'Metrik Pesanan',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -293,14 +312,14 @@ class _FinancialReportDetailScreenState
             ],
           ),
           const SizedBox(height: 12),
-          if (_report!.totalOrders > 0)
-            _buildOrderMetricCard(
-              'Rata-rata Transaksi',
-              FormatHelper.formatCurrency(_report!.totalRevenue / _report!.totalOrders),
-              Colors.orange,
-            ),
+          _buildOrderMetricCard(
+            'Rata-rata Transaksi (per pesanan Selesai)',
+            hasCompletedOrders
+                ? FormatHelper.formatCurrency(averageTransaction)
+                : '-',
+            Colors.orange,
+          ),
           const SizedBox(height: 24),
-          // Summary section
           _buildSummarySection(),
           const SizedBox(height: 24),
         ],
@@ -363,6 +382,7 @@ class _FinancialReportDetailScreenState
 
   Widget _buildOrderMetricCard(String label, String value, Color color) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -426,7 +446,7 @@ class _FinancialReportDetailScreenState
           const SizedBox(height: 16),
           _buildSummaryRow('Pendapatan Total', FormatHelper.formatCurrency(_report!.totalRevenue)),
           const SizedBox(height: 12),
-          _buildSummaryRow('Biaya Operasional', FormatHelper.formatCurrency(_report!.totalExpense)),
+          _buildSummaryRow('Biaya Admin (Platform Fee)', FormatHelper.formatCurrency(_report!.totalExpense)),
           const Divider(height: 20),
           _buildSummaryRow(
             'Laba Bersih',
@@ -558,7 +578,7 @@ class _FinancialReportDetailScreenState
   }
 
   Widget _buildProductsTab() {
-    final topProducts = _reportService.getTopProducts(_orders);
+    final topProducts = _reportService.getTopProducts(_ordersInPeriod);
     final products = (topProducts['products'] as Map<String, dynamic>);
 
     if (products.isEmpty) {
@@ -567,6 +587,11 @@ class _FinancialReportDetailScreenState
         child: Center(child: Text('Belum ada data produk terjual')),
       );
     }
+
+    final totalAllProducts = products.values.fold<double>(
+      0.0,
+      (prev, curr) => prev + ((curr['total'] as num?)?.toDouble() ?? 0.0),
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -638,9 +663,9 @@ class _FinancialReportDetailScreenState
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: LinearProgressIndicator(
-                        value: total / (products.values.fold<double>(0.0,
-                                (prev, curr) => prev + ((curr['total'] as num?)?.toDouble() ?? 0.0)) > 0 ? products.values.fold<double>(0.0,
-                                (prev, curr) => prev + ((curr['total'] as num?)?.toDouble() ?? 0.0)) : 1.0),
+                        value: totalAllProducts > 0
+                            ? total / totalAllProducts
+                            : 0.0,
                         minHeight: 6,
                         backgroundColor: Colors.grey.withAlpha(50),
                         valueColor: const AlwaysStoppedAnimation<Color>(
@@ -662,9 +687,12 @@ class _FinancialReportDetailScreenState
   Widget _buildInsightsTab() {
     if (_report == null) return const SizedBox.shrink();
 
-    final monthlySales = _reportService.getMonthlySalesData(_orders);
+    final ordersInPeriod = _ordersInPeriod;
+    final monthlySales = _reportService.getMonthlySalesData(ordersInPeriod);
     final paymentStatus =
-        _reportService.getPaymentStatusDistribution(_orders);
+        _reportService.getPaymentStatusDistribution(ordersInPeriod);
+    final totalPaymentStatus =
+        paymentStatus.values.fold<int>(0, (a, b) => a + b);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -676,10 +704,13 @@ class _FinancialReportDetailScreenState
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          ...paymentStatus.entries.map((entry) {
-            final total = paymentStatus.values.fold(0, (a, b) => a + b);
-            final percentage =
-                total > 0 ? (entry.value / total * 100).toStringAsFixed(1) : '0';
+          if (paymentStatus.isEmpty)
+            const Text('Belum ada data pembayaran pada periode ini')
+          else
+            ...paymentStatus.entries.map((entry) {
+            final percentage = totalPaymentStatus > 0
+                ? (entry.value / totalPaymentStatus * 100).toStringAsFixed(1)
+                : '0';
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -713,7 +744,9 @@ class _FinancialReportDetailScreenState
                     ClipRRect(
                       borderRadius: BorderRadius.circular(6),
                       child: LinearProgressIndicator(
-                        value: entry.value / total,
+                        value: totalPaymentStatus > 0
+                            ? entry.value / totalPaymentStatus
+                            : 0.0,
                         minHeight: 8,
                         backgroundColor: Colors.grey.withAlpha(50),
                         valueColor: const AlwaysStoppedAnimation<Color>(

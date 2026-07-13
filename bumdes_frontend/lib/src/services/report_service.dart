@@ -16,7 +16,6 @@ class ReportService {
     String? endDate,
   }) async {
     try {
-      // FIX: Hilangkan /api/ di depan — ApiService sudah tambah base URL sendiri
       String url = '/reports/store';
       final params = <String, String>{};
 
@@ -39,13 +38,20 @@ class ReportService {
           response['data'] as Map<String, dynamic>,
         );
       }
-      // Jika API tidak ada endpoint ini, fallback ke kalkulasi lokal
       throw Exception('No data in response');
     } catch (e) {
       debugPrint('getStoreReport error (akan pakai kalkulasi lokal): $e');
       rethrow;
     }
   }
+
+  // ── DEFINISI TUNGGAL: order dihitung sebagai pendapatan HANYA kalau
+  // statusnya 'Selesai'. Ini SAMA PERSIS dengan definisi yang dipakai di
+  // getMonthlySalesData() dan getTopProducts() di bawah, dan sesuai dengan
+  // logika backend (WalletService::creditFromCompletedOrder mengkredit
+  // saldo toko saat order berubah jadi 'Selesai', bukan saat 'Dikonfirmasi'
+  // atau baru berstatus pembayaran 'Lunas').
+  bool _isRevenueCounted(OrderModel order) => order.status == 'Selesai';
 
   /// Hitung laporan keuangan dari daftar pesanan (fallback / offline)
   FinancialReportModel calculateFromOrders(
@@ -56,7 +62,6 @@ class ReportService {
     startDate ??= DateTime.now().subtract(const Duration(days: 30));
     endDate ??= DateTime.now();
 
-    // Filter berdasarkan rentang tanggal
     final filteredOrders = orders.where((order) {
       final orderDate = order.createdAt;
       return !orderDate.isBefore(startDate!) &&
@@ -67,33 +72,30 @@ class ReportService {
     int completedOrders = 0;
 
     for (final order in filteredOrders) {
-      // Hitung sebagai pendapatan jika status Selesai atau Dikonfirmasi atau sudah Lunas
-      final isDone = order.status == 'Selesai' ||
-          order.status == 'Dikonfirmasi' ||
-          order.paymentStatus == 'Lunas';
-      if (isDone) {
+      if (_isRevenueCounted(order)) {
         totalRevenue += order.total;
         completedOrders++;
       }
     }
 
-    // Estimasi biaya operasional 25% dari pendapatan
     final totalExpense = totalRevenue * 0.25;
     final netProfit = totalRevenue - totalExpense;
 
-    // Buat daftar transaksi
     final transactions = filteredOrders.map((order) {
+      final counted = _isRevenueCounted(order);
       return TransactionModel(
         id: order.id,
         type: 'income',
-        description: 'Penjualan - ${order.orderNumber}',
+        description: counted
+            ? 'Penjualan - ${order.orderNumber}'
+            : 'Penjualan (belum selesai) - ${order.orderNumber}',
         amount: order.total,
         date: order.createdAt,
-        category: 'Penjualan',
+        category: counted ? 'Penjualan' : 'Belum Selesai',
         orderId: order.id.toString(),
       );
     }).toList()
-      ..sort((a, b) => b.date.compareTo(a.date)); // terbaru di atas
+      ..sort((a, b) => b.date.compareTo(a.date));
 
     return FinancialReportModel(
       totalRevenue: totalRevenue,
@@ -108,11 +110,12 @@ class ReportService {
     );
   }
 
-  /// Data penjualan per bulan
   List<MonthlySalesModel> getMonthlySalesData(List<OrderModel> orders) {
     final Map<String, MonthlySalesModel> monthlyData = {};
 
-    for (final order in orders) {
+    final completedOrders = orders.where(_isRevenueCounted);
+
+    for (final order in completedOrders) {
       final date = order.createdAt;
       final monthKey = '${date.year}-${date.month.toString().padLeft(2, '0')}';
 
@@ -144,11 +147,12 @@ class ReportService {
     return '${months[date.month]} ${date.year}';
   }
 
-  /// Produk terlaris dari daftar pesanan
   Map<String, dynamic> getTopProducts(List<OrderModel> orders) {
     final productSales = <String, Map<String, dynamic>>{};
 
-    for (final order in orders) {
+    final completedOrders = orders.where(_isRevenueCounted);
+
+    for (final order in completedOrders) {
       for (final item in order.items) {
         final productName = item.product.name;
         if (productSales.containsKey(productName)) {
@@ -176,25 +180,24 @@ class ReportService {
     };
   }
 
-  /// Distribusi status pembayaran
   Map<String, int> getPaymentStatusDistribution(List<OrderModel> orders) {
     final distribution = <String, int>{
       'Lunas': 0,
       'Belum Lunas': 0,
-      'Pending': 0,
       'Ditolak': 0,
     };
 
     for (final order in orders) {
-      final status = order.paymentStatus ?? 'Pending';
-      if (distribution.containsKey(status)) {
-        distribution[status] = distribution[status]! + 1;
+      final status = order.paymentStatus;
+      if (status == 'Lunas') {
+        distribution['Lunas'] = distribution['Lunas']! + 1;
+      } else if (status == 'Ditolak') {
+        distribution['Ditolak'] = distribution['Ditolak']! + 1;
       } else {
-        distribution[status] = 1;
+        distribution['Belum Lunas'] = distribution['Belum Lunas']! + 1;
       }
     }
 
-    // Hapus status dengan nilai 0 supaya UI lebih bersih
     distribution.removeWhere((key, value) => value == 0);
 
     return distribution;

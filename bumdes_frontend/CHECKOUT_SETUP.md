@@ -19,7 +19,7 @@ APP_NAME=Bumdes
 APP_ENV=local
 APP_KEY=
 APP_DEBUG=true
-APP_URL=https://project-uts-uas-production.up.railway.app
+APP_URL=https://bumdes-api-production.up.railway.app
 
 LOG_CHANNEL=stack
 LOG_LEVEL=debug
@@ -65,14 +65,14 @@ Ini akan membuat tabel dan seeder data:
 php artisan serve --port=8000
 ```
 
-Backend akan berjalan di: `https://project-uts-uas-production.up.railway.app/api`
+Backend akan berjalan di: `https://bumdes-api-production.up.railway.appp/api`
 
 ### 6. Test Checkout Flow
 
 #### A. Login
 **Request:**
 ```
-POST https://project-uts-uas-production.up.railway.app/api/auth/login
+POST https://bumdes-api-production.up.railway.app/api/auth/login
 Content-Type: application/json
 
 {
@@ -97,7 +97,7 @@ Content-Type: application/json
 #### B. Checkout
 **Request:**
 ```
-POST https://project-uts-uas-production.up.railway.app/api/checkout
+POST https://bumdes-api-production.up.railway.app/api/checkout
 Content-Type: application/json
 Authorization: Bearer {token_dari_login}
 
@@ -153,7 +153,7 @@ Authorization: Bearer {token_dari_login}
 
 ### 7. Verify Frontend
 
-- Flutter app sudah dikonfigurasi untuk menghubung ke backend di `https://project-uts-uas-production.up.railway.app/api`
+- Flutter app sudah dikonfigurasi untuk menghubung ke backend di `https://bumdes-api-production.up.railway.app/api`
 - Ketika checkout berhasil, app akan redirect ke **PaymentScreen** dengan data order
 - Jika gagal, akan menampilkan error message
 
