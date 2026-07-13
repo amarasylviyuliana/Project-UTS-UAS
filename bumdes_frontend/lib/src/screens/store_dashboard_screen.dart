@@ -822,7 +822,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   // - Stok > 0          -> label hijau "Stok: <jumlah>"
   Widget _buildStockBadge(ProductModel product) {
     if (product.isService) {
-      final isAvailable = product.isActive;
+      final isAvailable = product.stock > 0;
       return Text(
         isAvailable ? 'Tersedia' : 'Tidak Tersedia',
         style: TextStyle(
@@ -2496,9 +2496,9 @@ class _ProductCard extends StatelessWidget {
                 // buka form Ubah Produk satu per satu.
                 product.isService
                     ? Text(
-                        product.isActive ? 'Tersedia' : 'Tidak Tersedia',
+                        product.stock > 0 ? 'Tersedia' : 'Tidak Tersedia',
                         style: TextStyle(
-                          color: product.isActive ? Colors.green : Colors.red,
+                          color: product.stock > 0 ? Colors.green : Colors.red,
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                         ),
