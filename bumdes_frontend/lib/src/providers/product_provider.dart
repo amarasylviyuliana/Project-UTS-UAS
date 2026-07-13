@@ -149,6 +149,9 @@ class ProductProvider extends ChangeNotifier {
     String description,
     XFile? imageFile, {
     Uint8List? imageBytes,
+    // TAMBAHAN: diteruskan ke service — dipakai untuk toggle
+    // Tersedia/Tidak Tersedia pada Jasa.
+    bool isActive = true,
   }) async {
     final product = await _productService.createProduct(
       token,
@@ -160,6 +163,7 @@ class ProductProvider extends ChangeNotifier {
       description,
       imageFile,
       imageBytes: imageBytes,
+      isActive: isActive,
     );
     _products.insert(0, product);
     _filtered = List.of(_products);
@@ -189,6 +193,8 @@ class ProductProvider extends ChangeNotifier {
     String description,
     XFile? imageFile, {
     Uint8List? imageBytes,
+    // TAMBAHAN: sama seperti createProductOnServer.
+    bool isActive = true,
   }) async {
     final product = await _productService.updateProduct(
       token,
@@ -201,6 +207,7 @@ class ProductProvider extends ChangeNotifier {
       description,
       imageFile,
       imageBytes: imageBytes,
+      isActive: isActive,
     );
     final index = _products.indexWhere((item) => item.id == productId);
     if (index >= 0) {

@@ -17,6 +17,13 @@ class ProductModel {
   // halaman detail produk (foto toko + nama + lokasi).
   final int? storeId;
   final String? storePhotoUrl;
+  // TAMBAHAN: status aktif produk/jasa. Sebelumnya field ini TIDAK ADA
+  // sama sekali di model, padahal backend (ProductController::mapProductForResponse)
+  // sudah mengirim 'is_active' sejak awal, dan store_dashboard_screen.dart
+  // sudah terlanjur memanggil product.isActive — jadi berpotensi gagal
+  // compile. Sekarang benar-benar di-parse dari response.
+  // Dipakai juga sebagai status "Tersedia/Tidak Tersedia" untuk Jasa.
+  final bool isActive;
 
   ProductModel({
     required this.id,
@@ -32,6 +39,7 @@ class ProductModel {
     this.isSample = false,
     this.storeId,
     this.storePhotoUrl,
+    this.isActive = true,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -105,6 +113,17 @@ class ProductModel {
         json['is_service'] == true ||
         json['isService'] == true;
 
+    // TAMBAHAN: parse isActive dari 'is_active'. Kalau backend tidak
+    // mengirim field ini sama sekali (null), anggap aktif (true) supaya
+    // tidak tiba-tiba menyembunyikan produk lama yang belum punya field ini.
+    final rawIsActive = json['is_active'];
+    final bool isActive = rawIsActive == null
+        ? true
+        : (rawIsActive == true ||
+            rawIsActive == 1 ||
+            rawIsActive.toString() == '1' ||
+            rawIsActive.toString().toLowerCase() == 'true');
+
     return ProductModel(
       id: _parseInt(json['id']),
       name: json['name'] as String? ?? '',
@@ -120,6 +139,7 @@ class ProductModel {
       isSample: false,
       storeId: storeId,
       storePhotoUrl: storePhotoUrl,
+      isActive: isActive,
     );
   }
 
@@ -181,6 +201,7 @@ class ProductModel {
       description: '',
       imageUrl: '',
       isSample: false,
+      isActive: true,
     );
   }
 }
