@@ -166,26 +166,6 @@ class _BumdesListScreenState extends State<BumdesListScreen> {
   }
 }
 
-// TAMBAHAN: beberapa pasangan warna gradient yang dipilih otomatis
-// berdasarkan nama toko, supaya tiap card BUMDes punya "identitas warna"
-// sendiri (tidak semua kartu keliatan sama persis), tanpa bergantung
-// pada foto profil kecil yang gampang pecah kalau dipaksa jadi banner
-// besar.
-const List<List<Color>> _kBannerPalettes = [
-  [Color(0xFF1B5E20), Color(0xFF66BB6A)],
-  [Color(0xFF2E7D32), Color(0xFF9CCC65)],
-  [Color(0xFF00695C), Color(0xFF4DB6AC)],
-  [Color(0xFF33691E), Color(0xFFAED581)],
-  [Color(0xFF1565C0), Color(0xFF64B5F6)],
-  [Color(0xFF4E342E), Color(0xFFA1887F)],
-];
-
-List<Color> _bannerColorsFor(String seed) {
-  if (seed.isEmpty) return _kBannerPalettes.first;
-  final sum = seed.codeUnits.fold<int>(0, (a, b) => a + b);
-  return _kBannerPalettes[sum % _kBannerPalettes.length];
-}
-
 class _BumdesCard extends StatelessWidget {
   final StoreModel store;
   const _BumdesCard({required this.store});
@@ -203,57 +183,6 @@ class _BumdesCard extends StatelessWidget {
           fontWeight: FontWeight.bold,
           fontSize: 20,
         ),
-      ),
-    );
-  }
-
-  // FIX TAMPILAN BANNER: sebelumnya banner besar di atas card memakai
-  // foto yang SAMA dengan avatar bulat (store.storePhotoUrl). Karena foto
-  // itu sering kali cuma foto profil kecil hasil fallback (bukan foto
-  // cover toko yang memang didesain untuk ukuran besar), Image.network
-  // dengan BoxFit.cover memaksa foto kecil itu di-upscale jadi lebar
-  // penuh -> hasilnya pecah/blur.
-  //
-  // Sekarang banner TIDAK lagi bergantung pada foto sama sekali. Banner
-  // memakai gradient dekoratif (warnanya konsisten per toko, dihitung
-  // dari nama toko) plus pola ikon transparan di pojok, supaya tetap
-  // terlihat "didesain" dan bervariasi antar kartu tanpa risiko foto
-  // pecah. Foto profil pemilik toko tetap dipakai di avatar bulat kecil
-  // di bawah, karena di ukuran kecil foto itu masih terlihat wajar.
-  Widget _buildBanner() {
-    final colors = _bannerColorsFor(store.storeName);
-    return Container(
-      height: 110,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: colors,
-        ),
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            right: -18,
-            top: -22,
-            child: Icon(
-              Icons.storefront_rounded,
-              size: 130,
-              color: Colors.white.withValues(alpha: 0.14),
-            ),
-          ),
-          Positioned(
-            left: -14,
-            bottom: -26,
-            child: Icon(
-              Icons.eco_rounded,
-              size: 80,
-              color: Colors.white.withValues(alpha: 0.10),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -285,7 +214,23 @@ class _BumdesCard extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                _buildBanner(),
+                SizedBox(
+                  height: 110,
+                  width: double.infinity,
+                  child: store.storePhotoUrl != null
+                      ? Image.network(
+                          store.storePhotoUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: const Color(
+                              0xFF1B5E20,
+                            ).withValues(alpha: 0.15),
+                          ),
+                        )
+                      : Container(
+                          color: const Color(0xFF1B5E20).withValues(alpha: 0.15),
+                        ),
+                ),
                 Positioned(
                   left: 16,
                   bottom: -28,
@@ -295,11 +240,13 @@ class _BumdesCard extends StatelessWidget {
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    // Avatar bulat: tetap coba tampilkan foto (foto toko
-                    // atau fallback foto profil pemilik dari backend),
-                    // baru fallback ke huruf inisial kalau memang belum
-                    // ada foto atau gagal dimuat. Di ukuran 50x50 ini
-                    // foto kecil masih terlihat wajar, tidak pecah.
+                    // FIX: sebelumnya lingkaran ini SELALU menampilkan
+                    // huruf awal nama toko, tidak pernah mencoba
+                    // menampilkan foto profil BUMDes walau fotonya ada
+                    // di data (store.storePhotoUrl). Sekarang lingkaran
+                    // ini benar-benar mencoba memuat foto BUMDes-nya
+                    // dulu, baru fallback ke huruf kalau memang belum
+                    // ada foto atau gagal dimuat.
                     child: ClipOval(
                       child: SizedBox(
                         width: 50,
