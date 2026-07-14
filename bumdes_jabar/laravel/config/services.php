@@ -33,6 +33,7 @@ return [
 
     'n8n' => [
         'webhook_url' => env('N8N_WEBHOOK_URL'),
+        'group_chat_id' => env('N8N_TELEGRAM_GROUP_CHAT_ID'),
     ],
 
     'midtrans' => [
