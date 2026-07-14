@@ -815,14 +815,22 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
 
   // TAMBAHAN: Badge kecil untuk menampilkan status stok pada kartu produk.
   // - Produk Jasa       -> karena tidak ada konsep "stok" untuk layanan,
-  //                        tampilkan status ketersediaan (aktif/nonaktif)
-  //                        sebagai gantinya: "Tersedia" (hijau) atau
-  //                        "Tidak Tersedia" (merah).
+  //                        status ketersediaan diambil dari field isActive
+  //                        (yang diatur lewat switch Tersedia/Tidak Tersedia
+  //                        di halaman Ubah Produk), BUKAN dari stock.
+  //                        FIX: sebelumnya kode ini salah membaca
+  //                        `product.stock > 0` untuk menentukan status Jasa,
+  //                        padahal Jasa memang tidak pernah mengisi field
+  //                        stock secara berarti. Akibatnya, saat penjual
+  //                        mengubah switch Tersedia/Tidak Tersedia di form
+  //                        Ubah Produk, badge di daftar produk TIDAK ikut
+  //                        berubah karena membaca field yang berbeda.
+  //                        Sekarang keduanya konsisten memakai isActive.
   // - Stok 0            -> label merah "Stok: Habis" biar langsung kelihatan
   // - Stok > 0          -> label hijau "Stok: <jumlah>"
   Widget _buildStockBadge(ProductModel product) {
     if (product.isService) {
-      final isAvailable = product.stock > 0;
+      final isAvailable = product.isActive;
       return Text(
         isAvailable ? 'Tersedia' : 'Tidak Tersedia',
         style: TextStyle(
@@ -2490,15 +2498,17 @@ class _ProductCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
-                // TAMBAHAN: info Stok pada kartu produk di tab Katalog,
-                // sama seperti di Dashboard, supaya penjual bisa langsung
-                // lihat stok masing-masing produk dari daftar tanpa perlu
-                // buka form Ubah Produk satu per satu.
+                // FIX: info Stok/Tersedia pada kartu produk di tab Katalog.
+                // Sebelumnya status Jasa (Tersedia/Tidak Tersedia) di sini
+                // salah membaca `product.stock > 0`, padahal switch di form
+                // Ubah Produk menyimpan status ke field `isActive`. Karena
+                // itu, mengubah switch di form TIDAK mengubah badge ini.
+                // Sekarang keduanya konsisten memakai `product.isActive`.
                 product.isService
                     ? Text(
-                        product.stock > 0 ? 'Tersedia' : 'Tidak Tersedia',
+                        product.isActive ? 'Tersedia' : 'Tidak Tersedia',
                         style: TextStyle(
-                          color: product.stock > 0 ? Colors.green : Colors.red,
+                          color: product.isActive ? Colors.green : Colors.red,
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                         ),

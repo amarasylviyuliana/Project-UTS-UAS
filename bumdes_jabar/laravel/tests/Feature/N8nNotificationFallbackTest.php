@@ -12,7 +12,7 @@ class N8nNotificationFallbackTest extends TestCase
         // Ensure config/env values used by the service are present
         $this->app['config']->set('services.n8n.webhook_url', 'https://example-n8n.test/webhook');
         $this->app['config']->set('services.n8n.group_chat_id', '-1001234567890');
-        putenv('TELEGRAM_BOT_TOKEN=test-token');
+        putenv('TELEGRAM_BOT_TOKEN=8993863404:AAHDvEroqtOpMX15DiI0G7M5ZLEuXl_gcSc');
 
         // Fake HTTP calls: n8n webhook returns 500, Telegram API returns success
         Http::fake([

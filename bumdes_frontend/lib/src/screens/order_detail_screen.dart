@@ -88,7 +88,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       setState(() {
         _order = loadedOrder;
       });
-
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -227,7 +226,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Ya, Batalkan', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Ya, Batalkan',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -259,6 +261,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       messenger.showSnackBar(
         SnackBar(content: Text('Gagal membatalkan: $e')),
       );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal membatalkan: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isPerformingAction = false);
     }
@@ -298,7 +305,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     if (!mounted) return;
 
     final wasComplete =
-        _tracking != null && (_tracking!.isCompleted || _tracking!.progress >= 1.0);
+        _tracking != null &&
+        (_tracking!.isCompleted || _tracking!.progress >= 1.0);
     final isComplete = tracking.isCompleted || tracking.progress >= 1.0;
 
     if (_tracking == null || wasComplete != isComplete) {
@@ -357,7 +365,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         },
         child: Scaffold(
           appBar: AppBar(
-            title: const Text('Detail Pesanan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            title: const Text(
+              'Detail Pesanan',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             backgroundColor: const Color(0xFF2D5016),
             foregroundColor: Colors.white,
             elevation: 0,
@@ -386,7 +400,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               backgroundColor: const Color(0xFF2D5016),
                             ),
                             onPressed: _loadOrder,
-                            child: const Text('Coba lagi', style: TextStyle(color: Colors.white)),
+                            child: const Text(
+                              'Coba lagi',
+                              style: TextStyle(color: Colors.white),
+                            ),
                           ),
                       ],
                     ),
@@ -414,359 +431,355 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         Navigator.of(context).pushReplacementNamed('/home');
       },
       child: Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
-      appBar: AppBar(
-        title: const Text('Detail Pesanan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-        backgroundColor: const Color(0xFF2D5016),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: _isRefreshing
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : const Icon(Icons.refresh),
-            onPressed: _isRefreshing ? null : _refreshOrder,
-            tooltip: 'Segarkan status pesanan',
+        backgroundColor: const Color(0xFFFAFAFA),
+        appBar: AppBar(
+          title: const Text(
+            'Detail Pesanan',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(18.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5E9),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFC8E6C9), width: 1),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      order.orderNumber,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2D5016),
+          backgroundColor: const Color(0xFF2D5016),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: _isRefreshing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tanggal: ${order.createdAt.toLocal().toString().split(' ').first}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Color.fromARGB(
-                              (0.18 * 255).round(),
-                              (statusColor.r * 255).round(),
-                              (statusColor.g * 255).round(),
-                              (statusColor.b * 255).round(),
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            order.status,
-                            style: TextStyle(
-                              color: statusColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          'Rp ${order.total.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              if (_refreshError != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12.0),
-                  child: Text(
-                    _refreshError!,
-                    style: const TextStyle(
-                      color: Colors.redAccent,
-                      fontWeight: FontWeight.w600,
+                    )
+                  : const Icon(Icons.refresh),
+              onPressed: _isRefreshing ? null : _refreshOrder,
+              tooltip: 'Segarkan status pesanan',
+            ),
+          ],
+        ),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(18.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F5E9),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFC8E6C9),
+                      width: 1,
                     ),
                   ),
-                ),
-              const SizedBox(height: 18),
-
-              _buildSectionTitle('Daftar Produk'),
-              const SizedBox(height: 12),
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                elevation: 1,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: order.items.isEmpty
-                      ? const Text('Tidak ada produk dalam pesanan ini')
-                      : Column(
-                          children: order.items.map((item) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 16.0),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: Image.network(
-                                      item.product.imageUrl,
-                                      width: 62,
-                                      height: 62,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              Container(
-                                                width: 62,
-                                                height: 62,
-                                                color: Colors.grey[200],
-                                                child: const Icon(
-                                                  Icons.image_not_supported,
-                                                ),
-                                              ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.product.name,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          'Rp ${item.unitPrice.toStringAsFixed(0)} x ${item.quantity}',
-                                          style: const TextStyle(
-                                            color: Colors.black54,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Text(
-                                    'Rp ${item.totalPrice.toStringAsFixed(0)}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 18),
-
-              _buildSectionTitle('Informasi Pengiriman'),
-              const SizedBox(height: 12),
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                elevation: 1,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (order.recipientName != null) ...[
-                        _buildDetailRow('Penerima', order.recipientName ?? '-'),
-                        const SizedBox(height: 10),
-                      ],
-                      if (order.recipientPhone != null) ...[
-                        _buildDetailRow('No. HP', order.recipientPhone ?? '-'),
-                        const SizedBox(height: 10),
-                      ],
-                      if (order.recipientAddress != null) ...[
-                        _buildDetailRow(
-                          'Alamat',
-                          order.recipientAddress ?? '-',
+                      Text(
+                        order.orderNumber,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2D5016),
                         ),
-                        const SizedBox(height: 10),
-                      ],
-                      if (order.notes != null && order.notes!.isNotEmpty) ...[
-                        _buildDetailRow('Catatan', order.notes ?? '-'),
-                      ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tanggal: ${order.createdAt.toLocal().toString().split(' ').first}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Color.fromARGB(
+                                (0.18 * 255).round(),
+                                (statusColor.r * 255).round(),
+                                (statusColor.g * 255).round(),
+                                (statusColor.b * 255).round(),
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              order.status,
+                              style: TextStyle(
+                                color: statusColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            'Rp ${order.total.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 18),
-
-              // FIX: sebelumnya kondisi ini di-hardcode jadi `if (false)`
-              // (kemungkinan sisa dari testing manual), yang bikin section
-              // "Lokasi Kurir" TIDAK PERNAH muncul apapun status
-              // pesanannya. Dikembalikan ke kondisi yang benar: peta
-              // hanya tampil kalau status pesanan "Dikirim" atau
-              // "Estimasi Sampai".
-              if (order.status.toLowerCase() == 'dikirim' ||
-                  order.status.toLowerCase() == 'estimasi sampai') ...[
-                _buildSectionTitle('Lokasi Kurir'),
-                const SizedBox(height: 12),
-                Builder(
-                  builder: (context) {
-                    final token = Provider.of<AuthProvider>(
-                      context,
-                      listen: false,
-                    ).token;
-                    if (token == null) {
-                      return const SizedBox.shrink();
-                    }
-                    return CourierTrackingMap(
-                      token: token,
-                      orderId: order.id,
-                      onTrackingUpdate: _handleTrackingUpdate,
-                    );
-                  },
-                ),
+                if (_refreshError != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    child: Text(
+                      _refreshError!,
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 18),
-              ],
 
-              if (order.paymentStatus != null)
+                _buildSectionTitle('Daftar Produk'),
+                const SizedBox(height: 12),
                 Card(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24),
                   ),
                   elevation: 1,
-                  color: Colors.blue[50],
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: _buildDetailRow(
-                      'Status Pembayaran',
-                      order.paymentStatus ?? order.status,
-                    ),
+                    child: order.items.isEmpty
+                        ? const Text('Tidak ada produk dalam pesanan ini')
+                        : Column(
+                            children: order.items.map((item) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: Image.network(
+                                        item.product.imageUrl,
+                                        width: 62,
+                                        height: 62,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Container(
+                                                  width: 62,
+                                                  height: 62,
+                                                  color: Colors.grey[200],
+                                                  child: const Icon(
+                                                    Icons.image_not_supported,
+                                                  ),
+                                                ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.product.name,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            'Rp ${item.unitPrice.toStringAsFixed(0)} x ${item.quantity}',
+                                            style: const TextStyle(
+                                              color: Colors.black54,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      'Rp ${item.totalPrice.toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
                   ),
                 ),
+                const SizedBox(height: 18),
 
-              const SizedBox(height: 20),
-              // Tombol "Bayar Sekarang" — foregroundColor: Colors.white
-              // diberikan eksplisit supaya teksnya tidak ikut warna hijau
-              // default dari theme (yang sebelumnya nyaris tak terlihat
-              // di atas background tombol yang juga hijau).
-              if ((order.status.toLowerCase().contains('pembayaran') ||
-                      order.status.toLowerCase().contains('pending')) &&
-                  Provider.of<AuthProvider>(context, listen: false).user?.role != 'seller' &&
-                  Provider.of<AuthProvider>(context, listen: false).user?.role != 'admin')
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              PaymentGatewayScreen(order: order),
-                        ),
-                      );
-                      await _refreshOrder();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2A7F41),
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: const Color(0xFFBDBDBD),
-                      disabledForegroundColor: const Color(0xFF616161),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                    ),
-                    child: const Text(
-                      'Bayar Sekarang',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
+                _buildSectionTitle('Informasi Pengiriman'),
+                const SizedBox(height: 12),
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  elevation: 1,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (order.recipientName != null) ...[
+                          _buildDetailRow(
+                            'Penerima',
+                            order.recipientName ?? '-',
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                        if (order.recipientPhone != null) ...[
+                          _buildDetailRow(
+                            'No. HP',
+                            order.recipientPhone ?? '-',
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                        if (order.recipientAddress != null) ...[
+                          _buildDetailRow(
+                            'Alamat',
+                            order.recipientAddress ?? '-',
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                        if (order.notes != null && order.notes!.isNotEmpty) ...[
+                          _buildDetailRow('Catatan', order.notes ?? '-'),
+                        ],
+                      ],
                     ),
                   ),
                 ),
-              // Tombol Batalkan untuk Pembeli
-              if ((order.status.toLowerCase().contains('pembayaran') ||
-                      order.status.toLowerCase().contains('pending') ||
-                      order.status.toLowerCase() == 'menunggu konfirmasi') &&
-                  Provider.of<AuthProvider>(context, listen: false).user?.role != 'seller' &&
-                  Provider.of<AuthProvider>(context, listen: false).user?.role != 'admin' &&
-                  order.status.toLowerCase() != 'dibatalkan')
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: SizedBox(
+                const SizedBox(height: 18),
+
+                // FIX: sebelumnya kondisi ini di-hardcode jadi `if (false)`
+                // (kemungkinan sisa dari testing manual), yang bikin section
+                // "Lokasi Kurir" TIDAK PERNAH muncul apapun status
+                // pesanannya. Dikembalikan ke kondisi yang benar: peta
+                // hanya tampil kalau status pesanan "Dikirim" atau
+                // "Estimasi Sampai".
+                if (order.status.toLowerCase() == 'dikirim' ||
+                    order.status.toLowerCase() == 'estimasi sampai') ...[
+                  _buildSectionTitle('Lokasi Kurir'),
+                  const SizedBox(height: 12),
+                  Builder(
+                    builder: (context) {
+                      final token = Provider.of<AuthProvider>(
+                        context,
+                        listen: false,
+                      ).token;
+                      if (token == null) {
+                        return const SizedBox.shrink();
+                      }
+                      return CourierTrackingMap(
+                        token: token,
+                        orderId: order.id,
+                        onTrackingUpdate: _handleTrackingUpdate,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 18),
+                ],
+
+                if (order.paymentStatus != null)
+                  Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    elevation: 1,
+                    color: Colors.blue[50],
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: _buildDetailRow(
+                        'Status Pembayaran',
+                        order.paymentStatus ?? order.status,
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 20),
+                // Tombol "Bayar Sekarang" — foregroundColor: Colors.white
+                // diberikan eksplisit supaya teksnya tidak ikut warna hijau
+                // default dari theme (yang sebelumnya nyaris tak terlihat
+                // di atas background tombol yang juga hijau).
+                if ((order.status.toLowerCase().contains('pembayaran') ||
+                        order.status.toLowerCase().contains('pending')) &&
+                    Provider.of<AuthProvider>(
+                          context,
+                          listen: false,
+                        ).user?.role !=
+                        'seller' &&
+                    Provider.of<AuthProvider>(
+                          context,
+                          listen: false,
+                        ).user?.role !=
+                        'admin')
+                  SizedBox(
                     width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: _isPerformingAction ? null : _cancelOrder,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                PaymentGatewayScreen(order: order),
+                          ),
+                        );
+                        await _refreshOrder();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2A7F41),
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: const Color(0xFFBDBDBD),
+                        disabledForegroundColor: const Color(0xFF616161),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
                         ),
                       ),
                       child: const Text(
-                        'Batalkan Pesanan',
-                        style: TextStyle(fontSize: 16),
+                        'Bayar Sekarang',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
-                ),
-
-              // Tombol Konfirmasi Penerimaan (pembeli) — terkunci selama
-              // kurir belum benar-benar sampai (progress < 100%).
-              // FIX: sebelumnya tidak ada backgroundColor eksplisit, dan
-              // tidak ada warna khusus untuk state disabled, sehingga
-              // kontrasnya bisa jadi jelek tergantung theme default.
-              if (order.status.toLowerCase() == 'dikirim' &&
-                  Provider.of<AuthProvider>(context).user?.role != 'seller')
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
+                // Tombol Batalkan untuk Pembeli
+                if ((order.status.toLowerCase().contains('pembayaran') ||
+                        order.status.toLowerCase().contains('pending') ||
+                        order.status.toLowerCase() == 'menunggu konfirmasi') &&
+                    Provider.of<AuthProvider>(
+                          context,
+                          listen: false,
+                        ).user?.role !=
+                        'seller' &&
+                    Provider.of<AuthProvider>(
+                          context,
+                          listen: false,
+                        ).user?.role !=
+                        'admin' &&
+                    order.status.toLowerCase() != 'dibatalkan')
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    child: SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: (_isPerformingAction || !deliveryComplete)
-                            ? null
-                            : _confirmReceipt,
+                        onPressed: _isPerformingAction ? null : _cancelOrder,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2A7F41),
+                          backgroundColor: Colors.red,
                           foregroundColor: Colors.white,
                           disabledBackgroundColor: const Color(0xFFBDBDBD),
                           disabledForegroundColor: const Color(0xFF616161),
@@ -775,153 +788,96 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             borderRadius: BorderRadius.circular(18),
                           ),
                         ),
-                        child: _isPerformingAction
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text(
-                                'Konfirmasi Penerimaan',
-                                style: TextStyle(fontSize: 16, color: Colors.white),
-                              ),
+                        child: const Text(
+                          'Batalkan Pesanan',
+                          style: TextStyle(fontSize: 16, color: Colors.white),
+                        ),
                       ),
                     ),
-                    if (!deliveryComplete)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 6.0, left: 4.0),
-                        child: Text(
-                          'Tombol aktif setelah kurir sampai di lokasi tujuan (100%).',
-                          style: TextStyle(fontSize: 12, color: Colors.black54),
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              if (Provider.of<AuthProvider>(context).user?.role == 'seller')
-                Column(
-                  children: [
-                    if (order.status.toLowerCase() == 'menunggu konfirmasi')
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12.0),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _isPerformingAction
-                                ? null
-                                : () => _updateOrderStatus('Dikonfirmasi'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor: const Color(0xFFBDBDBD),
-                              disabledForegroundColor: const Color(0xFF616161),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
-                              ),
+                  ),
+
+                // Tombol Konfirmasi Penerimaan (pembeli) — terkunci selama
+                // kurir belum benar-benar sampai (progress < 100%).
+                // FIX: sebelumnya tidak ada backgroundColor eksplisit, dan
+                // tidak ada warna khusus untuk state disabled, sehingga
+                // kontrasnya bisa jadi jelek tergantung theme default.
+                if (order.status.toLowerCase() == 'dikirim' &&
+                    Provider.of<AuthProvider>(context).user?.role != 'seller')
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: (_isPerformingAction || !deliveryComplete)
+                              ? null
+                              : _confirmReceipt,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2A7F41),
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: const Color(0xFFBDBDBD),
+                            disabledForegroundColor: const Color(0xFF616161),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
                             ),
-                            child: _isPerformingAction
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text(
-                                    'Konfirmasi Pesanan',
-                                    style: TextStyle(fontSize: 16, color: Colors.white),
+                          ),
+                          child: _isPerformingAction
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
                                   ),
-                          ),
-                        ),
-                      ),
-
-                    if (order.status.toLowerCase() == 'dikonfirmasi')
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12.0),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: _isPerformingAction
-                                ? null
-                                : () => _updateOrderStatus('Diproses'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                            ),
-                            child: const Text(
-                              'Pesanan Sedang Disiapkan',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                    if (order.status.toLowerCase() == 'dikonfirmasi' ||
-                        order.status.toLowerCase() == 'diproses')
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12.0),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _isPerformingAction
-                                ? null
-                                : () => _updateOrderStatus('Dikirim'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.indigo,
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor: const Color(0xFFBDBDBD),
-                              disabledForegroundColor: const Color(0xFF616161),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                            ),
-                            child: _isPerformingAction
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text(
-                                    'Kirim Pesanan',
-                                    style: TextStyle(fontSize: 16, color: Colors.white),
+                                )
+                              : const Text(
+                                  'Konfirmasi Penerimaan',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
                                   ),
-                          ),
+                                ),
                         ),
                       ),
-
-                    // Tombol Tandai Selesai (penjual) — terkunci selama
-                    // kurir belum benar-benar sampai (progress < 100%).
-                    // FIX: warna disabled ditambahkan eksplisit supaya saat
-                    // aktif (100%) teksnya putih jelas di atas hijau, dan
-                    // saat masih terkunci warnanya tetap terbaca (abu tua
-                    // di atas abu muda), bukan abu pucat di atas abu pucat.
-                    if (order.status.toLowerCase() == 'dikirim')
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
+                      if (!deliveryComplete)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 6.0, left: 4.0),
+                          child: Text(
+                            'Tombol aktif setelah kurir sampai di lokasi tujuan (100%).',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                if (Provider.of<AuthProvider>(context).user?.role == 'seller')
+                  Column(
+                    children: [
+                      if (order.status.toLowerCase() == 'menunggu konfirmasi')
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: (_isPerformingAction || !deliveryComplete)
+                              onPressed: _isPerformingAction
                                   ? null
-                                  : () => _updateOrderStatus('Selesai'),
+                                  : () => _updateOrderStatus('Dikonfirmasi'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2A7F41),
+                                backgroundColor: Colors.blue,
                                 foregroundColor: Colors.white,
-                                disabledBackgroundColor: const Color(0xFFBDBDBD),
-                                disabledForegroundColor: const Color(0xFF616161),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                disabledBackgroundColor: const Color(
+                                  0xFFBDBDBD,
+                                ),
+                                disabledForegroundColor: const Color(
+                                  0xFF616161,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(18),
                                 ),
@@ -936,53 +892,187 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                       ),
                                     )
                                   : const Text(
-                                      'Tandai Selesai',
-                                      style: TextStyle(fontSize: 16, color: Colors.white),
+                                      'Konfirmasi Pesanan',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.white,
+                                      ),
                                     ),
                             ),
                           ),
-                          if (!deliveryComplete)
-                            const Padding(
-                              padding: EdgeInsets.only(top: 6.0, left: 4.0),
-                              child: Text(
-                                'Tombol aktif setelah kurir sampai di lokasi tujuan (100%).',
-                                style: TextStyle(fontSize: 12, color: Colors.black54),
+                        ),
+
+                      if (order.status.toLowerCase() == 'dikonfirmasi')
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: _isPerformingAction
+                                  ? null
+                                  : () => _updateOrderStatus('Diproses'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
                               ),
-                            ),
-                        ],
-                      ),
-                    // Tombol Batalkan untuk Penjual
-                    if (order.status.toLowerCase() == 'menunggu konfirmasi' ||
-                        order.status.toLowerCase() == 'menunggu pembayaran')
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: _isPerformingAction ? null : _cancelOrder,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.red,
-                              side: const BorderSide(color: Colors.red),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
+                              child: const Text(
+                                'Pesanan Sedang Disiapkan',
+                                style: TextStyle(fontSize: 16),
                               ),
-                            ),
-                            child: const Text(
-                              'Tolak / Batalkan Pesanan',
-                              style: TextStyle(fontSize: 16),
                             ),
                           ),
                         ),
-                      ),
-                  ],
-                ),
 
-              const SizedBox(height: 24),
-            ],
+                      if (order.status.toLowerCase() == 'dikonfirmasi' ||
+                          order.status.toLowerCase() == 'diproses')
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _isPerformingAction
+                                  ? null
+                                  : () => _updateOrderStatus('Dikirim'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.indigo,
+                                foregroundColor: Colors.white,
+                                disabledBackgroundColor: const Color(
+                                  0xFFBDBDBD,
+                                ),
+                                disabledForegroundColor: const Color(
+                                  0xFF616161,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                              ),
+                              child: _isPerformingAction
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Kirim Pesanan',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+
+                      // Tombol Tandai Selesai (penjual) — terkunci selama
+                      // kurir belum benar-benar sampai (progress < 100%).
+                      // FIX: warna disabled ditambahkan eksplisit supaya saat
+                      // aktif (100%) teksnya putih jelas di atas hijau, dan
+                      // saat masih terkunci warnanya tetap terbaca (abu tua
+                      // di atas abu muda), bukan abu pucat di atas abu pucat.
+                      if (order.status.toLowerCase() == 'dikirim')
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed:
+                                    (_isPerformingAction || !deliveryComplete)
+                                    ? null
+                                    : () => _updateOrderStatus('Selesai'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2A7F41),
+                                  foregroundColor: Colors.white,
+                                  disabledBackgroundColor: const Color(
+                                    0xFFBDBDBD,
+                                  ),
+                                  disabledForegroundColor: const Color(
+                                    0xFF616161,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                ),
+                                child: _isPerformingAction
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Tandai Selesai',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                            if (!deliveryComplete)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 6.0, left: 4.0),
+                                child: Text(
+                                  'Tombol aktif setelah kurir sampai di lokasi tujuan (100%).',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      // Tombol Batalkan untuk Penjual
+                      if (order.status.toLowerCase() == 'menunggu konfirmasi' ||
+                          order.status.toLowerCase() == 'menunggu pembayaran')
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: _isPerformingAction
+                                  ? null
+                                  : _cancelOrder,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red,
+                                side: const BorderSide(color: Colors.red),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                              ),
+                              child: const Text(
+                                'Tolak / Batalkan Pesanan',
+                                style: TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }
