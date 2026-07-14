@@ -1,0 +1,169 @@
+{
+  "name": "BUMDES - Send Telegram Notifications",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bumdes-notify",
+        "responseMode": "onReceived",
+        "responseData": "{\"message\":\"ok\"}"
+      },
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 250]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Normalize payload and prepare messages\nconst body = $json;\nconst payload = body;\n// Prefer provided target_chat_id; fallback to pembeli/seller/group fields if present\nconst target = payload.pembeli_telegram_chat_id || payload.seller_telegram_chat_id || payload.group_chat_id || payload.target_chat_id || null;\nconst buyerChat = payload.pembeli_telegram_chat_id || null;\nconst groupChat = payload.group_chat_id || null;\n\nconst text = `Pesanan: ${payload.order_number || payload.order_id || '-'}\nProduk: ${payload.item || '-'}\nTotal: ${payload.total || '-'}\nStatus: ${payload.status || payload.event || '-'}\n`;\n\nreturn [{ json: { payload, target, buyerChat, groupChat, text } }];"
+      },
+      "name": "Prepare Message",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 250]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json[\"buyerChat\"]}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "name": "Has Buyer Chat?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 160]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot{{ $json.credentials_bot_token || $env[\"N8N_TELEGRAM_BOT_TOKEN\"] }}/sendMessage",
+        "options": {},
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "chat_id",
+              "value": "={{$json[\"buyerChat\"]}}"
+            },
+            {
+              "name": "text",
+              "value": "={{$json[\"text\"]}}"
+            }
+          ]
+        }
+      },
+      "name": "Send To Buyer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [850, 120]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"ok\"]}}",
+              "operation": "equal",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "name": "Buyer Send OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1050, 140]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot{{ $json.credentials_bot_token || $env[\"N8N_TELEGRAM_BOT_TOKEN\"] }}/sendMessage",
+        "options": {},
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "chat_id",
+              "value": "= {{$json[\"groupChat\"]}}"
+            },
+            {
+              "name": "text",
+              "value": "= [GRUP] {{$json[\"text\"]}}"
+            }
+          ]
+        }
+      },
+      "name": "Send To Group",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Message": {
+      "main": [
+        [
+          {
+            "node": "Has Buyer Chat?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Buyer Chat?": {
+      "main": [
+        [
+          {
+            "node": "Send To Buyer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send To Group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+    ,
+    "Send To Buyer": {
+      "main": [
+        [
+          {
+            "node": "Buyer Send OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buyer Send OK?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Send To Group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -21,11 +21,13 @@ class N8nNotificationService
      */
     public function notifyNewOrder(Order $order): void
     {
-        $order->loadMissing(['store', 'buyer', 'orderItems.product']);
+        $order->loadMissing(['store', 'store.owner', 'buyer', 'orderItems.product']);
 
         $itemNames = $order->orderItems
             ->map(fn ($item) => $item->product->name ?? 'Produk')
             ->implode(', ');
+
+        $groupChatId = config('services.n8n.group_chat_id') ?? env('N8N_TELEGRAM_GROUP_CHAT_ID');
 
         $this->send([
             'event'        => 'order_created',
@@ -38,9 +40,14 @@ class N8nNotificationService
             // Prefer recipient phone provided at checkout; fallback to account phone
             'pembeli_wa'   => $order->recipient_phone ?? $order->buyer->phone ?? '',
             'pembeli_telegram_chat_id' => $order->buyer->telegram_chat_id ?? null,
+            'buyer_chat_id' => $order->buyer->telegram_chat_id ?? null,
+            // Chat id penjual (pemilik toko/BUMDes) agar bisa dikirim notifikasi personal
+            'seller_telegram_chat_id' => $order->store->owner->telegram_chat_id ?? null,
             'item'         => $itemNames,
             'status'       => $order->status,
             'total'        => (float) $order->total_price,
+            'group_chat_id' => $groupChatId,
+            'target_chat_id' => $groupChatId,
         ]);
     }
 
@@ -77,6 +84,20 @@ class N8nNotificationService
         if (empty($this->webhookUrl)) {
             Log::warning('N8N_WEBHOOK_URL belum diatur di .env, notifikasi dilewati.', $payload);
             return;
+        }
+
+        // Sertakan fallback group chat id agar n8n selalu punya target
+        // (n8n workflow dapat memilih pembeli/seller/group berdasarkan field ini)
+        $payload['group_chat_id'] = config('services.n8n.group_chat_id') ?? env('N8N_TELEGRAM_GROUP_CHAT_ID');
+
+        // Jika target_chat_id sudah diset eksplisit dari payload, jangan timpa.
+        if (empty($payload['target_chat_id'])) {
+            // Tentukan target_chat_id prioritas: pembeli -> seller -> group
+            $payload['target_chat_id'] = $payload['pembeli_telegram_chat_id'] ?? $payload['seller_telegram_chat_id'] ?? $payload['group_chat_id'] ?? null;
+        }
+
+        if (empty($payload['target_chat_id'])) {
+            Log::warning('Tidak ditemukan target Telegram chat id untuk notifikasi n8n; payload akan dikirim tanpa target spesifik.', $payload);
         }
 
         try {
