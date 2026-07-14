@@ -170,6 +170,23 @@ class _BumdesCard extends StatelessWidget {
   final StoreModel store;
   const _BumdesCard({required this.store});
 
+  // TAMBAHAN: fallback huruf awal nama toko, dipakai kalau BUMDes belum
+  // punya foto atau fotonya gagal dimuat.
+  Widget _buildInitialAvatar() {
+    return Container(
+      color: const Color(0xFF1B5E20).withValues(alpha: 0.1),
+      alignment: Alignment.center,
+      child: Text(
+        store.storeName.isNotEmpty ? store.storeName[0].toUpperCase() : '?',
+        style: const TextStyle(
+          color: Color(0xFF1B5E20),
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -223,20 +240,33 @@ class _BumdesCard extends StatelessWidget {
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: CircleAvatar(
-                      radius: 25,
-                      backgroundColor: const Color(
-                        0xFF1B5E20,
-                      ).withValues(alpha: 0.1),
-                      child: Text(
-                        store.storeName.isNotEmpty
-                            ? store.storeName[0].toUpperCase()
-                            : '?',
-                        style: const TextStyle(
-                          color: Color(0xFF1B5E20),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                        ),
+                    // FIX: sebelumnya lingkaran ini SELALU menampilkan
+                    // huruf awal nama toko, tidak pernah mencoba
+                    // menampilkan foto profil BUMDes walau fotonya ada
+                    // di data (store.storePhotoUrl). Sekarang lingkaran
+                    // ini benar-benar mencoba memuat foto BUMDes-nya
+                    // dulu, baru fallback ke huruf kalau memang belum
+                    // ada foto atau gagal dimuat.
+                    child: ClipOval(
+                      child: SizedBox(
+                        width: 50,
+                        height: 50,
+                        child: store.storePhotoUrl != null
+                            ? Image.network(
+                                store.storePhotoUrl!,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) return child;
+                                  return Container(
+                                    color: const Color(
+                                      0xFF1B5E20,
+                                    ).withValues(alpha: 0.08),
+                                  );
+                                },
+                                errorBuilder: (_, __, ___) =>
+                                    _buildInitialAvatar(),
+                              )
+                            : _buildInitialAvatar(),
                       ),
                     ),
                   ),

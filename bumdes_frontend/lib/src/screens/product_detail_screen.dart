@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
+import '../models/store_model.dart';
 import '../providers/cart_provider.dart';
 import 'cart_screen.dart';
 import 'order_history_screen.dart';
 import 'profile_screen.dart';
 import 'home_screen.dart';
+import 'bumdes_detail_screen.dart';
 
 const Color _kPrimaryGreen = Color(0xFF2D5016);
 const Color _kBg = Color(0xFFFAFAFA);
@@ -168,9 +170,37 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  // FIX: kartu toko sekarang benar-benar bisa diklik dan membuka halaman
+  // BumdesDetailScreen milik BUMDes tersebut. Sebelumnya ikon panah
+  // (chevron_right) di kartu ini cuma dekorasi, tidak dibungkus
+  // GestureDetector/InkWell apa pun.
+  //
+  // ProductModel sudah punya storeId (id BUMDes pemilik produk ini), jadi
+  // kita bisa langsung buat objek StoreModel "ringan" dari data yang sudah
+  // ada di produk (nama toko, foto, lokasi) tanpa perlu request tambahan
+  // ke server — BumdesDetailScreen sendiri yang nanti mengambil daftar
+  // produk BUMDes ini dari API begitu halaman dibuka.
+  void _goToStore(BuildContext context, ProductModel product) {
+    if (product.storeId == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BumdesDetailScreen(
+          store: StoreModel(
+            id: product.storeId!,
+            storeName: product.storeName,
+            village: product.location,
+            storePhotoUrl: product.storePhotoUrl,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStoreCard(ProductModel product) {
     const double avatarSize = 48;
     final hasPhoto = product.storePhotoUrl != null && product.storePhotoUrl!.isNotEmpty;
+    final canNavigate = product.storeId != null;
 
     Widget avatar;
     if (hasPhoto) {
@@ -197,49 +227,53 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       );
     }
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF6FAF6),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kPrimaryGreen.withOpacity(0.08)),
-      ),
-      child: Row(
-        children: [
-          avatar,
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.storeName.isNotEmpty ? product.storeName : 'Toko tidak diketahui',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _kPrimaryGreen),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (product.location.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on_outlined, size: 14, color: Colors.black45),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          product.location,
-                          style: const TextStyle(fontSize: 12.5, color: Colors.black54),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: canNavigate ? () => _goToStore(context, product) : null,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF6FAF6),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _kPrimaryGreen.withOpacity(0.08)),
+        ),
+        child: Row(
+          children: [
+            avatar,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.storeName.isNotEmpty ? product.storeName : 'Toko tidak diketahui',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _kPrimaryGreen),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                  if (product.location.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_outlined, size: 14, color: Colors.black45),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            product.location,
+                            style: const TextStyle(fontSize: 12.5, color: Colors.black54),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          Icon(Icons.chevron_right, color: Colors.black26),
-        ],
+            if (canNavigate) const Icon(Icons.chevron_right, color: Colors.black26),
+          ],
+        ),
       ),
     );
   }

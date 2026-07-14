@@ -1,3 +1,5 @@
+import '../config.dart';
+
 class StoreModel {
   final int id;
   final String storeName;
@@ -37,15 +39,26 @@ class StoreModel {
 
   factory StoreModel.fromJson(Map<String, dynamic> json) {
     final rawPhoto = json['store_photo_url'] as String?;
+    // FIX: sebelumnya path foto dari backend cuma digabung dengan base
+    // URL biasa (AppConfig.resolveMediaUrl), padahal ProductModel (yang
+    // fotonya sudah terbukti berhasil tampil di halaman detail produk)
+    // memakai jalur berbeda: _resolveImageUrl() lalu
+    // resolveImageUrlWithProxy() dari config.dart, yang mengubah URL
+    // "/storage/..." menjadi URL proxy "/api/image/...". Kalau proxy ini
+    // dilewati, foto gagal dimuat (kemungkinan storage backend tidak bisa
+    // diakses langsung). Sekarang StoreModel memakai jalur resolve yang
+    // SAMA PERSIS dengan ProductModel, supaya konsisten.
+    final storePhotoUrl = (rawPhoto != null && rawPhoto.isNotEmpty)
+        ? resolveImageUrlWithProxy(_resolveImageUrl(rawPhoto))
+        : null;
+
     return StoreModel(
       id: _parseInt(json['id']),
       storeName: json['store_name'] as String? ?? '',
       village: json['village'] as String? ?? '',
       district: json['district'] as String?,
       regency: json['regency'] as String?,
-      storePhotoUrl: (rawPhoto != null && rawPhoto.isNotEmpty)
-          ? rawPhoto
-          : null,
+      storePhotoUrl: storePhotoUrl,
       productCount: _parseInt(json['product_count']),
       categories: (json['categories'] is List)
           ? List<String>.from(
@@ -53,6 +66,19 @@ class StoreModel {
             )
           : const [],
     );
+  }
+
+  /// Pastikan URL foto selalu absolute dan bersih. Disalin identik dari
+  /// ProductModel._resolveImageUrl supaya perilaku resolve URL foto
+  /// konsisten di seluruh app.
+  static String _resolveImageUrl(String url) {
+    if (url.isEmpty) return '';
+    final cleaned = url.replaceAll(r'\/', '/');
+    if (cleaned.startsWith('http://') || cleaned.startsWith('https://')) {
+      return cleaned;
+    }
+    if (cleaned.startsWith('/')) return '$backendUrl$cleaned';
+    return '$backendUrl/$cleaned';
   }
 
   static int _parseInt(dynamic value) {

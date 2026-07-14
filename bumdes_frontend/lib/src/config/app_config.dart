@@ -23,6 +23,29 @@ class AppConfig {
     return 'http://localhost:8000/api';
   }
 
+  // TAMBAHAN: base URL untuk file media (foto), yaitu apiBaseUrl tanpa
+  // akhiran "/api" — karena file yang di-upload (storage/...) biasanya
+  // disajikan langsung dari root domain, bukan dari path /api.
+  static String get _mediaBaseUrl {
+    final base = apiBaseUrl;
+    return base.endsWith('/api')
+        ? base.substring(0, base.length - '/api'.length)
+        : base;
+  }
+
+  // TAMBAHAN: gabungkan path foto dari backend (yang kadang berupa path
+  // relatif, mis. "storage/photos/x.jpg") menjadi URL lengkap yang bisa
+  // dimuat Image.network(). Kalau path yang dikirim backend TERNYATA
+  // sudah berupa URL lengkap (diawali http:// atau https://), fungsi ini
+  // tidak mengubah apa-apa dan langsung mengembalikannya apa adanya.
+  static String resolveMediaUrl(String path) {
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    return '$_mediaBaseUrl$normalizedPath';
+  }
+
   // Debug Configuration
   static bool get enableDebugLogging => kDebugMode;
   static bool get enableVerboseLogging =>

@@ -61,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final pages = <Widget>[
-      const HomeTab(),
+      HomeTab(onShopNow: () => setState(() => _selectedIndex = 1)),
       const SearchTab(),
       const CartScreen(),
       const OrderHistoryScreen(),
@@ -271,18 +271,18 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class HomeTab extends StatefulWidget {
-  const HomeTab({super.key});
+  // TAMBAHAN: callback untuk pindah ke tab "Pencarian" (yang menampilkan
+  // semua produk + search & filter kategori) saat tombol "Belanja
+  // Sekarang" ditekan. Diisi oleh HomeScreen lewat setState pindah
+  // _selectedIndex, tanpa perlu route atau provider baru.
+  final VoidCallback? onShopNow;
+  const HomeTab({super.key, this.onShopNow});
 
   @override
   State<HomeTab> createState() => _HomeTabState();
 }
 
 class _HomeTabState extends State<HomeTab> {
-  // TAMBAHAN: focus node untuk search bar, dipakai supaya tombol
-  // "Belanja Sekarang" di banner bisa langsung mengarahkan fokus ke
-  // kolom pencarian (tanpa perlu route/provider baru).
-  final FocusNode _searchFocusNode = FocusNode();
-
   @override
   void initState() {
     super.initState();
@@ -291,12 +291,6 @@ class _HomeTabState extends State<HomeTab> {
         Provider.of<ProductProvider>(context, listen: false).refresh();
       }
     });
-  }
-
-  @override
-  void dispose() {
-    _searchFocusNode.dispose();
-    super.dispose();
   }
 
   // TAMBAHAN: buka aplikasi email default dengan alamat sudah terisi.
@@ -323,10 +317,34 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
+  // FIX: tombol "Belanja Sekarang" sebelumnya hanya memindahkan fokus ke
+  // search bar (yang letaknya di bawah, di luar layar), jadi kelihatan
+  // seolah tidak merespons saat diklik. Sekarang tombol ini langsung
+  // membuka daftar BUMDes, sama seperti kartu "BUMDes" di bawahnya —
+  // supaya ada aksi/navigasi yang jelas dan terlihat saat ditekan.
+  void _goToBumdesList(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const BumdesListScreen()),
+    );
+  }
+
+  // TAMBAHAN: "Belanja Sekarang" sekarang langsung pindah ke tab
+  // "Pencarian" (index 1 di bottom nav), yang menampilkan grid SEMUA
+  // produk lengkap dengan search bar & filter kategori — ini yang
+  // paling mendekati halaman "Semua Produk" di aplikasi ini.
+  void _shopNow(BuildContext context) {
+    if (widget.onShopNow != null) {
+      widget.onShopNow!();
+    } else {
+      _goToBumdesList(context);
+    }
+  }
+
   // TAMBAHAN: banner promo bergaya marketplace, menggantikan hero besar
   // sebelumnya. Tetap pakai warna hijau brand (gradient 1B5E20 -> 388E3C)
   // dan logo yang sudah ada di assets, jadi tidak butuh aset baru.
-  Widget _buildPromoBanner() {
+  Widget _buildPromoBanner(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -368,7 +386,7 @@ class _HomeTabState extends State<HomeTab> {
                 ),
                 const SizedBox(height: 14),
                 ElevatedButton(
-                  onPressed: () => _searchFocusNode.requestFocus(),
+                  onPressed: () => _shopNow(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFF1B5E20),
@@ -419,12 +437,7 @@ class _HomeTabState extends State<HomeTab> {
   Widget _buildBumdesRow(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const BumdesListScreen()),
-        );
-      },
+      onTap: () => _goToBumdesList(context),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -475,94 +488,6 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // TAMBAHAN: pemetaan ikon berdasarkan nama kategori dari backend,
-  // dengan fallback aman kalau nama kategori tidak dikenali, supaya
-  // tidak error walau daftar kategori dari Laravel berubah-ubah.
-  IconData _iconForCategory(String category) {
-    final lower = category.toLowerCase();
-    if (lower.contains('semua') || lower.contains('all')) {
-      return Icons.grid_view_rounded;
-    }
-    if (lower.contains('kuliner') || lower.contains('makan')) {
-      return Icons.restaurant_menu_outlined;
-    }
-    if (lower.contains('tani') ||
-        lower.contains('kebun') ||
-        lower.contains('pertanian')) {
-      return Icons.eco_outlined;
-    }
-    if (lower.contains('kerajinan') || lower.contains('kriya')) {
-      return Icons.shopping_bag_outlined;
-    }
-    if (lower.contains('jasa')) {
-      return Icons.groups_outlined;
-    }
-    return Icons.category_outlined;
-  }
-
-  // TAMBAHAN: bagian "Kategori" berbentuk grid ikon, mengambil daftar
-  // kategori langsung dari ProductProvider yang sudah ada (categories,
-  // selectedCategory, filterByCategory) — sama seperti yang dipakai
-  // filter sheet sebelumnya, jadi tidak menambah state/provider baru.
-  Widget _buildCategorySection(ProductProvider provider) {
-    if (provider.categories.isEmpty) return const SizedBox.shrink();
-    return SizedBox(
-      height: 96,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: provider.categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final category = provider.categories[index];
-          final selected = provider.selectedCategory == category;
-          return GestureDetector(
-            onTap: () => provider.filterByCategory(category),
-            child: Container(
-              width: 80,
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-              decoration: BoxDecoration(
-                color: selected
-                    ? const Color(0xFF1B5E20).withValues(alpha: 0.10)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: selected
-                      ? const Color(0xFF1B5E20)
-                      : Colors.black.withValues(alpha: 0.08),
-                  width: selected ? 1.4 : 1,
-                ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    _iconForCategory(category),
-                    color: const Color(0xFF1B5E20),
-                    size: 24,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    category,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      color: selected
-                          ? const Color(0xFF1B5E20)
-                          : Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildSearchBar(BuildContext context) {
     final provider = Provider.of<ProductProvider>(context, listen: false);
     return Container(
@@ -578,7 +503,6 @@ class _HomeTabState extends State<HomeTab> {
         ],
       ),
       child: TextField(
-        focusNode: _searchFocusNode,
         decoration: InputDecoration(
           hintText: 'Cari produk atau jasa desa...',
           hintStyle: const TextStyle(color: Colors.black45),
@@ -763,7 +687,7 @@ class _HomeTabState extends State<HomeTab> {
             // dipakai di banner promo, kategori terpilih, dan tombol.
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-              child: _buildPromoBanner(),
+              child: _buildPromoBanner(context),
             ),
 
             const SizedBox(height: 20),
@@ -780,18 +704,9 @@ class _HomeTabState extends State<HomeTab> {
               child: _buildBumdesRow(context),
             ),
 
-            const SizedBox(height: 24),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildSectionHeader('Kategori'),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildCategorySection(provider),
-            ),
-
+            // DIHAPUS: section "Kategori" (header + grid ikon kategori)
+            // sesuai permintaan — sekarang langsung lanjut ke "Produk &
+            // Jasa Unggulan" setelah kartu BUMDes.
             const SizedBox(height: 24),
 
             Padding(
