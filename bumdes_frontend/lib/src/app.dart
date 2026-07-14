@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/product_provider.dart';
+import 'providers/store_provider.dart';
 import 'services/api_service.dart';
 import 'models/order_model.dart';
 import 'screens/admin_dashboard_screen.dart';
@@ -59,6 +60,10 @@ class BumdesApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
+        // TAMBAHAN: StoreProvider didaftarkan di sini supaya tersedia untuk
+        // BumdesListScreen (dan layar lain yang butuh daftar BUMDes) di
+        // seluruh aplikasi, bukan hanya di satu route tertentu.
+        ChangeNotifierProvider(create: (_) => StoreProvider()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,

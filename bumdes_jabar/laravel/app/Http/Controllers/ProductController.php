@@ -123,6 +123,93 @@ class ProductController extends Controller
         ]);
     }
 
+    // TAMBAHAN: daftar SEMUA BUMDes (toko) yang aktif, publik (tanpa
+    // login), dengan dukungan pencarian (?q=) dan filter wilayah
+    // kabupaten/kota (?region=). Dipakai oleh halaman "BUMDes" di
+    // aplikasi Flutter (BumdesListScreen).
+    //
+    // Setiap BUMDes juga disertai:
+    // - product_count : jumlah produk/jasa aktif milik toko itu
+    // - categories    : daftar nama kategori unik yang dijual toko itu
+    //   (dipakai untuk tag "Kuliner Desa, Pertanian" di kartu BUMDes)
+    //
+    // CATATAN: belum ada kolom/agregasi rating untuk toko di database,
+    // jadi endpoint ini TIDAK mengirim field rating. Kalau nanti mau
+    // ditambahkan, sebaiknya dihitung dari rata-rata rating produk milik
+    // toko (tabel product_reviews) lalu di-cache, bukan dihitung on the
+    // fly di setiap request daftar BUMDes (berat).
+    public function getStores(Request $request): JsonResponse
+    {
+        $keyword = trim((string) $request->query('q', ''));
+        $region = trim((string) $request->query('region', ''));
+
+        $query = DB::table('stores')->where('stores.is_active', true);
+
+        if ($keyword !== '') {
+            $query->where(function ($q) use ($keyword) {
+                $q->where('store_name', 'like', "%$keyword%")
+                    ->orWhere('village', 'like', "%$keyword%")
+                    ->orWhere('district', 'like', "%$keyword%")
+                    ->orWhere('regency', 'like', "%$keyword%");
+            });
+        }
+
+        if ($region !== '' && $region !== 'Semua Wilayah') {
+            $query->where(function ($q) use ($region) {
+                $q->where('regency', $region)->orWhere('district', $region);
+            });
+        }
+
+        $stores = $query->orderBy('store_name')->paginate(20);
+        $storeIds = collect($stores->items())->pluck('id');
+
+        // Jumlah produk aktif per toko (satu query untuk semua toko di
+        // halaman ini, bukan N+1 query per toko).
+        $productCounts = DB::table('products')
+            ->whereIn('store_id', $storeIds)
+            ->where('is_active', true)
+            ->select('store_id', DB::raw('count(*) as total'))
+            ->groupBy('store_id')
+            ->pluck('total', 'store_id');
+
+        // Kategori unik yang dijual tiap toko.
+        $categoriesByStore = DB::table('products')
+            ->join('categories', 'products.category_id', '=', 'categories.id')
+            ->whereIn('products.store_id', $storeIds)
+            ->where('products.is_active', true)
+            ->select('products.store_id', 'categories.name')
+            ->distinct()
+            ->get()
+            ->groupBy('store_id')
+            ->map(fn($rows) => $rows->pluck('name')->values());
+
+        $data = collect($stores->items())->map(function ($store) use (
+            $productCounts,
+            $categoriesByStore
+        ) {
+            return [
+                'id' => $store->id,
+                'store_name' => $store->store_name,
+                'village' => $store->village,
+                'district' => $store->district ?? null,
+                'regency' => $store->regency ?? null,
+                'store_photo_url' => $this->resolvePhotoUrl($store->store_photo_url ?? null),
+                'product_count' => $productCounts[$store->id] ?? 0,
+                'categories' => ($categoriesByStore[$store->id] ?? collect())->values(),
+            ];
+        });
+
+        return response()->json([
+            'message' => 'Daftar BUMDes',
+            'data' => $data,
+            'meta' => [
+                'current_page' => $stores->currentPage(),
+                'last_page' => $stores->lastPage(),
+                'total' => $stores->total(),
+            ],
+        ]);
+    }
+
     public function search(Request $request): JsonResponse
     {
         $keyword = $request->query('q', '');

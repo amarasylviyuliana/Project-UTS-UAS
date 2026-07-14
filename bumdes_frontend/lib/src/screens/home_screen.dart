@@ -11,6 +11,7 @@ import 'cart_screen.dart';
 import 'order_history_screen.dart';
 import 'profile_screen.dart';
 import 'login_screen.dart';
+import 'bumdes_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
@@ -184,6 +185,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
+              // TAMBAHAN: ikon keranjang di pojok kanan header, sesuai
+              // referensi desain. Tap akan memindahkan bottom nav ke tab
+              // "Keranjang" (index 2) yang sudah ada, tanpa membuka route
+              // baru dan tanpa perlu provider tambahan.
+              actions: [
+                IconButton(
+                  tooltip: 'Keranjang',
+                  onPressed: () => setState(() => _selectedIndex = 2),
+                  icon: const Icon(
+                    Icons.shopping_cart_outlined,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 4),
+              ],
             ),
           ],
           body: pages[_selectedIndex],
@@ -262,6 +278,11 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
+  // TAMBAHAN: focus node untuk search bar, dipakai supaya tombol
+  // "Belanja Sekarang" di banner bisa langsung mengarahkan fokus ke
+  // kolom pencarian (tanpa perlu route/provider baru).
+  final FocusNode _searchFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
@@ -270,6 +291,12 @@ class _HomeTabState extends State<HomeTab> {
         Provider.of<ProductProvider>(context, listen: false).refresh();
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _searchFocusNode.dispose();
+    super.dispose();
   }
 
   // TAMBAHAN: buka aplikasi email default dengan alamat sudah terisi.
@@ -296,93 +323,242 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
-  Widget _buildHeroText() {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'BUMDES_JABAR',
-          style: TextStyle(
-            fontSize: 36,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            letterSpacing: 1.0,
-          ),
-        ),
-        SizedBox(height: 8),
-        Text(
-          'Koperasi Umat Berdaulat',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.white60,
-            letterSpacing: 1.5,
-          ),
-        ),
-        SizedBox(height: 16),
-        Text(
-          'Adalah aplikasi penyokong usaha pada tiap desa yang mana menjual dan memasarkan produk barang atau jasa unggulan di desanya.',
-          style: TextStyle(fontSize: 16, color: Colors.white70, height: 1.6),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeroIllustration() {
+  // TAMBAHAN: banner promo bergaya marketplace, menggantikan hero besar
+  // sebelumnya. Tetap pakai warna hijau brand (gradient 1B5E20 -> 388E3C)
+  // dan logo yang sudah ada di assets, jadi tidak butuh aset baru.
+  Widget _buildPromoBanner() {
     return Container(
       width: double.infinity,
-      height: 320,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F0E8),
-        borderRadius: BorderRadius.circular(28),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1B5E20), Color(0xFF388E3C)],
+        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: const [
           BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.15),
-            blurRadius: 24,
-            offset: Offset(0, 10),
+            color: Color.fromRGBO(0, 0, 0, 0.12),
+            blurRadius: 16,
+            offset: Offset(0, 8),
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final imageSize = constraints.maxWidth < 360 ? 150.0 : 180.0;
-                return Image.asset(
-                  'assets/logo.jpeg',
-                  height: imageSize,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.eco,
-                        size: 72,
-                        color: const Color(0xFF1B5E20).withValues(alpha: 0.6),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'BUMDES JABAR',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1B5E20),
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                      const Text(
-                        'Koperasi Umat Berdaulat',
-                        style: TextStyle(fontSize: 11, color: Colors.black45),
-                      ),
-                    ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Marketplace Produk dan Jasa Antar BUMDes di Jawa Barat',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    height: 1.3,
                   ),
-                );
-              },
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Belanja mudah, dukung ekonomi desa',
+                  style: TextStyle(color: Colors.white70, fontSize: 12.5),
+                ),
+                const SizedBox(height: 14),
+                ElevatedButton(
+                  onPressed: () => _searchFocusNode.requestFocus(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF1B5E20),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'Belanja Sekarang',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: 84,
+              height: 84,
+              color: Colors.white.withValues(alpha: 0.14),
+              padding: const EdgeInsets.all(14),
+              child: Image.asset(
+                'assets/logo.jpeg',
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.eco, color: Colors.white, size: 40),
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // TAMBAHAN: kartu "BUMDes" (baris navigasi ke daftar BUMDes). Sekarang
+  // sudah tersambung ke BumdesListScreen yang menampilkan semua BUMDes
+  // (dengan search & filter wilayah), lalu tap salah satu BUMDes akan
+  // membuka detail produknya.
+  Widget _buildBumdesRow(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const BumdesListScreen()),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Color.fromRGBO(0, 0, 0, 0.04),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1B5E20).withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.storefront_outlined,
+                color: Color(0xFF1B5E20),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'BUMDes',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Temukan berbagai BUMDes di Jawa Barat',
+                    style: TextStyle(fontSize: 11.5, color: Colors.black54),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.black38),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // TAMBAHAN: pemetaan ikon berdasarkan nama kategori dari backend,
+  // dengan fallback aman kalau nama kategori tidak dikenali, supaya
+  // tidak error walau daftar kategori dari Laravel berubah-ubah.
+  IconData _iconForCategory(String category) {
+    final lower = category.toLowerCase();
+    if (lower.contains('semua') || lower.contains('all')) {
+      return Icons.grid_view_rounded;
+    }
+    if (lower.contains('kuliner') || lower.contains('makan')) {
+      return Icons.restaurant_menu_outlined;
+    }
+    if (lower.contains('tani') ||
+        lower.contains('kebun') ||
+        lower.contains('pertanian')) {
+      return Icons.eco_outlined;
+    }
+    if (lower.contains('kerajinan') || lower.contains('kriya')) {
+      return Icons.shopping_bag_outlined;
+    }
+    if (lower.contains('jasa')) {
+      return Icons.groups_outlined;
+    }
+    return Icons.category_outlined;
+  }
+
+  // TAMBAHAN: bagian "Kategori" berbentuk grid ikon, mengambil daftar
+  // kategori langsung dari ProductProvider yang sudah ada (categories,
+  // selectedCategory, filterByCategory) — sama seperti yang dipakai
+  // filter sheet sebelumnya, jadi tidak menambah state/provider baru.
+  Widget _buildCategorySection(ProductProvider provider) {
+    if (provider.categories.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 96,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: provider.categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final category = provider.categories[index];
+          final selected = provider.selectedCategory == category;
+          return GestureDetector(
+            onTap: () => provider.filterByCategory(category),
+            child: Container(
+              width: 80,
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+              decoration: BoxDecoration(
+                color: selected
+                    ? const Color(0xFF1B5E20).withValues(alpha: 0.10)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: selected
+                      ? const Color(0xFF1B5E20)
+                      : Colors.black.withValues(alpha: 0.08),
+                  width: selected ? 1.4 : 1,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _iconForCategory(category),
+                    color: const Color(0xFF1B5E20),
+                    size: 24,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    category,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: selected
+                          ? const Color(0xFF1B5E20)
+                          : Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -402,8 +578,9 @@ class _HomeTabState extends State<HomeTab> {
         ],
       ),
       child: TextField(
+        focusNode: _searchFocusNode,
         decoration: InputDecoration(
-          hintText: 'Cari produk, toko, desa...',
+          hintText: 'Cari produk atau jasa desa...',
           hintStyle: const TextStyle(color: Colors.black45),
           prefixIcon: const Icon(Icons.search, color: Color(0xFF1B5E20)),
           suffixIcon: IconButton(
@@ -580,66 +757,46 @@ class _HomeTabState extends State<HomeTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF1B5E20), Color(0xFF388E3C)],
-                ),
-              ),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final horizontalPadding = constraints.maxWidth < 550
-                      ? 16.0
-                      : 24.0;
-                  if (constraints.maxWidth > 900) {
-                    return Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 40,
-                        horizontal: horizontalPadding,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(child: _buildHeroText()),
-                          const SizedBox(width: 32),
-                          Expanded(child: _buildHeroIllustration()),
-                        ],
-                      ),
-                    );
-                  }
-                  return Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 40,
-                      horizontal: horizontalPadding,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeroText(),
-                        const SizedBox(height: 24),
-                        _buildHeroIllustration(),
-                      ],
-                    ),
-                  );
-                },
-              ),
+            // TAMBAHAN: latar putih di bagian atas (bukan hero hijau full
+            // screen lagi) supaya nuansanya jadi lebih ke "marketplace"
+            // seperti referensi gambar 2, sementara warna brand tetap
+            // dipakai di banner promo, kategori terpilih, dan tombol.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+              child: _buildPromoBanner(),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: _buildSearchBar(context),
             ),
 
+            const SizedBox(height: 20),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: _buildBumdesRow(context),
+            ),
+
             const SizedBox(height: 24),
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildSectionHeader('Produk Unggulan'),
+              child: _buildSectionHeader('Kategori'),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: _buildCategorySection(provider),
+            ),
+
+            const SizedBox(height: 24),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: _buildSectionHeader('Produk & Jasa Unggulan'),
             ),
             const SizedBox(height: 16),
 
@@ -1297,4 +1454,4 @@ class ChoicePill extends StatelessWidget {
       onSelected: (_) => provider.filterByCategory(label),
     );
   }
-} 
+}
