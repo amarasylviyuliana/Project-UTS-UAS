@@ -327,14 +327,6 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // FIX: sebelumnya Container ini tidak punya `width`, dan parent-nya
-  // (Column dengan crossAxisAlignment.start di layout HP/narrow) tidak
-  // pernah men-stretch child-nya secara horizontal. Akibatnya kotak krem
-  // logo menyusut mengikuti ukuran gambar di dalamnya dan menyisakan
-  // ruang kosong di kanan — persis yang digarisin di screenshot.
-  // Sekarang width: double.infinity dipaksa supaya kotak selalu selebar
-  // ruang yang tersedia (full-bleed sesuai padding luar), konsisten di
-  // HP maupun web/desktop.
   Widget _buildHeroIllustration() {
     return Container(
       width: double.infinity,
@@ -395,9 +387,6 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // ── DIUBAH: sekarang benar-benar bisa dipencet (IconButton), sebelumnya
-  // suffixIcon cuma `Icon(...)` polos jadi kelihatan seperti tombol tapi
-  // sama sekali tidak merespons ketukan (itu "bug" yang kamu maksud).
   Widget _buildSearchBar(BuildContext context) {
     final provider = Provider.of<ProductProvider>(context, listen: false);
     return Container(
@@ -435,7 +424,6 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // TAMBAHAN: bottom sheet filter kategori, dipanggil dari ikon garis tiga.
   void _showFilterSheet(BuildContext context, ProductProvider provider) {
     showModalBottomSheet(
       context: context,
@@ -529,13 +517,20 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // ── TAMBAHAN: grid Shopee-style yang benar-benar responsif.
-  // Sebelumnya pakai Wrap dengan kartu lebar tetap 220px — di layar HP,
-  // 2 kartu (220*2 + jarak) lebih lebar dari layar, jadi kartu ke-2
-  // "kepotong" ke luar layar dan hasilnya cuma keliatan 1 kolom.
-  // Sekarang pakai GridView dengan jumlah kolom dihitung dari lebar layar,
-  // dijamin selalu 2 kolom di HP, dan makin banyak kolom di layar lebar —
-  // persis seperti Shopee.
+  // ── FIX: sebelumnya childAspectRatio dipatok angka tetap (0.56) yang
+  // dihitung berdasarkan asumsi card sempit (2-3 kolom). Padahal gambar
+  // produk pakai AspectRatio 1 (kotak, ikut lebar card), sedangkan tinggi
+  // area teks di bawahnya (nama, toko, harga, badge stok) itu TETAP dalam
+  // pixel berapapun lebar card-nya. Akibatnya, di layar lebar (4-5 kolom),
+  // card jadi lebar → gambar kotaknya ikut membesar → tapi teks di
+  // bawahnya tetap segitu-segitu saja → sisa ruang di bawah jadi kosong
+  // putih panjang (persis yang di-screenshot).
+  //
+  // Sekarang aspect ratio dihitung ULANG tiap kali lebar layar berubah:
+  // cellHeight = cellWidth (untuk gambar kotak) + tinggi area teks yang
+  // konsisten (textAreaHeight), lalu aspectRatio = cellWidth / cellHeight.
+  // Dengan begini, berapapun jumlah kolomnya, tinggi card selalu pas
+  // mengikuti isinya — tidak ada lagi ruang kosong di bawah.
   Widget _buildProductGrid(List<ProductModel> products) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -548,15 +543,24 @@ class _HomeTabState extends State<HomeTab> {
         } else if (width >= 550) {
           crossAxisCount = 3;
         }
+        const spacing = 14.0;
+        // Perkiraan tinggi area teks di bawah gambar: padding(16) +
+        // nama 2 baris (~33) + nama toko (~16) + baris harga (~20) +
+        // badge stok (~20) + sedikit slack (~15).
+        const textAreaHeight = 120.0;
+        final cellWidth =
+            (width - spacing * (crossAxisCount - 1)) / crossAxisCount;
+        final cellHeight = cellWidth + textAreaHeight;
+        final aspectRatio = cellWidth / cellHeight;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: products.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
-            childAspectRatio: 0.56,
+            mainAxisSpacing: spacing,
+            crossAxisSpacing: spacing,
+            childAspectRatio: aspectRatio,
           ),
           itemBuilder: (context, index) =>
               ProductCard(product: products[index]),
@@ -612,13 +616,6 @@ class _HomeTabState extends State<HomeTab> {
                       horizontal: horizontalPadding,
                     ),
                     child: Column(
-                      // FIX: crossAxisAlignment.start membuat child
-                      // (termasuk kotak logo) menyusut ke lebar isinya
-                      // sendiri alih-alih mengisi lebar penuh. Kotak logo
-                      // sekarang sudah punya width: double.infinity sendiri
-                      // sehingga tetap full-width walau alignment ini
-                      // tetap .start (dipakai supaya teks hero tetap rata
-                      // kiri seperti semula).
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildHeroText(),
@@ -795,12 +792,6 @@ class _HomeTabState extends State<HomeTab> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // FIX: email & lokasi sekarang bisa diklik.
-                  // - Lokasi -> buka Google Maps.
-                  // - Email  -> buka aplikasi Mail dengan alamat terisi.
-                  // Dibungkus Wrap (bukan Row) supaya tidak overflow di
-                  // layar HP yang sempit, dan diberi garis bawah tipis
-                  // sebagai penanda visual bahwa teks ini bisa disentuh.
                   Wrap(
                     alignment: WrapAlignment.center,
                     crossAxisAlignment: WrapCrossAlignment.center,
@@ -1005,8 +996,10 @@ class _SearchTabState extends State<SearchTab> {
             ),
             const SizedBox(height: 8),
 
-            // ── DIUBAH: hasil pencarian sekarang juga grid 2 kolom
-            // (Shopee-style), bukan list 1 kolom seperti sebelumnya.
+            // ── FIX: sama seperti grid di HomeTab, aspect ratio card di
+            // hasil pencarian sekarang juga dihitung dinamis mengikuti
+            // lebar card sesungguhnya, supaya tidak ada ruang kosong
+            // putih di bawah badge stok.
             Expanded(
               child: provider.isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -1039,14 +1032,21 @@ class _SearchTabState extends State<SearchTab> {
                         } else if (width >= 550) {
                           crossAxisCount = 3;
                         }
+                        const spacing = 14.0;
+                        const textAreaHeight = 120.0;
+                        final cellWidth =
+                            (width - spacing * (crossAxisCount - 1)) /
+                            crossAxisCount;
+                        final cellHeight = cellWidth + textAreaHeight;
+                        final aspectRatio = cellWidth / cellHeight;
                         return GridView.builder(
                           itemCount: provider.products.length,
                           gridDelegate:
                               SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: crossAxisCount,
-                                mainAxisSpacing: 14,
-                                crossAxisSpacing: 14,
-                                childAspectRatio: 0.56,
+                                mainAxisSpacing: spacing,
+                                crossAxisSpacing: spacing,
+                                childAspectRatio: aspectRatio,
                               ),
                           itemBuilder: (context, index) =>
                               ProductCard(product: provider.products[index]),
@@ -1063,20 +1063,18 @@ class _SearchTabState extends State<SearchTab> {
 
 // ─── PRODUCT CARD ─────────────────────────────────────────────────────────────
 
-// ── DIUBAH: dulu punya lebar tetap (width: 220) + margin sendiri, sehingga
-// tidak cocok dipakai di dalam GridView (lebar sel grid jadi diabaikan).
-// Sekarang kartu selalu mengisi penuh lebar sel yang diberikan induknya
-// (GridView atau SizedBox), jadi bisa dipakai baik di grid 2/3/4/5 kolom
-// maupun di list horizontal "Produk Unggulan".
 class ProductCard extends StatelessWidget {
   final ProductModel product;
   const ProductCard({required this.product, super.key});
 
   @override
   Widget build(BuildContext context) {
-    final stockLabel = product.stock == 0
-        ? 'Stok Habis'
-        : 'Stok ${product.stock}';
+    // FIX: produk jasa (isService == true) tidak punya konsep "stok"
+    // dalam arti barang, jadi label & maknanya diganti jadi
+    // "Tersedia" / "Tidak Tersedia" alih-alih "Stok X" / "Stok Habis".
+    final stockLabel = product.isService
+        ? (product.stock > 0 ? 'Tersedia' : 'Tidak Tersedia')
+        : (product.stock == 0 ? 'Stok Habis' : 'Stok ${product.stock}');
     return GestureDetector(
       onTap: () => Navigator.pushNamed(
         context,
@@ -1134,47 +1132,52 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
             ),
-            Flexible(
+            // ── FIX: bungkus dengan Expanded (bukan Flexible +
+            // mainAxisSize.min) supaya area teks selalu mengisi sisa
+            // tinggi card, dan mainAxisAlignment.spaceBetween menyebar
+            // konten secara merata dari atas (nama/toko) sampai bawah
+            // (badge stok) — jadi kalaupun ada sisa ruang, terisi rapi,
+            // bukan menumpuk jadi blok putih kosong di paling bawah.
+            Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      product.name,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        height: 1.25,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      product.storeName,
-                      style: const TextStyle(
-                        color: Colors.black45,
-                        fontSize: 11,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            'Rp ${product.price.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: Color(0xFF1B5E20),
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                        Text(
+                          product.name,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            height: 1.25,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          product.storeName,
+                          style: const TextStyle(
+                            color: Colors.black45,
+                            fontSize: 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
+                    ),
+                    Text(
+                      'Rp ${product.price.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Color(0xFF1B5E20),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -1294,4 +1297,4 @@ class ChoicePill extends StatelessWidget {
       onSelected: (_) => provider.filterByCategory(label),
     );
   }
-}
+} 
