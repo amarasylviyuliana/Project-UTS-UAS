@@ -6,6 +6,9 @@ echo "=== Starting Laravel Application ==="
 echo ">>> Running migrations..."
 php artisan migrate --force
 
+echo ">>> Seeding demo data (idempotent, safe to run every start)..."
+php artisan db:seed --force || true
+
 echo ">>> Clearing old cache..."
 php artisan config:clear
 php artisan cache:clear

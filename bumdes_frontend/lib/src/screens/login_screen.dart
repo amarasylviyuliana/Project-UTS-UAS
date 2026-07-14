@@ -18,7 +18,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -67,7 +66,6 @@ class _LoginScreenState extends State<LoginScreen> {
     bool obscureText = false,
     TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
-    Widget? suffixIcon,
   }) {
     return TextFormField(
       controller: controller,
@@ -78,7 +76,6 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(color: Colors.black38),
-        suffixIcon: suffixIcon,
         enabledBorder: const UnderlineInputBorder(
           borderSide: BorderSide(color: Color(0xFFC8E6C9)),
         ),
@@ -165,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       _buildUnderlineField(
                         controller: _passwordController,
                         hintText: 'Password',
-                        obscureText: _obscurePassword,
+                        obscureText: true,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Password wajib diisi';
@@ -175,19 +172,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           }
                           return null;
                         },
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            color: const Color(0xFF2D5016),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
                       ),
                       const SizedBox(height: 36),
                       ElevatedButton(

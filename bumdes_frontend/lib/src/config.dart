@@ -4,14 +4,17 @@ String get backendUrl {
   const String apiUrlDefine = String.fromEnvironment('API_URL');
   if (apiUrlDefine.isNotEmpty) return apiUrlDefine;
 
-  if (kIsWeb) {
-    return 'https://bumdes-api-production.up.railway.app';
-  }
-
+  // Debug mode (e.g. `flutter run -d chrome` or on a device/emulator) always
+  // points to the local backend first, regardless of platform. This is what
+  // makes "flutter run" work out of the box against `php artisan serve` or
+  // the docker-compose backend without extra flags.
   if (kDebugMode) {
     return 'http://127.0.0.1:8000';
   }
 
+  // Release/production builds (e.g. `flutter build web`, or the Docker
+  // frontend image) use the production backend unless overridden above by
+  // --dart-define=API_URL=...
   return 'https://bumdes-api-production.up.railway.app';
 }
 

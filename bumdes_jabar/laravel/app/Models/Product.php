@@ -22,14 +22,40 @@ class Product extends Model
         'description',
         'photo_url',
         'is_active',
+        'tags',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'is_active' => 'boolean',
+        // 'tags' = atribut produk yang mungkin tidak tertulis di judul,
+        // mis. ["pedas", "gurih", "khas garut"]. Disimpan JSON, dibaca
+        // sebagai array PHP biasa.
+        'tags' => 'array',
     ];
 
     protected $appends = ['image_url'];
+
+    /**
+     * Setiap kali produk dibuat/diubah/dihapus, sinkronkan otomatis ke
+     * index Algolia supaya fitur pencarian AI selalu up-to-date tanpa
+     * perlu reindex manual. Dibungkus try/catch di dalam AlgoliaService
+     * sendiri supaya kegagalan Algolia (mis. saat development lokal
+     * tanpa API key) tidak sampai menggagalkan proses simpan produk.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (Product $product) {
+            $fresh = $product->fresh(['category', 'store']);
+            if ($fresh) {
+                app(\App\Services\AlgoliaService::class)->saveProduct($fresh);
+            }
+        });
+
+        static::deleted(function (Product $product) {
+            app(\App\Services\AlgoliaService::class)->deleteProduct($product->id);
+        });
+    }
 
     public function getImageUrlAttribute(): ?string
     {

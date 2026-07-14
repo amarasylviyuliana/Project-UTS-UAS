@@ -16,8 +16,6 @@ use App\Http\Controllers\Admin\ApprovalController;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Product;
 use App\Http\Controllers\ProductAISearchController;
-use App\Http\Controllers\SmartSearchController;
-use App\Http\Controllers\N8nDebugController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\ImageProxyController;
 /*
@@ -83,15 +81,9 @@ Route::get('/debug/products', function () {
 });
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/featured', [ProductController::class, 'getFeaturedProducts']);
-// TAMBAHAN: daftar semua BUMDes (toko) publik, dipakai halaman "BUMDes"
-// di aplikasi Flutter. Diletakkan SEBELUM /stores/popular tidak wajib
-// (path-nya beda kedalaman), tapi ditaruh berurutan biar rapi dibaca.
-Route::get('/stores', [ProductController::class, 'getStores']);
 Route::get('/stores/popular', [ProductController::class, 'getPopularStores']);
 Route::get('/products/search', [ProductController::class, 'search']);
 Route::post('/products/ai-search', [ProductAISearchController::class, 'search']);
-Route::post('/products/smart-search', [SmartSearchController::class, 'search']);
-Route::post('/debug/n8n/test', [N8nDebugController::class, 'test']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::get('/stores/{store_id}/products', [ProductController::class, 'getByStore']);
 Route::get('/products/{productId}/reviews', [ReviewController::class, 'getProductReviews']);
@@ -191,15 +183,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/users/{id}',         [AdminController::class, 'updateUser']);
         Route::delete('/users/{id}',      [AdminController::class, 'deleteUser']);
 
-        // FIX: baris "Route::get('/stores', [AdminController::class, 'getAllStores']);"
-        // yang SEBELUMNYA ada di sini SUDAH DIHAPUS. Baris itu path-nya sama
-        // persis (GET /stores) dengan route publik di atas
-        // (Route::get('/stores', [ProductController::class, 'getStores']))
-        // yang dipakai buyer untuk melihat daftar BUMDes. Karena keduanya
-        // bentrok, buyer (role bukan Admin) kena 403 Forbidden saat mengakses
-        // /stores. Fungsi untuk admin TIDAK hilang — AdminService di Flutter
-        // sudah memanggil '/admin/stores' (lihat blok prefix('admin') di
-        // bawah), jadi dashboard admin tetap berjalan normal tanpa baris ini.
+
+        Route::get('/stores',             [AdminController::class, 'getAllStores']);
         Route::put('/stores/{id}',        [AdminController::class, 'updateStore']);
         Route::delete('/stores/{id}',     [AdminController::class, 'deleteStore']);
 

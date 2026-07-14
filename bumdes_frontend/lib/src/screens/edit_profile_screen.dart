@@ -247,7 +247,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  // ── DIALOG UBAH PASSWORD (dengan toggle lihat password) ─────────────────
   Future<void> _showChangePasswordDialog() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.token == null) {
@@ -261,17 +260,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     final dialogFormKey = GlobalKey<FormState>();
 
-    // state lokal khusus dialog untuk toggle show/hide tiap field
-    bool obscureCurrent = true;
-    bool obscureNew = true;
-    bool obscureConfirm = true;
-
-    InputDecoration passwordDecoration(
-      String label, {
-      required bool obscure,
-      required VoidCallback onToggle,
-    }) =>
-        InputDecoration(
+    InputDecoration passwordDecoration(String label) => InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(color: _primary),
           enabledBorder: OutlineInputBorder(
@@ -282,107 +271,84 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(color: _accent, width: 2),
           ),
-          suffixIcon: IconButton(
-            icon: Icon(
-              obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-              color: _primary,
-            ),
-            onPressed: onToggle,
-          ),
         );
 
     final result = await showDialog<Map<String, String>?>(
       context: context,
       builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Text('Ubah Kata Sandi', style: TextStyle(color: _primary)),
-              content: Form(
-                key: dialogFormKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: _currentPasswordController,
-                      obscureText: obscureCurrent,
-                      decoration: passwordDecoration(
-                        'Password Saat Ini',
-                        obscure: obscureCurrent,
-                        onToggle: () => setDialogState(() => obscureCurrent = !obscureCurrent),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Password saat ini diperlukan';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _newPasswordController,
-                      obscureText: obscureNew,
-                      decoration: passwordDecoration(
-                        'Password Baru',
-                        obscure: obscureNew,
-                        onToggle: () => setDialogState(() => obscureNew = !obscureNew),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Password baru diperlukan';
-                        }
-                        if (value.trim().length < 8) {
-                          return 'Password harus minimal 8 karakter';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _confirmPasswordController,
-                      obscureText: obscureConfirm,
-                      decoration: passwordDecoration(
-                        'Konfirmasi Password',
-                        obscure: obscureConfirm,
-                        onToggle: () => setDialogState(() => obscureConfirm = !obscureConfirm),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Konfirmasi password diperlukan';
-                        }
-                        if (value.trim() != _newPasswordController.text.trim()) {
-                          return 'Password konfirmasi tidak cocok';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(null),
-                  child: const Text('Batal', style: TextStyle(color: _accent)),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: () {
-                    if (!dialogFormKey.currentState!.validate()) return;
-                    Navigator.of(dialogContext).pop({
-                      'current': _currentPasswordController.text.trim(),
-                      'password': _newPasswordController.text.trim(),
-                      'password_confirmation': _confirmPasswordController.text.trim(),
-                    });
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Ubah Kata Sandi', style: TextStyle(color: _primary)),
+          content: Form(
+            key: dialogFormKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _currentPasswordController,
+                  obscureText: true,
+                  decoration: passwordDecoration('Password Saat Ini'),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Password saat ini diperlukan';
+                    }
+                    return null;
                   },
-                  child: const Text('Simpan Password', style: TextStyle(color: Colors.white)),
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _newPasswordController,
+                  obscureText: true,
+                  decoration: passwordDecoration('Password Baru'),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Password baru diperlukan';
+                    }
+                    if (value.trim().length < 8) {
+                      return 'Password harus minimal 8 karakter';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: true,
+                  decoration: passwordDecoration('Konfirmasi Password'),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Konfirmasi password diperlukan';
+                    }
+                    if (value.trim() != _newPasswordController.text.trim()) {
+                      return 'Password konfirmasi tidak cocok';
+                    }
+                    return null;
+                  },
                 ),
               ],
-            );
-          },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(null),
+              child: const Text('Batal', style: TextStyle(color: _accent)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                if (!dialogFormKey.currentState!.validate()) return;
+                Navigator.of(dialogContext).pop({
+                  'current': _currentPasswordController.text.trim(),
+                  'password': _newPasswordController.text.trim(),
+                  'password_confirmation': _confirmPasswordController.text.trim(),
+                });
+              },
+              child: const Text('Simpan Password', style: TextStyle(color: Colors.white)),
+            ),
+          ],
         );
       },
     );
@@ -455,6 +421,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Icon(Icons.person, size: radius, color: _primary);
   }
 
+  // ── TAMBAHAN: pembungkus card generik supaya tiap bagian form (Foto,
+  // Data Diri, Notifikasi, Keamanan) punya batas & judul yang jelas.
+  // Sebelumnya semua field ditumpuk langsung di ListView tanpa pengelompokan
+  // visual, itu yang bikin halaman ini kelihatan "berantakan".
   Widget _sectionCard({
     required String title,
     IconData? icon,

@@ -31,16 +31,41 @@ class ProductService {
         .toList();
   }
 
-  // TAMBAHAN: ambil produk milik satu BUMDes (toko) tertentu, dipakai di
-  // halaman Detail BUMDes. Endpoint /stores/{id}/products sudah ada di
-  // backend dan bersifat publik (tidak perlu token), sama seperti
-  // fetchProducts() di atas.
-  Future<List<ProductModel>> fetchProductsForStore(int storeId) async {
-    final response = await api.getRaw('/stores/$storeId/products');
+  // TAMBAHAN: pencarian produk berbasis AI (Gemini) — mengirim query bahasa
+  // natural (mis. "sepatu murah buat lari") ke backend, yang akan
+  // mengubahnya jadi kriteria terstruktur (keywords/kategori/rentang harga)
+  // lalu mencari produk yang cocok. Endpoint: POST /products/ai-search.
+  Future<AISearchResult> searchWithAI(String query) async {
+    final response = await api.post('/products/ai-search', {'query': query});
     final rawProducts = _extractProductList(response);
-    return rawProducts
+    final products = rawProducts
         .map((item) => ProductModel.fromJson(item as Map<String, dynamic>))
         .toList();
+
+    final criteria =
+        response['interpreted_criteria'] as Map<String, dynamic>? ?? {};
+
+    return AISearchResult(
+      products: products,
+      keywords:
+          (criteria['keywords'] as List?)?.map((e) => e.toString()).toList() ??
+          const [],
+      category: criteria['category'] as String?,
+      minPrice: (criteria['min_price'] as num?)?.toDouble(),
+      maxPrice: (criteria['max_price'] as num?)?.toDouble(),
+      // TAMBAHAN: atribut produk (mis. "pedas") & daerah asal (mis.
+      // "Garut") hasil pemahaman AI, dipakai backend untuk facetFilters
+      // Algolia. Ditampilkan juga di ringkasan UI supaya transparan.
+      tags:
+          (criteria['tags'] as List?)?.map((e) => e.toString()).toList() ??
+          const [],
+      region: criteria['region'] as String?,
+      sort: criteria['sort'] as String?,
+      // engine: "algolia" kalau lewat Algolia, "database-fallback" kalau
+      // Algolia sedang tidak tersedia dan backend otomatis jatuh ke
+      // pencarian database biasa.
+      engine: response['engine'] as String?,
+    );
   }
 
   Future<List<ProductModel>> fetchProductsByStore(String token) async {
@@ -93,8 +118,7 @@ class ProductService {
     if (imageFile == null) return;
 
     final bytes = imageBytes ?? await imageFile.readAsBytes();
-    final fileName =
-        imageFile.name.isNotEmpty ? imageFile.name : 'photo.jpg';
+    final fileName = imageFile.name.isNotEmpty ? imageFile.name : 'photo.jpg';
     final ext = fileName.split('.').last.toLowerCase();
     final mimeType = switch (ext) {
       'png' => 'image/png',
@@ -235,9 +259,37 @@ class ProductService {
           response['data']['data'] is List) {
         return response['data']['data'] as List<dynamic>;
       }
-      if (response['products'] is List) return response['products'] as List<dynamic>;
+      if (response['products'] is List)
+        return response['products'] as List<dynamic>;
       if (response['items'] is List) return response['items'] as List<dynamic>;
     }
     return [];
   }
+}
+
+// TAMBAHAN: hasil pencarian AI, membawa daftar produk sekaligus kriteria
+// hasil interpretasi Gemini supaya bisa ditampilkan ke user sebagai
+// ringkasan ("Dipahami sebagai: kata kunci ..., kategori ..., harga ...").
+class AISearchResult {
+  final List<ProductModel> products;
+  final List<String> keywords;
+  final String? category;
+  final double? minPrice;
+  final double? maxPrice;
+  final List<String> tags;
+  final String? region;
+  final String? sort;
+  final String? engine;
+
+  AISearchResult({
+    required this.products,
+    this.keywords = const [],
+    this.category,
+    this.minPrice,
+    this.maxPrice,
+    this.tags = const [],
+    this.region,
+    this.sort,
+    this.engine,
+  });
 }

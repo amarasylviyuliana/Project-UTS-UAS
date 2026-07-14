@@ -15,6 +15,25 @@ class ProductProvider extends ChangeNotifier {
   // selected category for SearchTab filtering
   String selectedCategory = 'Semua';
 
+  // TAMBAHAN: state untuk fitur pencarian AI (Gemini).
+  // isAiSearchActive: true kalau hasil yang ditampilkan sekarang berasal
+  // dari pencarian AI (bukan filter lokal biasa), dipakai UI untuk
+  // menampilkan ringkasan kriteria + badge "Hasil AI".
+  bool isAiSearching = false;
+  bool isAiSearchActive = false;
+  String? aiSearchError;
+  List<String> aiKeywords = [];
+  String? aiCategory;
+  double? aiMinPrice;
+  double? aiMaxPrice;
+  String? aiSort;
+  // TAMBAHAN: atribut produk (mis. "pedas") & daerah (mis. "Garut") yang
+  // dipahami AI dari query, plus mesin pencarian yang dipakai backend
+  // ("algolia" atau "database-fallback").
+  List<String> aiTags = [];
+  String? aiRegion;
+  String? aiEngine;
+
   List<ProductModel> get products => _filtered;
   List<ProductModel> get featured => _products.take(6).toList();
   // FIX: kategori diambil dinamis dari data produk asli (sesuai tabel
@@ -90,6 +109,7 @@ class ProductProvider extends ChangeNotifier {
 
   void search(String query) {
     _lastQuery = query;
+    isAiSearchActive = false;
     final lower = query.toLowerCase();
     final normalizedSelectedCategory = normalizeCategoryName(selectedCategory);
     List<ProductModel> base = List.of(_products);
@@ -113,8 +133,67 @@ class ProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // TAMBAHAN: pencarian produk pakai AI (Gemini) — query bahasa natural
+  // (mis. "sepatu murah buat lari") dikirim ke backend, hasilnya (sudah
+  // diinterpretasi jadi keyword/kategori/rentang harga oleh AI) dipakai
+  // langsung sebagai daftar produk yang ditampilkan.
+  Future<void> searchWithAI(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      // Query kosong: kembali ke pencarian lokal biasa.
+      resetAiSearch();
+      return;
+    }
+
+    isAiSearching = true;
+    aiSearchError = null;
+    notifyListeners();
+
+    try {
+      final result = await _productService.searchWithAI(trimmed);
+      _filtered = result.products;
+      aiKeywords = result.keywords;
+      aiCategory = result.category;
+      aiMinPrice = result.minPrice;
+      aiMaxPrice = result.maxPrice;
+      aiSort = result.sort;
+      aiTags = result.tags;
+      aiRegion = result.region;
+      aiEngine = result.engine;
+      isAiSearchActive = true;
+      _lastQuery = trimmed;
+    } catch (e) {
+      aiSearchError = 'Pencarian AI gagal, coba lagi ya.';
+      // Fallback: tetap tampilkan hasil pencarian teks biasa supaya user
+      // tidak mentok tanpa hasil sama sekali.
+      search(trimmed);
+      isAiSearchActive = false;
+    }
+
+    isAiSearching = false;
+    notifyListeners();
+  }
+
+  // TAMBAHAN: keluar dari mode hasil AI, balik ke pencarian/filter lokal.
+  void resetAiSearch() {
+    isAiSearchActive = false;
+    aiSearchError = null;
+    aiKeywords = [];
+    aiCategory = null;
+    aiMinPrice = null;
+    aiMaxPrice = null;
+    aiSort = null;
+    aiTags = [];
+    aiRegion = null;
+    aiEngine = null;
+    search(_lastQuery);
+  }
+
   void filterByCategory(String category) {
     selectedCategory = normalizeCategoryName(category);
+    // Memilih kategori chip berarti keluar dari mode hasil AI (kriteria AI
+    // sebelumnya sudah tidak relevan lagi), balik ke pencarian/filter lokal.
+    isAiSearchActive = false;
     // reuse last query so selecting category doesn't clear user's search
     search(_lastQuery);
   }
