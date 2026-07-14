@@ -133,6 +133,19 @@ class ProductController extends Controller
     // - categories    : daftar nama kategori unik yang dijual toko itu
     //   (dipakai untuk tag "Kuliner Desa, Pertanian" di kartu BUMDes)
     //
+    // FIX FOTO TIDAK MUNCUL: sebelumnya endpoint ini HANYA mengambil
+    // store_photo_url langsung dari tabel stores, TANPA fallback ke foto
+    // profil pemilik toko (users.photo_url). Padahal
+    // ProductController::mapStoreForResponse() (dipakai di halaman detail
+    // produk & produk toko) SELALU melakukan fallback itu:
+    //   jika store_photo_url kosong -> pakai foto profil user pemilik toko.
+    // Karena banyak toko belum upload foto toko khusus dan hanya
+    // mengandalkan foto profil akunnya, daftar BUMDes jadi selalu tampil
+    // avatar inisial huruf ("B") walau di halaman lain foto (foto profil
+    // pemilik) berhasil tampil. Sekarang query di-join ke tabel users
+    // supaya foto profil pemilik ikut terbawa dan dipakai sebagai
+    // fallback, PERSIS seperti perilaku mapStoreForResponse().
+    //
     // CATATAN: belum ada kolom/agregasi rating untuk toko di database,
     // jadi endpoint ini TIDAK mengirim field rating. Kalau nanti mau
     // ditambahkan, sebaiknya dihitung dari rata-rata rating produk milik
@@ -143,24 +156,31 @@ class ProductController extends Controller
         $keyword = trim((string) $request->query('q', ''));
         $region = trim((string) $request->query('region', ''));
 
-        $query = DB::table('stores')->where('stores.is_active', true);
+        // TAMBAHAN: leftJoin ke users supaya kita bisa fallback ke foto
+        // profil pemilik toko kalau store_photo_url kosong (lihat catatan
+        // FIX di atas). Semua kolom disebut eksplisit dengan prefix
+        // 'stores.' untuk menghindari ambiguous column error akibat join.
+        $query = DB::table('stores')
+            ->leftJoin('users', 'stores.user_id', '=', 'users.id')
+            ->where('stores.is_active', true)
+            ->select('stores.*', 'users.photo_url as owner_photo_url');
 
         if ($keyword !== '') {
             $query->where(function ($q) use ($keyword) {
-                $q->where('store_name', 'like', "%$keyword%")
-                    ->orWhere('village', 'like', "%$keyword%")
-                    ->orWhere('district', 'like', "%$keyword%")
-                    ->orWhere('regency', 'like', "%$keyword%");
+                $q->where('stores.store_name', 'like', "%$keyword%")
+                    ->orWhere('stores.village', 'like', "%$keyword%")
+                    ->orWhere('stores.district', 'like', "%$keyword%")
+                    ->orWhere('stores.regency', 'like', "%$keyword%");
             });
         }
 
         if ($region !== '' && $region !== 'Semua Wilayah') {
             $query->where(function ($q) use ($region) {
-                $q->where('regency', $region)->orWhere('district', $region);
+                $q->where('stores.regency', $region)->orWhere('stores.district', $region);
             });
         }
 
-        $stores = $query->orderBy('store_name')->paginate(20);
+        $stores = $query->orderBy('stores.store_name')->paginate(20);
         $storeIds = collect($stores->items())->pluck('id');
 
         // Jumlah produk aktif per toko (satu query untuk semua toko di
@@ -187,13 +207,20 @@ class ProductController extends Controller
             $productCounts,
             $categoriesByStore
         ) {
+            // FIX: fallback ke foto profil pemilik toko kalau toko belum
+            // punya foto khusus, sama seperti mapStoreForResponse().
+            $storePhoto = $this->resolvePhotoUrl($store->store_photo_url ?? null);
+            if (!$storePhoto) {
+                $storePhoto = $this->resolvePhotoUrl($store->owner_photo_url ?? null);
+            }
+
             return [
                 'id' => $store->id,
                 'store_name' => $store->store_name,
                 'village' => $store->village,
                 'district' => $store->district ?? null,
                 'regency' => $store->regency ?? null,
-                'store_photo_url' => $this->resolvePhotoUrl($store->store_photo_url ?? null),
+                'store_photo_url' => $storePhoto,
                 'product_count' => $productCounts[$store->id] ?? 0,
                 'categories' => ($categoriesByStore[$store->id] ?? collect())->values(),
             ];
