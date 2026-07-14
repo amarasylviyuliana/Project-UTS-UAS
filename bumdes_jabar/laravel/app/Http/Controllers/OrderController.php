@@ -414,6 +414,10 @@ class OrderController extends Controller
         // Dispatch event untuk real-time sync
         event(new OrderStatusUpdated($order, $previousStatus));
 
+        if (in_array($validated['status'], ['Dikirim', 'Selesai'], true)) {
+            (new N8nNotificationService())->notifyOrderStatusChanged($order, $previousStatus);
+        }
+
         if ($validated['status'] === 'Selesai') {
             app(\App\Services\WalletService::class)->creditFromCompletedOrder($order);
         }
@@ -460,6 +464,7 @@ class OrderController extends Controller
             'completed_at' => now(),
         ]);
 
+        (new N8nNotificationService())->notifyOrderStatusChanged($order, 'Dikirim');
         app(\App\Services\WalletService::class)->creditFromCompletedOrder($order);
 
         return response()->json([
