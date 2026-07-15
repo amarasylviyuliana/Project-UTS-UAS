@@ -1817,10 +1817,20 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
+                // FIX: tombol "Keluar" tidak kelihatan karena teksnya
+                // memakai warna default dari tema (bukan putih), sehingga
+                // nyaris tidak kontras di atas background merah. Ditambahkan
+                // foregroundColor: Colors.white secara eksplisit supaya
+                // teks & efek ripple tombol selalu putih, apapun tema
+                // aplikasinya.
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               onPressed: _handleLogout,
-              child: const Text('Keluar'),
+              child: const Text(
+                'Keluar',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ],

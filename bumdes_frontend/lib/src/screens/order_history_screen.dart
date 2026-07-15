@@ -376,6 +376,15 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
+          // FIX: tanpa ini, TabBar yang isScrollable:true secara default
+          // (sejak Flutter 3.13+) memakai TabAlignment.startOffset, yaitu
+          // menambahkan ruang kosong (~52px) SEBELUM tab pertama supaya
+          // sesuai spek Material 3. Efeknya persis seperti yang terlihat
+          // di HP: tab-tab kelihatan "kegeser" ke kanan dengan ruang
+          // kosong mencurigakan di kiri, padahal tab pertama ("Semua")
+          // sedang aktif/terpilih. TabAlignment.start menghilangkan
+          // offset itu dan merapatkan tab-tab ke tepi kiri seperti biasa.
+          tabAlignment: TabAlignment.start,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           indicatorColor: const Color(0xFF52B788),
@@ -449,4 +458,4 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       ),
     );
   }
-}
+} 
