@@ -36,9 +36,26 @@ test.describe.serial('Pesanan Masuk (Order Management) Seller - BUMDes Jabar', (
 
     await fillField(page, 'Email', SELLER_EMAIL);
     await fillField(page, 'Password', SELLER_PASSWORD, true);
-    await page.getByRole('button', { name: 'LOGIN' }).click();
 
-    await expect(page.getByText('Produk Saya').last()).toBeVisible({ timeout: 30000 });
+    const loginBtn = page.getByRole('button', { name: 'LOGIN' });
+    await expect(loginBtn).toBeEnabled();
+    await loginBtn.click();
+
+    // Tunggu SALAH SATU: dashboard muncul, atau pesan error muncul (polling, tahan flaky)
+    const dashboardMarker = page.getByText('Produk Saya').last();
+    const loginError = page.getByText(/Email atau password salah|Login gagal|Invalid credentials/i);
+
+    await expect(async () => {
+      const success = await dashboardMarker.isVisible().catch(() => false);
+      const failed = await loginError.isVisible().catch(() => false);
+      expect(success || failed).toBe(true);
+    }).toPass({ timeout: 45000, intervals: [500, 1000, 2000] });
+
+    if (await loginError.isVisible().catch(() => false)) {
+      throw new Error('Login gagal: kredensial ditolak oleh server, cek email/password seller.');
+    }
+
+    await expect(dashboardMarker).toBeVisible({ timeout: 10000 });
   });
 
   test('navigasi ke tab Pesanan dan menampilkan seluruh tab status', async () => {
@@ -97,8 +114,18 @@ test.describe.serial('Pesanan Masuk (Order Management) Seller - BUMDes Jabar', (
     const hasEmptyState = await page.getByText(/Belum ada pesanan/).isVisible();
     test.skip(hasEmptyState, 'Tidak ada data pesanan untuk ditest saat ini');
 
-    // Klik card pesanan pertama pada daftar
-    await page.locator('text=Rp').first().click();
+    // Klik card pesanan lewat semantics accessibility bridge (focus + Enter),
+    // karena tap handler ada di parent node, bukan di span teks itu sendiri
+    const orderCard = page.locator('text=Rp').first();
+    await orderCard.scrollIntoViewIfNeeded();
+    await orderCard.focus();
+    await page.keyboard.press('Enter');
+
+    // Fallback: kalau Enter gak memicu navigasi, coba klik langsung di parent node
+    const detailVisible = await page.getByText('Detail Pesanan').isVisible({ timeout: 3000 }).catch(() => false);
+    if (!detailVisible) {
+      await orderCard.locator('xpath=ancestor::*[1]').click({ force: true });
+    }
 
     await expect(page.getByText('Detail Pesanan')).toBeVisible({ timeout: 15000 });
   });
