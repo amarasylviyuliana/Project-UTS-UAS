@@ -304,6 +304,19 @@ class _HomeTabState extends State<HomeTab> {
     super.dispose();
   }
 
+  // TAMBAHAN: true kalau user sedang mengetik pencarian, memilih kategori
+  // selain "Semua", atau hasil AI search sedang aktif — dipakai untuk
+  // menyembunyikan section "Produk & Jasa Unggulan" saat user lagi
+  // nyari/filter, supaya halaman fokus ke "Semua Produk" (hasil yang
+  // sebenarnya) tanpa section duplikat di atasnya.
+  bool _hasActiveFilter(ProductProvider provider) {
+    final hasCategory =
+        provider.selectedCategory.trim().isNotEmpty &&
+        provider.selectedCategory.trim().toLowerCase() != 'semua';
+    final hasQuery = _searchController.text.trim().isNotEmpty;
+    return hasCategory || hasQuery || provider.isAiSearchActive;
+  }
+
   // TAMBAHAN: kirim isi search bar Beranda ke endpoint AI (Gemini) —
   // sama persis perilakunya dengan tombol AI di tab Pencarian, supaya
   // fitur AI search bisa dipakai dari kedua tempat.
@@ -875,49 +888,55 @@ class _HomeTabState extends State<HomeTab> {
             ),
 
             // DIHAPUS: section "Kategori" (header + grid ikon kategori)
-            // sesuai permintaan — sekarang langsung lanjut ke "Produk &
-            // Jasa Unggulan" setelah kartu BUMDes.
+            // sesuai permintaan sebelumnya.
             const SizedBox(height: 24),
 
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildSectionHeader('Produk & Jasa Unggulan'),
-            ),
-            const SizedBox(height: 16),
+            // TAMBAHAN: section "Produk & Jasa Unggulan" cuma tampil kalau
+            // TIDAK sedang ada filter kategori / pencarian teks / AI search
+            // aktif — begitu user mulai nyari/filter, section ini hilang
+            // sementara supaya halaman fokus ke "Semua Produk" (hasil yang
+            // sebenarnya) di bawah, tanpa section duplikat di atasnya.
+            if (!_hasActiveFilter(provider)) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: _buildSectionHeader('Produk & Jasa Unggulan'),
+              ),
+              const SizedBox(height: 16),
 
-            if (provider.isLoading)
-              const ProductRowSkeleton()
-            else if (provider.featured.isEmpty)
-              const SizedBox(
-                height: 200,
-                child: Center(
-                  child: Text(
-                    'Belum ada produk tersedia',
-                    style: TextStyle(color: Colors.black54),
+              if (provider.isLoading)
+                const ProductRowSkeleton()
+              else if (provider.products.isEmpty)
+                const SizedBox(
+                  height: 200,
+                  child: Center(
+                    child: Text(
+                      'Belum ada produk tersedia',
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                  ),
+                )
+              else
+                SizedBox(
+                  height: 350,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: provider.products.take(6).length,
+                    itemBuilder: (context, index) {
+                      final product = provider.products[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 16.0),
+                        child: SizedBox(
+                          width: 220,
+                          child: ProductCard(product: product),
+                        ),
+                      );
+                    },
                   ),
                 ),
-              )
-            else
-              SizedBox(
-                height: 350,
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: provider.featured.length,
-                  itemBuilder: (context, index) {
-                    final product = provider.featured[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 16.0),
-                      child: SizedBox(
-                        width: 220,
-                        child: ProductCard(product: product),
-                      ),
-                    );
-                  },
-                ),
-              ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
+            ],
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),

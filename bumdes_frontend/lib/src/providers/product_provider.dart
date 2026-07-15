@@ -161,7 +161,17 @@ class ProductProvider extends ChangeNotifier {
       aiRegion = result.region;
       aiEngine = result.engine;
       isAiSearchActive = true;
-      _lastQuery = trimmed;
+      // FIX: SEBELUMNYA baris ini nyimpen seluruh kalimat bahasa natural
+      // (mis. "cari sepatu murah buat lari") ke `_lastQuery`. Masalahnya,
+      // `_lastQuery` juga dipakai `filterByCategory()` buat pencarian teks
+      // literal (lihat `search()` di atas: mencocokkan substring ke nama
+      // produk). Kalimat AI itu hampir pasti tidak match nama produk apa
+      // pun, jadi begitu user pilih kategori SETELAH pernah pakai AI
+      // search, hasilnya selalu kosong — kelihatan seperti "filter
+      // kategori tidak berfungsi", padahal kategori sudah benar, cuma
+      // ketiban filter teks sisa AI yang tidak nyambung. Sekarang
+      // `_lastQuery` TIDAK diisi kalimat AI, jadi tetap bersih untuk
+      // dipakai ulang oleh filter kategori.
     } catch (e) {
       aiSearchError = 'Pencarian AI gagal, coba lagi ya.';
       // Fallback: tetap tampilkan hasil pencarian teks biasa supaya user
