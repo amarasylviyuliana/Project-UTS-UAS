@@ -1565,11 +1565,26 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // FIX: produk jasa (isService == true) tidak punya konsep "stok"
-    // dalam arti barang, jadi label & maknanya diganti jadi
-    // "Tersedia" / "Tidak Tersedia" alih-alih "Stok X" / "Stok Habis".
+    // FIX BUG "Tidak Tersedia" padahal di dashboard penjual "Tersedia":
+    // sebelumnya status ketersediaan Jasa di kartu pembeli ini dihitung
+    // dari `product.stock` (stok > 0 => Tersedia). Padahal dashboard
+    // penjual menampilkan status berdasarkan field `is_active` dari
+    // server. Untuk Jasa lama yang stock-nya masih 0 di database
+    // (dibuat sebelum field stock disamakan dengan is_active saat
+    // simpan/edit), dua sisi jadi tidak sinkron: penjual bilang
+    // "Tersedia" (is_active = true) tapi pembeli bilang "Tidak
+    // Tersedia" (stock = 0).
+    //
+    // Sekarang untuk Jasa, ketersediaan SELALU dibaca dari
+    // `product.isActive` (sama seperti dashboard penjual), bukan dari
+    // stock. Stock cuma tetap relevan untuk Produk fisik. Dengan ini
+    // kedua sisi memakai satu sumber kebenaran yang sama, apapun nilai
+    // stock lama yang tersimpan di database.
+    final isAvailable =
+        product.isService ? product.isActive : product.stock > 0;
+
     final stockLabel = product.isService
-        ? (product.stock > 0 ? 'Tersedia' : 'Tidak Tersedia')
+        ? (isAvailable ? 'Tersedia' : 'Tidak Tersedia')
         : (product.stock == 0 ? 'Stok Habis' : 'Stok ${product.stock}');
     return GestureDetector(
       onTap: () => Navigator.pushNamed(
@@ -1681,15 +1696,15 @@ class ProductCard extends StatelessWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: product.stock == 0
-                            ? Colors.red.withAlpha(20)
-                            : Colors.green.withAlpha(20),
+                        color: isAvailable
+                            ? Colors.green.withAlpha(20)
+                            : Colors.red.withAlpha(20),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         stockLabel,
                         style: TextStyle(
-                          color: product.stock == 0 ? Colors.red : Colors.green,
+                          color: isAvailable ? Colors.green : Colors.red,
                           fontWeight: FontWeight.w600,
                           fontSize: 10,
                         ),
