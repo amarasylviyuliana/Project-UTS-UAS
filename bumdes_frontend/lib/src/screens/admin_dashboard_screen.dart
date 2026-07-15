@@ -46,6 +46,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // Sub-tab di menu PENGGUNA: 0 = Penjual, 1 = Pembeli
   int _userSubTab = 0;
 
+  // ── TAMBAHAN: state pencarian untuk masing-masing tab (Produk, BUMDes,
+  // Pesanan, Penjual, Pembeli). Semua filter dilakukan di sisi frontend
+  // terhadap data yang sudah dimuat, jadi tidak perlu perubahan backend.
+  final _productSearchCtrl = TextEditingController();
+  final _storeSearchCtrl = TextEditingController();
+  final _orderSearchCtrl = TextEditingController();
+  final _userSearchCtrl = TextEditingController();
+  final _buyerSearchCtrl = TextEditingController();
+
+  String _productSearch = '';
+  String _storeSearch = '';
+  String _orderSearch = '';
+  String _userSearch = '';
+  String _buyerSearch = '';
+
   Timer? _autoRefreshTimer;
 
   final _adminService = AdminService();
@@ -62,6 +77,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    _productSearchCtrl.dispose();
+    _storeSearchCtrl.dispose();
+    _orderSearchCtrl.dispose();
+    _userSearchCtrl.dispose();
+    _buyerSearchCtrl.dispose();
     super.dispose();
   }
 
@@ -217,6 +237,111 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final role = (u['role'] ?? '').toString().toLowerCase();
     return role == 'seller' || role == 'penjual';
   }).toList();
+
+  // ── TAMBAHAN: getter hasil filter pencarian per tab. Semua pencarian
+  // case-insensitive dan mencari di beberapa field sekaligus (nama, email,
+  // nama toko, nomor pesanan) supaya lebih fleksibel buat admin.
+  List<Map<String, dynamic>> get _filteredProducts {
+    if (_productSearch.trim().isEmpty) return _products;
+    final q = _productSearch.trim().toLowerCase();
+    return _products.where((p) {
+      final name = (p['name'] ?? '').toString().toLowerCase();
+      final store = (p['store']?['store_name'] ?? '').toString().toLowerCase();
+      return name.contains(q) || store.contains(q);
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> get _filteredStores {
+    if (_storeSearch.trim().isEmpty) return _stores;
+    final q = _storeSearch.trim().toLowerCase();
+    return _stores.where((s) {
+      final name = (s['store_name'] ?? s['name'] ?? '').toString().toLowerCase();
+      final owner =
+          (s['user']?['name'] ?? s['owner_name'] ?? '').toString().toLowerCase();
+      final email = (s['user']?['email'] ?? '').toString().toLowerCase();
+      return name.contains(q) || owner.contains(q) || email.contains(q);
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> get _filteredOrders {
+    if (_orderSearch.trim().isEmpty) return _orders;
+    final q = _orderSearch.trim().toLowerCase();
+    return _orders.where((o) {
+      final orderNumber = (o['order_number'] ?? '').toString().toLowerCase();
+      final buyer =
+          (o['recipient_name'] ?? o['user']?['name'] ?? '')
+              .toString()
+              .toLowerCase();
+      return orderNumber.contains(q) || buyer.contains(q);
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> get _filteredSellerUsers {
+    final base = _sellerUsers;
+    if (_userSearch.trim().isEmpty) return base;
+    final q = _userSearch.trim().toLowerCase();
+    return base.where((u) {
+      final name = (u['name'] ?? '').toString().toLowerCase();
+      final email = (u['email'] ?? '').toString().toLowerCase();
+      final store = (u['store']?['store_name'] ?? '').toString().toLowerCase();
+      return name.contains(q) || email.contains(q) || store.contains(q);
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> get _filteredBuyers {
+    if (_buyerSearch.trim().isEmpty) return _buyers;
+    final q = _buyerSearch.trim().toLowerCase();
+    return _buyers.where((b) {
+      final name = (b['name'] ?? '').toString().toLowerCase();
+      final email = (b['email'] ?? '').toString().toLowerCase();
+      return name.contains(q) || email.contains(q);
+    }).toList();
+  }
+
+  // ── TAMBAHAN: widget search bar yang dipakai bersama di semua tab.
+  Widget _buildSearchField({
+    required String hint,
+    required TextEditingController controller,
+    required ValueChanged<String> onChanged,
+  }) {
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(fontSize: 13, color: Colors.black38),
+        prefixIcon: const Icon(Icons.search, size: 20, color: Colors.black45),
+        suffixIcon: controller.text.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear, size: 18),
+                onPressed: () {
+                  controller.clear();
+                  onChanged('');
+                },
+              )
+            : null,
+        isDense: true,
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF2A7F41), width: 1.5),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -776,6 +901,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
           const SizedBox(height: 16),
+          _buildSearchField(
+            hint: 'Cari nama toko, pemilik, atau email...',
+            controller: _storeSearchCtrl,
+            onChanged: (v) => setState(() => _storeSearch = v),
+          ),
+          const SizedBox(height: 16),
           if (_storesError != null)
             _buildErrorBanner(_storesError!, _loadStores),
           if (_isLoadingStores)
@@ -787,9 +918,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             )
           else if (_stores.isEmpty)
             _buildEmptyState('Belum ada toko terdaftar', Icons.store_outlined)
+          else if (_filteredStores.isEmpty)
+            _buildEmptyState('Toko tidak ditemukan', Icons.search_off)
           else
             PaginatedListView<Map<String, dynamic>>(
-              items: _stores,
+              items: _filteredStores,
               pageSize: 10,
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, store, index) => _buildStoreCard(store),
@@ -1032,6 +1165,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
           const SizedBox(height: 16),
+          _buildSearchField(
+            hint: 'Cari nama produk atau toko...',
+            controller: _productSearchCtrl,
+            onChanged: (v) => setState(() => _productSearch = v),
+          ),
+          const SizedBox(height: 16),
           if (_productsError != null)
             _buildErrorBanner(_productsError!, _loadProducts),
           if (_isLoadingProducts)
@@ -1043,15 +1182,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             )
           else if (_products.isEmpty)
             _buildEmptyState('Belum ada produk', Icons.shopping_cart_outlined)
+          else if (_filteredProducts.isEmpty)
+            _buildEmptyState('Produk tidak ditemukan', Icons.search_off)
           else
-            _buildProductList(),
+            _buildProductList(_filteredProducts),
         ],
       ),
     );
   }
 
   // ── DIUBAH: layout responsif — card di HP, tabel di layar lebar ──────────
-  Widget _buildProductList() {
+  // ── DIUBAH: sekarang menerima [items] hasil filter pencarian, bukan
+  // langsung membaca _products, supaya bisa dipakai ulang untuk daftar
+  // yang sudah difilter.
+  Widget _buildProductList(List<Map<String, dynamic>> items) {
     final isMobile = MediaQuery.of(context).size.width < 700;
 
     if (isMobile) {
@@ -1068,7 +1212,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ],
         ),
         child: PaginatedListView<Map<String, dynamic>>(
-          items: _products,
+          items: items,
           pageSize: 10,
           separatorBuilder: (_, __) => const Divider(height: 1),
           itemBuilder: (context, p, index) => _buildProductCardMobile(p),
@@ -1126,7 +1270,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           const Divider(height: 1),
           PaginatedListView<Map<String, dynamic>>(
-            items: _products,
+            items: items,
             pageSize: 10,
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, p, index) => _buildProductRowDesktop(p),
@@ -1383,6 +1527,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
           const SizedBox(height: 16),
+          _buildSearchField(
+            hint: 'Cari nomor pesanan atau nama pembeli...',
+            controller: _orderSearchCtrl,
+            onChanged: (v) => setState(() => _orderSearch = v),
+          ),
+          const SizedBox(height: 16),
           if (_ordersError != null)
             _buildErrorBanner(_ordersError!, _loadOrders),
           if (_isLoadingOrders)
@@ -1394,14 +1544,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             )
           else if (_orders.isEmpty)
             _buildEmptyState('Belum ada pesanan', Icons.receipt_outlined)
+          else if (_filteredOrders.isEmpty)
+            _buildEmptyState('Pesanan tidak ditemukan', Icons.search_off)
           else
-            _buildOrderList(),
+            _buildOrderList(_filteredOrders),
         ],
       ),
     );
   }
 
-  Widget _buildOrderList() {
+  // ── DIUBAH: sekarang menerima [items] hasil filter pencarian.
+  Widget _buildOrderList(List<Map<String, dynamic>> items) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1415,7 +1568,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
       ),
       child: PaginatedListView<Map<String, dynamic>>(
-        items: _orders,
+        items: items,
         pageSize: 10,
         separatorBuilder: (_, __) => const Divider(height: 1),
         // FIX: dirombak dari Row 4-kolom rata (yang bikin nomor pesanan
@@ -1737,6 +1890,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     List<Map<String, dynamic>> userList, {
     bool showStoreInfo = false,
   }) {
+    // ── TAMBAHAN: daftar ini khusus tab Penjual, jadi hasil pencariannya
+    // diambil dari _filteredSellerUsers (sudah memfilter userList yang
+    // sama). Parameter [userList] tetap dipakai untuk hitung total di atas.
+    final displayedList = _filteredSellerUsers;
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       child: Column(
@@ -1768,6 +1925,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
           const SizedBox(height: 16),
+          _buildSearchField(
+            hint: 'Cari nama penjual, email, atau nama toko...',
+            controller: _userSearchCtrl,
+            onChanged: (v) => setState(() => _userSearch = v),
+          ),
+          const SizedBox(height: 16),
           if (_usersError != null) _buildErrorBanner(_usersError!, _loadUsers),
           if (_isLoadingUsers)
             const Center(
@@ -1781,6 +1944,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               'Belum ada penjual terdaftar',
               Icons.people_outline,
             )
+          else if (displayedList.isEmpty)
+            _buildEmptyState('Penjual tidak ditemukan', Icons.search_off)
           else
             Container(
               decoration: BoxDecoration(
@@ -1795,7 +1960,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ],
               ),
               child: PaginatedListView<Map<String, dynamic>>(
-                items: userList,
+                items: displayedList,
                 pageSize: 10,
                 separatorBuilder: (_, __) => const Divider(height: 1),
                 // ── DIUBAH: layout responsif — card 2-baris di HP, Row lama di layar lebar
@@ -2134,6 +2299,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
           const SizedBox(height: 12),
+          _buildSearchField(
+            hint: 'Cari nama atau email pembeli...',
+            controller: _buyerSearchCtrl,
+            onChanged: (v) => setState(() => _buyerSearch = v),
+          ),
+          const SizedBox(height: 12),
           if (_buyersError != null)
             _buildErrorBanner(_buyersError!, _loadBuyers),
           if (_isLoadingBuyers)
@@ -2148,6 +2319,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               'Belum ada pembeli terdaftar',
               Icons.person_outline,
             )
+          else if (_filteredBuyers.isEmpty)
+            _buildEmptyState('Pembeli tidak ditemukan', Icons.search_off)
           else
             Container(
               decoration: BoxDecoration(
@@ -2162,7 +2335,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ],
               ),
               child: PaginatedListView<Map<String, dynamic>>(
-                items: _buyers,
+                items: _filteredBuyers,
                 pageSize: 10,
                 separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (context, buyer, index) {

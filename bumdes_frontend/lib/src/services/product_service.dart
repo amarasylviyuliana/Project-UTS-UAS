@@ -31,6 +31,18 @@ class ProductService {
         .toList();
   }
 
+  // TAMBAHAN: ambil produk milik satu BUMDes (toko) tertentu, dipakai di
+  // halaman Detail BUMDes. Endpoint /stores/{id}/products sudah ada di
+  // backend dan bersifat publik (tidak perlu token), sama seperti
+  // fetchProducts() di atas.
+  Future<List<ProductModel>> fetchProductsForStore(int storeId) async {
+    final response = await api.getRaw('/stores/$storeId/products');
+    final rawProducts = _extractProductList(response);
+    return rawProducts
+        .map((item) => ProductModel.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
   // TAMBAHAN: pencarian produk berbasis AI (Gemini) — mengirim query bahasa
   // natural (mis. "sepatu murah buat lari") ke backend, yang akan
   // mengubahnya jadi kriteria terstruktur (keywords/kategori/rentang harga)

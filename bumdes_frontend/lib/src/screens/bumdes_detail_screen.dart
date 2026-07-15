@@ -84,6 +84,50 @@ class _BumdesDetailScreenState extends State<BumdesDetailScreen>
     }).toList();
   }
 
+  // FIX: sebelumnya grid produk di sini selalu dipatok crossAxisCount: 2
+  // dengan childAspectRatio: 0.62 tetap, berapa pun lebar layarnya.
+  // Akibatnya di layar lebar (laptop/desktop), tiap kartu jadi lebar
+  // sekali dan gambar produknya ikut membesar drastis, jadi terlihat
+  // "kegedean" seperti di screenshot.
+  //
+  // Sekarang dibuat responsif, sama seperti grid "Semua Produk" di
+  // Beranda: jumlah kolom menyesuaikan lebar layar (2 kolom di HP, sampai
+  // 5 kolom di layar lebar), dan tinggi kartu dihitung ulang mengikuti
+  // lebar kolom supaya gambar tidak pernah membesar berlebihan, baik di
+  // HP maupun laptop.
+  Widget _buildProductGrid(List<ProductModel> items) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        int crossAxisCount = 2;
+        if (width >= 1100) {
+          crossAxisCount = 5;
+        } else if (width >= 800) {
+          crossAxisCount = 4;
+        } else if (width >= 550) {
+          crossAxisCount = 3;
+        }
+        const spacing = 14.0;
+        const textAreaHeight = 120.0;
+        final cellWidth =
+            (width - spacing * (crossAxisCount - 1)) / crossAxisCount;
+        final cellHeight = cellWidth + textAreaHeight;
+        final aspectRatio = cellWidth / cellHeight;
+        return GridView.builder(
+          padding: const EdgeInsets.all(16),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: spacing,
+            crossAxisSpacing: spacing,
+            childAspectRatio: aspectRatio,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, i) => ProductCard(product: items[i]),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = widget.store;
@@ -209,19 +253,7 @@ class _BumdesDetailScreenState extends State<BumdesDetailScreen>
                           ),
                         );
                       }
-                      return GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 14,
-                              crossAxisSpacing: 14,
-                              childAspectRatio: 0.62,
-                            ),
-                        itemCount: items.length,
-                        itemBuilder: (context, i) =>
-                            ProductCard(product: items[i]),
-                      );
+                      return _buildProductGrid(items);
                     }),
                   ),
           ),

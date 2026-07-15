@@ -11,6 +11,7 @@ import 'cart_screen.dart';
 import 'order_history_screen.dart';
 import 'profile_screen.dart';
 import 'login_screen.dart';
+import 'bumdes_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
@@ -60,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final pages = <Widget>[
-      const HomeTab(),
+      HomeTab(onShopNow: () => setState(() => _selectedIndex = 1)),
       const SearchTab(),
       const CartScreen(),
       const OrderHistoryScreen(),
@@ -130,56 +131,79 @@ class _HomeScreenState extends State<HomeScreen> {
           SystemNavigator.pop();
         } else {
           _lastBackPressTime = now;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Tekan sekali lagi untuk keluar aplikasi'),
-              duration: Duration(seconds: 2),
-            ),
-          );
+          // Intentional: removed the visible "Tekan sekali lagi" SnackBar
+          // so back press won't show a snackbar. Behavior remains double
+          // press to exit but without the notification.
         }
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF6F6F6),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF1B5E20),
-          elevation: 0,
-          toolbarHeight: isNarrow ? 60 : 68,
-          titleSpacing: 16,
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.16),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Image.asset(
-                  'assets/logo.jpeg',
-                  width: 24,
-                  height: 24,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) =>
-                      const Icon(Icons.eco, color: Colors.white, size: 22),
-                ),
+        // Pindahkan header AppBar ke SliverAppBar supaya ikut digulung
+        // bersama isi halaman. NestedScrollView akan mengkoordinasikan
+        // scroll header dan body sehingga header tidak lagi tetap.
+        body: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverAppBar(
+              backgroundColor: const Color(0xFF1B5E20),
+              elevation: 0,
+              pinned: false,
+              floating: false,
+              snap: false,
+              toolbarHeight: isNarrow ? 60 : 68,
+              titleSpacing: 16,
+              automaticallyImplyLeading: false,
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.16),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Image.asset(
+                      'assets/logo.jpeg',
+                      width: 24,
+                      height: 24,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.eco, color: Colors.white, size: 22),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Flexible(
+                    child: Text(
+                      'BUMDES JABAR',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
-              const Flexible(
-                child: Text(
-                  'BUMDES JABAR',
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+              // TAMBAHAN: ikon keranjang di pojok kanan header, sesuai
+              // referensi desain. Tap akan memindahkan bottom nav ke tab
+              // "Keranjang" (index 2) yang sudah ada, tanpa membuka route
+              // baru dan tanpa perlu provider tambahan.
+              actions: [
+                IconButton(
+                  tooltip: 'Keranjang',
+                  onPressed: () => setState(() => _selectedIndex = 2),
+                  icon: const Icon(
+                    Icons.shopping_cart_outlined,
                     color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
                   ),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 4),
+              ],
+            ),
+          ],
+          body: pages[_selectedIndex],
         ),
-        body: pages[_selectedIndex],
         bottomNavigationBar: SafeArea(
           top: false,
           child: NavigationBarTheme(
@@ -247,7 +271,12 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class HomeTab extends StatefulWidget {
-  const HomeTab({super.key});
+  // TAMBAHAN: callback untuk pindah ke tab "Pencarian" (yang menampilkan
+  // semua produk + search & filter kategori) saat tombol "Belanja
+  // Sekarang" ditekan. Diisi oleh HomeScreen lewat setState pindah
+  // _selectedIndex, tanpa perlu route atau provider baru.
+  final VoidCallback? onShopNow;
+  const HomeTab({super.key, this.onShopNow});
 
   @override
   State<HomeTab> createState() => _HomeTabState();
@@ -288,98 +317,112 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
-  Widget _buildHeroText() {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'BUMDES_JABAR',
-          style: TextStyle(
-            fontSize: 36,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            letterSpacing: 1.0,
-          ),
-        ),
-        SizedBox(height: 8),
-        Text(
-          'Koperasi Umat Berdaulat',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.white60,
-            letterSpacing: 1.5,
-          ),
-        ),
-        SizedBox(height: 16),
-        Text(
-          'Adalah aplikasi penyokong usaha pada tiap desa yang mana menjual dan memasarkan produk barang atau jasa unggulan di desanya.',
-          style: TextStyle(fontSize: 16, color: Colors.white70, height: 1.6),
-        ),
-      ],
+  // FIX: tombol "Belanja Sekarang" sebelumnya hanya memindahkan fokus ke
+  // search bar (yang letaknya di bawah, di luar layar), jadi kelihatan
+  // seolah tidak merespons saat diklik. Sekarang tombol ini langsung
+  // membuka daftar BUMDes, sama seperti kartu "BUMDes" di bawahnya —
+  // supaya ada aksi/navigasi yang jelas dan terlihat saat ditekan.
+  void _goToBumdesList(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const BumdesListScreen()),
     );
   }
 
-  // FIX: sebelumnya Container ini tidak punya `width`, dan parent-nya
-  // (Column dengan crossAxisAlignment.start di layout HP/narrow) tidak
-  // pernah men-stretch child-nya secara horizontal. Akibatnya kotak krem
-  // logo menyusut mengikuti ukuran gambar di dalamnya dan menyisakan
-  // ruang kosong di kanan — persis yang digarisin di screenshot.
-  // Sekarang width: double.infinity dipaksa supaya kotak selalu selebar
-  // ruang yang tersedia (full-bleed sesuai padding luar), konsisten di
-  // HP maupun web/desktop.
-  Widget _buildHeroIllustration() {
+  // TAMBAHAN: "Belanja Sekarang" sekarang langsung pindah ke tab
+  // "Pencarian" (index 1 di bottom nav), yang menampilkan grid SEMUA
+  // produk lengkap dengan search bar & filter kategori — ini yang
+  // paling mendekati halaman "Semua Produk" di aplikasi ini.
+  void _shopNow(BuildContext context) {
+    if (widget.onShopNow != null) {
+      widget.onShopNow!();
+    } else {
+      _goToBumdesList(context);
+    }
+  }
+
+  // TAMBAHAN: banner promo bergaya marketplace, menggantikan hero besar
+  // sebelumnya. Tetap pakai warna hijau brand (gradient 1B5E20 -> 388E3C)
+  // dan logo yang sudah ada di assets, jadi tidak butuh aset baru.
+  Widget _buildPromoBanner(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 320,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F0E8),
-        borderRadius: BorderRadius.circular(28),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1B5E20), Color(0xFF388E3C)],
+        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: const [
           BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.15),
-            blurRadius: 24,
-            offset: Offset(0, 10),
+            color: Color.fromRGBO(0, 0, 0, 0.12),
+            blurRadius: 16,
+            offset: Offset(0, 8),
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final imageSize = constraints.maxWidth < 360 ? 150.0 : 180.0;
-                return Image.asset(
-                  'assets/logo.jpeg',
-                  height: imageSize,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.eco,
-                        size: 72,
-                        color: const Color(0xFF1B5E20).withValues(alpha: 0.6),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'BUMDES JABAR',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1B5E20),
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                      const Text(
-                        'Koperasi Umat Berdaulat',
-                        style: TextStyle(fontSize: 11, color: Colors.black45),
-                      ),
-                    ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Marketplace Produk dan Jasa Antar BUMDes di Jawa Barat',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    height: 1.3,
                   ),
-                );
-              },
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Belanja mudah, dukung ekonomi desa',
+                  style: TextStyle(color: Colors.white70, fontSize: 12.5),
+                ),
+                const SizedBox(height: 14),
+                ElevatedButton(
+                  onPressed: () => _shopNow(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF1B5E20),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'Belanja Sekarang',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: 84,
+              height: 84,
+              color: Colors.white.withValues(alpha: 0.14),
+              padding: const EdgeInsets.all(14),
+              child: Image.asset(
+                'assets/logo.jpeg',
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.eco, color: Colors.white, size: 40),
+              ),
             ),
           ),
         ],
@@ -387,9 +430,64 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // ── DIUBAH: sekarang benar-benar bisa dipencet (IconButton), sebelumnya
-  // suffixIcon cuma `Icon(...)` polos jadi kelihatan seperti tombol tapi
-  // sama sekali tidak merespons ketukan (itu "bug" yang kamu maksud).
+  // TAMBAHAN: kartu "BUMDes" (baris navigasi ke daftar BUMDes). Sekarang
+  // sudah tersambung ke BumdesListScreen yang menampilkan semua BUMDes
+  // (dengan search & filter wilayah), lalu tap salah satu BUMDes akan
+  // membuka detail produknya.
+  Widget _buildBumdesRow(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () => _goToBumdesList(context),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Color.fromRGBO(0, 0, 0, 0.04),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1B5E20).withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.storefront_outlined,
+                color: Color(0xFF1B5E20),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'BUMDes',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Temukan berbagai BUMDes di Jawa Barat',
+                    style: TextStyle(fontSize: 11.5, color: Colors.black54),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.black38),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSearchBar(BuildContext context) {
     final provider = Provider.of<ProductProvider>(context, listen: false);
     return Container(
@@ -406,7 +504,7 @@ class _HomeTabState extends State<HomeTab> {
       ),
       child: TextField(
         decoration: InputDecoration(
-          hintText: 'Cari produk, toko, desa...',
+          hintText: 'Cari produk atau jasa desa...',
           hintStyle: const TextStyle(color: Colors.black45),
           prefixIcon: const Icon(Icons.search, color: Color(0xFF1B5E20)),
           suffixIcon: IconButton(
@@ -427,7 +525,6 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // TAMBAHAN: bottom sheet filter kategori, dipanggil dari ikon garis tiga.
   void _showFilterSheet(BuildContext context, ProductProvider provider) {
     showModalBottomSheet(
       context: context,
@@ -521,13 +618,20 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // ── TAMBAHAN: grid Shopee-style yang benar-benar responsif.
-  // Sebelumnya pakai Wrap dengan kartu lebar tetap 220px — di layar HP,
-  // 2 kartu (220*2 + jarak) lebih lebar dari layar, jadi kartu ke-2
-  // "kepotong" ke luar layar dan hasilnya cuma keliatan 1 kolom.
-  // Sekarang pakai GridView dengan jumlah kolom dihitung dari lebar layar,
-  // dijamin selalu 2 kolom di HP, dan makin banyak kolom di layar lebar —
-  // persis seperti Shopee.
+  // ── FIX: sebelumnya childAspectRatio dipatok angka tetap (0.56) yang
+  // dihitung berdasarkan asumsi card sempit (2-3 kolom). Padahal gambar
+  // produk pakai AspectRatio 1 (kotak, ikut lebar card), sedangkan tinggi
+  // area teks di bawahnya (nama, toko, harga, badge stok) itu TETAP dalam
+  // pixel berapapun lebar card-nya. Akibatnya, di layar lebar (4-5 kolom),
+  // card jadi lebar → gambar kotaknya ikut membesar → tapi teks di
+  // bawahnya tetap segitu-segitu saja → sisa ruang di bawah jadi kosong
+  // putih panjang (persis yang di-screenshot).
+  //
+  // Sekarang aspect ratio dihitung ULANG tiap kali lebar layar berubah:
+  // cellHeight = cellWidth (untuk gambar kotak) + tinggi area teks yang
+  // konsisten (textAreaHeight), lalu aspectRatio = cellWidth / cellHeight.
+  // Dengan begini, berapapun jumlah kolomnya, tinggi card selalu pas
+  // mengikuti isinya — tidak ada lagi ruang kosong di bawah.
   Widget _buildProductGrid(List<ProductModel> products) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -540,15 +644,24 @@ class _HomeTabState extends State<HomeTab> {
         } else if (width >= 550) {
           crossAxisCount = 3;
         }
+        const spacing = 14.0;
+        // Perkiraan tinggi area teks di bawah gambar: padding(16) +
+        // nama 2 baris (~33) + nama toko (~16) + baris harga (~20) +
+        // badge stok (~20) + sedikit slack (~15).
+        const textAreaHeight = 120.0;
+        final cellWidth =
+            (width - spacing * (crossAxisCount - 1)) / crossAxisCount;
+        final cellHeight = cellWidth + textAreaHeight;
+        final aspectRatio = cellWidth / cellHeight;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: products.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
-            childAspectRatio: 0.56,
+            mainAxisSpacing: spacing,
+            crossAxisSpacing: spacing,
+            childAspectRatio: aspectRatio,
           ),
           itemBuilder: (context, index) =>
               ProductCard(product: products[index]),
@@ -568,73 +681,37 @@ class _HomeTabState extends State<HomeTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF1B5E20), Color(0xFF388E3C)],
-                ),
-              ),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final horizontalPadding = constraints.maxWidth < 550
-                      ? 16.0
-                      : 24.0;
-                  if (constraints.maxWidth > 900) {
-                    return Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 40,
-                        horizontal: horizontalPadding,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(child: _buildHeroText()),
-                          const SizedBox(width: 32),
-                          Expanded(child: _buildHeroIllustration()),
-                        ],
-                      ),
-                    );
-                  }
-                  return Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 40,
-                      horizontal: horizontalPadding,
-                    ),
-                    child: Column(
-                      // FIX: crossAxisAlignment.start membuat child
-                      // (termasuk kotak logo) menyusut ke lebar isinya
-                      // sendiri alih-alih mengisi lebar penuh. Kotak logo
-                      // sekarang sudah punya width: double.infinity sendiri
-                      // sehingga tetap full-width walau alignment ini
-                      // tetap .start (dipakai supaya teks hero tetap rata
-                      // kiri seperti semula).
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeroText(),
-                        const SizedBox(height: 24),
-                        _buildHeroIllustration(),
-                      ],
-                    ),
-                  );
-                },
-              ),
+            // TAMBAHAN: latar putih di bagian atas (bukan hero hijau full
+            // screen lagi) supaya nuansanya jadi lebih ke "marketplace"
+            // seperti referensi gambar 2, sementara warna brand tetap
+            // dipakai di banner promo, kategori terpilih, dan tombol.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+              child: _buildPromoBanner(context),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: _buildSearchBar(context),
             ),
 
+            const SizedBox(height: 20),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: _buildBumdesRow(context),
+            ),
+
+            // DIHAPUS: section "Kategori" (header + grid ikon kategori)
+            // sesuai permintaan — sekarang langsung lanjut ke "Produk &
+            // Jasa Unggulan" setelah kartu BUMDes.
             const SizedBox(height: 24),
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildSectionHeader('Produk Unggulan'),
+              child: _buildSectionHeader('Produk & Jasa Unggulan'),
             ),
             const SizedBox(height: 16),
 
@@ -787,12 +864,6 @@ class _HomeTabState extends State<HomeTab> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // FIX: email & lokasi sekarang bisa diklik.
-                  // - Lokasi -> buka Google Maps.
-                  // - Email  -> buka aplikasi Mail dengan alamat terisi.
-                  // Dibungkus Wrap (bukan Row) supaya tidak overflow di
-                  // layar HP yang sempit, dan diberi garis bawah tipis
-                  // sebagai penanda visual bahwa teks ini bisa disentuh.
                   Wrap(
                     alignment: WrapAlignment.center,
                     crossAxisAlignment: WrapCrossAlignment.center,
@@ -897,96 +968,6 @@ class _SearchTabState extends State<SearchTab> {
     super.dispose();
   }
 
-  // TAMBAHAN: kirim isi kolom pencarian ke endpoint AI (Gemini) di backend.
-  // AI akan menerjemahkan kalimat bebas (mis. "sepatu murah buat lari")
-  // jadi kriteria terstruktur (kata kunci, kategori, rentang harga).
-  Future<void> _runAiSearch(ProductProvider provider) async {
-    final query = _searchController.text.trim();
-    if (query.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ketik dulu apa yang kamu cari')),
-      );
-      return;
-    }
-    FocusScope.of(context).unfocus();
-    await provider.searchWithAI(query);
-    if (!mounted) return;
-    if (provider.aiSearchError != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(provider.aiSearchError!)));
-    }
-  }
-
-  // TAMBAHAN: ringkasan kecil menampilkan bagaimana AI memahami query,
-  // supaya user tahu kenapa hasilnya seperti itu (transparansi AI).
-  Widget _buildAiSummary(ProductProvider provider) {
-    final parts = <String>[];
-    if (provider.aiKeywords.isNotEmpty) {
-      parts.add('kata kunci "${provider.aiKeywords.join(', ')}"');
-    }
-    if (provider.aiCategory != null && provider.aiCategory!.isNotEmpty) {
-      parts.add('kategori "${provider.aiCategory}"');
-    }
-    // TAMBAHAN: atribut produk (mis. "pedas") — ini yang membuat produk
-    // seperti sambal tanpa kata "pedas" di judulnya tetap bisa ketemu,
-    // karena dicocokkan lewat atribut tersimpan (tags), bukan judul.
-    if (provider.aiTags.isNotEmpty) {
-      parts.add('atribut "${provider.aiTags.join(', ')}"');
-    }
-    if (provider.aiRegion != null && provider.aiRegion!.isNotEmpty) {
-      parts.add('daerah "${provider.aiRegion}"');
-    }
-    if (provider.aiMinPrice != null) {
-      parts.add('harga min Rp ${provider.aiMinPrice!.toStringAsFixed(0)}');
-    }
-    if (provider.aiMaxPrice != null) {
-      parts.add('harga maks Rp ${provider.aiMaxPrice!.toStringAsFixed(0)}');
-    }
-    if (provider.aiSort != null) {
-      switch (provider.aiSort) {
-        case 'price_asc':
-          parts.add('diurutkan termurah dulu');
-          break;
-        case 'price_desc':
-          parts.add('diurutkan termahal dulu');
-          break;
-        case 'best_selling':
-          parts.add('diurutkan produk terlaris dulu');
-          break;
-      }
-    }
-    if (parts.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.14),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'AI memahami pencarianmu sebagai ${parts.join(', ')}.',
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-            ),
-          ),
-          IconButton(
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            icon: const Icon(Icons.close, color: Colors.white70, size: 16),
-            onPressed: () => provider.resetAiSearch(),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<ProductProvider>(context);
@@ -1003,118 +984,44 @@ class _SearchTabState extends State<SearchTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText:
-                          'Coba tulis "sepatu murah buat lari" atau "ada nggak susu sehat"... atau tekan ikon AI',
-                      hintStyle: const TextStyle(color: Colors.white60),
-                      prefixIcon: const Icon(
-                        Icons.search,
-                        color: Colors.white70,
-                      ),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(
-                                Icons.clear,
-                                color: Colors.white70,
-                              ),
-                              onPressed: () {
-                                _searchController.clear();
-                                provider.resetAiSearch();
-                                provider.search('');
-                                setState(() {});
-                              },
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.white70),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Colors.white70,
-                          width: 0.5,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.white),
-                      ),
-                    ),
-                    textInputAction: TextInputAction.search,
-                    onChanged: (value) {
-                      // Jika user sedang mengetik "rekomendasi"/"cari" maka jalankan
-                      // rekomendasi AI (beberapa produk) sesuai query.
-                      final v = value.trim().toLowerCase();
-                      final isRecommendation =
-                          v.isNotEmpty &&
-                          (v.contains('rekomendasi') ||
-                              v.contains('rekomendasikan') ||
-                              v.contains('rekomendasiin') ||
-                              v.contains('saran') ||
-                              v.contains('sarankan') ||
-                              v.contains('mau') ||
-                              v.contains('ingin') ||
-                              v.contains('cari') ||
-                              v.contains('carikan') ||
-                              v.contains('termurah') ||
-                              v.contains('mahal') ||
-                              v.contains('terlaris') ||
-                              v.contains('sehat'));
-
-                      if (isRecommendation) {
-                        provider.searchWithAI(value.trim());
-                      } else {
-                        provider.search(value);
-                      }
-                      setState(() {});
-                    },
-                    onSubmitted: (_) => _runAiSearch(provider),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // TAMBAHAN: tombol "Cari dengan AI" — tetap memakai pencarian
-                // teks biasa (onChanged di atas) secara instan, tapi tombol
-                // ini memicu pencarian ber-AI (pemahaman bahasa natural,
-                // filter kategori & rentang harga otomatis).
-                Material(
-                  color: Colors.white,
+            TextField(
+              controller: _searchController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Cari produk, toko, desa...',
+                hintStyle: const TextStyle(color: Colors.white60),
+                prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.white70),
+                        onPressed: () {
+                          _searchController.clear();
+                          provider.search('');
+                          setState(() {});
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: provider.isAiSearching
-                        ? null
-                        : () => _runAiSearch(provider),
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      alignment: Alignment.center,
-                      child: provider.isAiSearching
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFF1B5E20),
-                              ),
-                            )
-                          : const Icon(
-                              Icons.auto_awesome,
-                              color: Color(0xFF1B5E20),
-                            ),
-                    ),
+                  borderSide: const BorderSide(color: Colors.white70),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Colors.white70,
+                    width: 0.5,
                   ),
                 ),
-              ],
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.white),
+                ),
+              ),
+              onChanged: (value) {
+                provider.search(value);
+                setState(() {});
+              },
             ),
-            if (provider.isAiSearchActive) _buildAiSummary(provider),
             const SizedBox(height: 16),
 
             SingleChildScrollView(
@@ -1155,50 +1062,16 @@ class _SearchTabState extends State<SearchTab> {
             ),
             const SizedBox(height: 16),
 
-            Row(
-              children: [
-                Text(
-                  '${provider.products.length} produk ditemukan',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                if (provider.isAiSearchActive) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.auto_awesome,
-                          size: 11,
-                          color: Color(0xFF1B5E20),
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          'Hasil AI',
-                          style: TextStyle(
-                            color: Color(0xFF1B5E20),
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
+            Text(
+              '${provider.products.length} produk ditemukan',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
             ),
             const SizedBox(height: 8),
 
-            // ── DIUBAH: hasil pencarian sekarang juga grid 2 kolom
-            // (Shopee-style), bukan list 1 kolom seperti sebelumnya.
+            // ── FIX: sama seperti grid di HomeTab, aspect ratio card di
+            // hasil pencarian sekarang juga dihitung dinamis mengikuti
+            // lebar card sesungguhnya, supaya tidak ada ruang kosong
+            // putih di bawah badge stok.
             Expanded(
               child: provider.isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -1231,14 +1104,21 @@ class _SearchTabState extends State<SearchTab> {
                         } else if (width >= 550) {
                           crossAxisCount = 3;
                         }
+                        const spacing = 14.0;
+                        const textAreaHeight = 120.0;
+                        final cellWidth =
+                            (width - spacing * (crossAxisCount - 1)) /
+                            crossAxisCount;
+                        final cellHeight = cellWidth + textAreaHeight;
+                        final aspectRatio = cellWidth / cellHeight;
                         return GridView.builder(
                           itemCount: provider.products.length,
                           gridDelegate:
                               SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: crossAxisCount,
-                                mainAxisSpacing: 14,
-                                crossAxisSpacing: 14,
-                                childAspectRatio: 0.56,
+                                mainAxisSpacing: spacing,
+                                crossAxisSpacing: spacing,
+                                childAspectRatio: aspectRatio,
                               ),
                           itemBuilder: (context, index) =>
                               ProductCard(product: provider.products[index]),
@@ -1255,20 +1135,18 @@ class _SearchTabState extends State<SearchTab> {
 
 // ─── PRODUCT CARD ─────────────────────────────────────────────────────────────
 
-// ── DIUBAH: dulu punya lebar tetap (width: 220) + margin sendiri, sehingga
-// tidak cocok dipakai di dalam GridView (lebar sel grid jadi diabaikan).
-// Sekarang kartu selalu mengisi penuh lebar sel yang diberikan induknya
-// (GridView atau SizedBox), jadi bisa dipakai baik di grid 2/3/4/5 kolom
-// maupun di list horizontal "Produk Unggulan".
 class ProductCard extends StatelessWidget {
   final ProductModel product;
   const ProductCard({required this.product, super.key});
 
   @override
   Widget build(BuildContext context) {
-    final stockLabel = product.stock == 0
-        ? 'Stok Habis'
-        : 'Stok ${product.stock}';
+    // FIX: produk jasa (isService == true) tidak punya konsep "stok"
+    // dalam arti barang, jadi label & maknanya diganti jadi
+    // "Tersedia" / "Tidak Tersedia" alih-alih "Stok X" / "Stok Habis".
+    final stockLabel = product.isService
+        ? (product.stock > 0 ? 'Tersedia' : 'Tidak Tersedia')
+        : (product.stock == 0 ? 'Stok Habis' : 'Stok ${product.stock}');
     return GestureDetector(
       onTap: () => Navigator.pushNamed(
         context,
@@ -1326,47 +1204,52 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
             ),
-            Flexible(
+            // ── FIX: bungkus dengan Expanded (bukan Flexible +
+            // mainAxisSize.min) supaya area teks selalu mengisi sisa
+            // tinggi card, dan mainAxisAlignment.spaceBetween menyebar
+            // konten secara merata dari atas (nama/toko) sampai bawah
+            // (badge stok) — jadi kalaupun ada sisa ruang, terisi rapi,
+            // bukan menumpuk jadi blok putih kosong di paling bawah.
+            Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      product.name,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        height: 1.25,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      product.storeName,
-                      style: const TextStyle(
-                        color: Colors.black45,
-                        fontSize: 11,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            'Rp ${product.price.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: Color(0xFF1B5E20),
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                        Text(
+                          product.name,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            height: 1.25,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          product.storeName,
+                          style: const TextStyle(
+                            color: Colors.black45,
+                            fontSize: 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
+                    ),
+                    Text(
+                      'Rp ${product.price.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Color(0xFF1B5E20),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
