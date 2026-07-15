@@ -11,9 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('telegram_chat_id')->nullable()->after('email');
-        });
+        // FIX: cek dulu kolomnya sudah ada atau belum sebelum nambah.
+        // Sebelumnya migration ini langsung ALTER TABLE tanpa cek, jadi kalau
+        // kolom `telegram_chat_id` sudah pernah ditambahkan manual/dari
+        // percobaan deploy sebelumnya, migration ini SELALU gagal dengan
+        // error "Duplicate column name" setiap kali `php artisan migrate`
+        // dijalankan (baik lokal maupun di server/Railway) -> itu yang
+        // sebelumnya bikin proses start server gagal total.
+        if (! Schema::hasColumn('users', 'telegram_chat_id')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->string('telegram_chat_id')->nullable()->after('email');
+            });
+        }
     }
 
     /**
@@ -21,8 +30,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('telegram_chat_id');
-        });
+        if (Schema::hasColumn('users', 'telegram_chat_id')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropColumn('telegram_chat_id');
+            });
+        }
     }
 };
