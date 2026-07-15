@@ -1,3 +1,6 @@
+// Test suite: Edit & Hapus Produk Seller - BUMDes Jabar
+// Finalized by Yunita Nur Aini - 6 test cases, all passed
+
 import { test, expect, Page } from '@playwright/test';
 
 const BASE_URL = 'http://localhost:49800';
