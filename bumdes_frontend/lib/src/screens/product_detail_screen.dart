@@ -34,7 +34,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       );
     }
     final cart = Provider.of<CartProvider>(context, listen: false);
-    final available = product.stock > 0;
+
+    // FIX BUG "Tidak Tersedia"/"Stok Habis" padahal di dashboard penjual
+    // "Tersedia": sebelumnya ketersediaan di halaman detail ini SELALU
+    // dihitung dari `product.stock` (stock > 0 => tersedia), termasuk
+    // untuk Jasa. Padahal dashboard penjual & kartu produk (ProductCard)
+    // menentukan status Jasa dari field `is_active`, bukan dari stock.
+    // Untuk Jasa lama yang stock-nya masih 0 di database, dua sisi jadi
+    // tidak sinkron: penjual bilang "Tersedia" (is_active = true) tapi
+    // halaman ini bilang "Stok Habis" (stock = 0).
+    //
+    // Sekarang untuk Jasa, ketersediaan SELALU dibaca dari
+    // `product.isActive` (sama seperti ProductCard & dashboard penjual).
+    // Stock cuma tetap relevan untuk Produk fisik.
+    final available = product.isService ? product.isActive : product.stock > 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -113,6 +126,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Widget _buildImageSection(ProductModel product, bool available) {
+    // TAMBAHAN: label badge sekarang dibedakan antara Jasa dan Produk
+    // fisik, sama seperti stockLabel di ProductCard. Jasa memakai
+    // "Tersedia"/"Tidak Tersedia", Produk fisik tetap memakai info stok.
+    final badgeLabel = product.isService
+        ? (available ? 'Tersedia' : 'Tidak Tersedia')
+        : (available ? 'Stok tersedia: ${product.stock}' : 'Stok Habis');
+
     return ClipRRect(
       borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(28), bottomRight: Radius.circular(28)),
       child: Stack(
@@ -160,7 +180,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                available ? 'Stok tersedia: ${product.stock}' : 'Stok Habis',
+                badgeLabel,
                 style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
               ),
             ),
