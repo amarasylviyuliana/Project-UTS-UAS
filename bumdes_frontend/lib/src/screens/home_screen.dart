@@ -968,6 +968,93 @@ class _SearchTabState extends State<SearchTab> {
     super.dispose();
   }
 
+  // TAMBAHAN: kirim isi kolom pencarian ke endpoint AI (Gemini) di backend.
+  // AI akan menerjemahkan kalimat bebas (mis. "sepatu murah buat lari")
+  // jadi kriteria terstruktur (kata kunci, kategori, rentang harga).
+  Future<void> _runAiSearch(ProductProvider provider) async {
+    final query = _searchController.text.trim();
+    if (query.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ketik dulu apa yang kamu cari')),
+      );
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    await provider.searchWithAI(query);
+    if (!mounted) return;
+    if (provider.aiSearchError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(provider.aiSearchError!)));
+    }
+  }
+
+  // TAMBAHAN: ringkasan kecil menampilkan bagaimana AI memahami query,
+  // supaya user tahu kenapa hasilnya seperti itu (transparansi AI).
+  Widget _buildAiSummary(ProductProvider provider) {
+    final parts = <String>[];
+    if (provider.aiKeywords.isNotEmpty) {
+      parts.add('kata kunci "${provider.aiKeywords.join(', ')}"');
+    }
+    if (provider.aiCategory != null && provider.aiCategory!.isNotEmpty) {
+      parts.add('kategori "${provider.aiCategory}"');
+    }
+    if (provider.aiTags.isNotEmpty) {
+      parts.add('atribut "${provider.aiTags.join(', ')}"');
+    }
+    if (provider.aiRegion != null && provider.aiRegion!.isNotEmpty) {
+      parts.add('daerah "${provider.aiRegion}"');
+    }
+    if (provider.aiMinPrice != null) {
+      parts.add('harga min Rp ${provider.aiMinPrice!.toStringAsFixed(0)}');
+    }
+    if (provider.aiMaxPrice != null) {
+      parts.add('harga maks Rp ${provider.aiMaxPrice!.toStringAsFixed(0)}');
+    }
+    if (provider.aiSort != null) {
+      switch (provider.aiSort) {
+        case 'price_asc':
+          parts.add('diurutkan termurah dulu');
+          break;
+        case 'price_desc':
+          parts.add('diurutkan termahal dulu');
+          break;
+        case 'best_selling':
+          parts.add('diurutkan produk terlaris dulu');
+          break;
+      }
+    }
+    if (parts.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'AI memahami pencarianmu sebagai ${parts.join(', ')}.',
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+            ),
+          ),
+          IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: const Icon(Icons.close, color: Colors.white70, size: 16),
+            onPressed: () => provider.resetAiSearch(),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<ProductProvider>(context);
@@ -984,44 +1071,118 @@ class _SearchTabState extends State<SearchTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              controller: _searchController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Cari produk, toko, desa...',
-                hintStyle: const TextStyle(color: Colors.white60),
-                prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.white70),
-                        onPressed: () {
-                          _searchController.clear();
-                          provider.search('');
-                          setState(() {});
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.white70),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: Colors.white70,
-                    width: 0.5,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText:
+                          'Coba tulis "sepatu murah buat lari" atau "ada nggak susu sehat"... atau tekan ikon AI',
+                      hintStyle: const TextStyle(color: Colors.white60),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: Colors.white70,
+                      ),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.clear,
+                                color: Colors.white70,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                provider.resetAiSearch();
+                                provider.search('');
+                                setState(() {});
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.white70),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: Colors.white70,
+                          width: 0.5,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.white),
+                      ),
+                    ),
+                    textInputAction: TextInputAction.search,
+                    onChanged: (value) {
+                      // Jika user sedang mengetik "rekomendasi"/"cari" maka jalankan
+                      // rekomendasi AI (beberapa produk) sesuai query.
+                      final v = value.trim().toLowerCase();
+                      final isRecommendation =
+                          v.isNotEmpty &&
+                          (v.contains('rekomendasi') ||
+                              v.contains('rekomendasikan') ||
+                              v.contains('rekomendasiin') ||
+                              v.contains('saran') ||
+                              v.contains('sarankan') ||
+                              v.contains('mau') ||
+                              v.contains('ingin') ||
+                              v.contains('cari') ||
+                              v.contains('carikan') ||
+                              v.contains('termurah') ||
+                              v.contains('mahal') ||
+                              v.contains('terlaris') ||
+                              v.contains('sehat'));
+
+                      if (isRecommendation) {
+                        provider.searchWithAI(value.trim());
+                      } else {
+                        provider.search(value);
+                      }
+                      setState(() {});
+                    },
+                    onSubmitted: (_) => _runAiSearch(provider),
                   ),
                 ),
-                focusedBorder: OutlineInputBorder(
+                const SizedBox(width: 8),
+                // TAMBAHAN: tombol "Cari dengan AI" — tetap memakai pencarian
+                // teks biasa (onChanged di atas) secara instan, tapi tombol
+                // ini memicu pencarian ber-AI (pemahaman bahasa natural,
+                // filter kategori & rentang harga otomatis).
+                Material(
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.white),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: provider.isAiSearching
+                        ? null
+                        : () => _runAiSearch(provider),
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      alignment: Alignment.center,
+                      child: provider.isAiSearching
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFF1B5E20),
+                              ),
+                            )
+                          : const Icon(
+                              Icons.auto_awesome,
+                              color: Color(0xFF1B5E20),
+                            ),
+                    ),
+                  ),
                 ),
-              ),
-              onChanged: (value) {
-                provider.search(value);
-                setState(() {});
-              },
+              ],
             ),
+            if (provider.isAiSearchActive) _buildAiSummary(provider),
             const SizedBox(height: 16),
 
             SingleChildScrollView(
@@ -1062,9 +1223,45 @@ class _SearchTabState extends State<SearchTab> {
             ),
             const SizedBox(height: 16),
 
-            Text(
-              '${provider.products.length} produk ditemukan',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            Row(
+              children: [
+                Text(
+                  '${provider.products.length} produk ditemukan',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                if (provider.isAiSearchActive) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.auto_awesome,
+                          size: 11,
+                          color: Color(0xFF1B5E20),
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Hasil AI',
+                          style: TextStyle(
+                            color: Color(0xFF1B5E20),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
             ),
             const SizedBox(height: 8),
 
