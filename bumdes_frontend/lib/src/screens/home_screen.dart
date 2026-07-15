@@ -1196,7 +1196,7 @@ class _SearchTabState extends State<SearchTab> {
   }
 
   // TAMBAHAN: kirim isi kolom pencarian ke endpoint AI (Gemini) di backend.
-  // AI akan menerjemahkan kalimat bebas (mis. "sepatu murah buat lari")
+  // AI akan menerjemahkan kalimat bebas (mis. "sambal murah di Garut")
   // jadi kriteria terstruktur (kata kunci, kategori, rentang harga).
   Future<void> _runAiSearch(ProductProvider provider) async {
     final query = _searchController.text.trim();
@@ -1307,7 +1307,7 @@ class _SearchTabState extends State<SearchTab> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       hintText:
-                          'Coba tulis "sepatu murah buat lari" atau "ada nggak susu sehat"... atau tekan ikon AI',
+                          'Coba tulis "sambal murah di Garut" atau "jasa yang paling laris"... atau tekan ikon AI',
                       hintStyle: const TextStyle(color: Colors.white60),
                       prefixIcon: const Icon(
                         Icons.search,
