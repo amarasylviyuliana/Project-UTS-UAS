@@ -283,6 +283,11 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
+  // TAMBAHAN: controller untuk search bar di Beranda, dipakai supaya
+  // search bar ini juga bisa memicu pencarian AI (Gemini), sama seperti
+  // search bar di tab Pencarian.
+  final _searchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -291,6 +296,116 @@ class _HomeTabState extends State<HomeTab> {
         Provider.of<ProductProvider>(context, listen: false).refresh();
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // TAMBAHAN: true kalau user sedang mengetik pencarian, memilih kategori
+  // selain "Semua", atau hasil AI search sedang aktif — dipakai untuk
+  // menyembunyikan section "Produk & Jasa Unggulan" saat user lagi
+  // nyari/filter, supaya halaman fokus ke "Semua Produk" (hasil yang
+  // sebenarnya) tanpa section duplikat di atasnya.
+  bool _hasActiveFilter(ProductProvider provider) {
+    final hasCategory =
+        provider.selectedCategory.trim().isNotEmpty &&
+        provider.selectedCategory.trim().toLowerCase() != 'semua';
+    final hasQuery = _searchController.text.trim().isNotEmpty;
+    return hasCategory || hasQuery || provider.isAiSearchActive;
+  }
+
+  // TAMBAHAN: kirim isi search bar Beranda ke endpoint AI (Gemini) —
+  // sama persis perilakunya dengan tombol AI di tab Pencarian, supaya
+  // fitur AI search bisa dipakai dari kedua tempat.
+  Future<void> _runAiSearch(ProductProvider provider) async {
+    final query = _searchController.text.trim();
+    if (query.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ketik dulu apa yang kamu cari')),
+      );
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    await provider.searchWithAI(query);
+    if (!mounted) return;
+    if (provider.aiSearchError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(provider.aiSearchError!)));
+    }
+  }
+
+  // TAMBAHAN: ringkasan kecil menampilkan bagaimana AI memahami query,
+  // versi terang (untuk dipakai di atas latar putih Beranda), isinya
+  // sama dengan versi di tab Pencarian.
+  Widget _buildAiSummary(ProductProvider provider) {
+    final parts = <String>[];
+    if (provider.aiKeywords.isNotEmpty) {
+      parts.add('kata kunci "${provider.aiKeywords.join(', ')}"');
+    }
+    if (provider.aiCategory != null && provider.aiCategory!.isNotEmpty) {
+      parts.add('kategori "${provider.aiCategory}"');
+    }
+    if (provider.aiTags.isNotEmpty) {
+      parts.add('atribut "${provider.aiTags.join(', ')}"');
+    }
+    if (provider.aiRegion != null && provider.aiRegion!.isNotEmpty) {
+      parts.add('daerah "${provider.aiRegion}"');
+    }
+    if (provider.aiMinPrice != null) {
+      parts.add('harga min Rp ${provider.aiMinPrice!.toStringAsFixed(0)}');
+    }
+    if (provider.aiMaxPrice != null) {
+      parts.add('harga maks Rp ${provider.aiMaxPrice!.toStringAsFixed(0)}');
+    }
+    if (provider.aiSort != null) {
+      switch (provider.aiSort) {
+        case 'price_asc':
+          parts.add('diurutkan termurah dulu');
+          break;
+        case 'price_desc':
+          parts.add('diurutkan termahal dulu');
+          break;
+        case 'best_selling':
+          parts.add('diurutkan produk terlaris dulu');
+          break;
+      }
+    }
+    if (parts.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1B5E20).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.auto_awesome, color: Color(0xFF1B5E20), size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'AI memahami pencarianmu sebagai ${parts.join(', ')}.',
+              style: const TextStyle(color: Color(0xFF1B5E20), fontSize: 12),
+            ),
+          ),
+          IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: const Icon(Icons.close, color: Color(0xFF1B5E20), size: 16),
+            onPressed: () {
+              provider.resetAiSearch();
+              _searchController.clear();
+              setState(() {});
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   // TAMBAHAN: buka aplikasi email default dengan alamat sudah terisi.
@@ -490,38 +605,98 @@ class _HomeTabState extends State<HomeTab> {
 
   Widget _buildSearchBar(BuildContext context) {
     final provider = Provider.of<ProductProvider>(context, listen: false);
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.04),
-            blurRadius: 12,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: 'Cari produk atau jasa desa...',
-          hintStyle: const TextStyle(color: Colors.black45),
-          prefixIcon: const Icon(Icons.search, color: Color(0xFF1B5E20)),
-          suffixIcon: IconButton(
-            tooltip: 'Filter kategori',
-            icon: const Icon(Icons.filter_list, color: Color(0xFF1B5E20)),
-            onPressed: () => _showFilterSheet(context, provider),
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color.fromRGBO(0, 0, 0, 0.04),
+                  blurRadius: 12,
+                  offset: Offset(0, 6),
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Cari produk atau jasa desa...',
+                hintStyle: const TextStyle(color: Colors.black45),
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF1B5E20)),
+                suffixIcon: IconButton(
+                  tooltip: 'Filter kategori',
+                  icon: const Icon(Icons.filter_list, color: Color(0xFF1B5E20)),
+                  onPressed: () => _showFilterSheet(context, provider),
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
+              textInputAction: TextInputAction.search,
+              onChanged: (value) {
+                // TAMBAHAN: sama seperti tab Pencarian — kalau kalimatnya
+                // terdeteksi sebagai permintaan rekomendasi, langsung pakai
+                // AI search alih-alih filter teks biasa.
+                final v = value.trim().toLowerCase();
+                final isRecommendation =
+                    v.isNotEmpty &&
+                    (v.contains('rekomendasi') ||
+                        v.contains('rekomendasikan') ||
+                        v.contains('rekomendasiin') ||
+                        v.contains('saran') ||
+                        v.contains('sarankan') ||
+                        v.contains('mau') ||
+                        v.contains('ingin') ||
+                        v.contains('cari') ||
+                        v.contains('carikan') ||
+                        v.contains('termurah') ||
+                        v.contains('mahal') ||
+                        v.contains('terlaris') ||
+                        v.contains('sehat'));
+                if (isRecommendation) {
+                  provider.searchWithAI(value.trim());
+                } else {
+                  provider.search(value);
+                }
+                setState(() {});
+              },
+              onSubmitted: (_) => _runAiSearch(provider),
+            ),
           ),
         ),
-        onChanged: (value) {
-          provider.search(value);
-        },
-      ),
+        const SizedBox(width: 8),
+        // TAMBAHAN: tombol "Cari dengan AI" di search bar Beranda, sama
+        // fungsinya dengan tombol di tab Pencarian.
+        Material(
+          color: const Color(0xFF1B5E20),
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: provider.isAiSearching ? null : () => _runAiSearch(provider),
+            child: Container(
+              width: 48,
+              height: 48,
+              alignment: Alignment.center,
+              child: provider.isAiSearching
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.auto_awesome, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -697,6 +872,14 @@ class _HomeTabState extends State<HomeTab> {
               child: _buildSearchBar(context),
             ),
 
+            if (provider.isAiSearchActive) ...[
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: _buildAiSummary(provider),
+              ),
+            ],
+
             const SizedBox(height: 20),
 
             Padding(
@@ -705,56 +888,100 @@ class _HomeTabState extends State<HomeTab> {
             ),
 
             // DIHAPUS: section "Kategori" (header + grid ikon kategori)
-            // sesuai permintaan — sekarang langsung lanjut ke "Produk &
-            // Jasa Unggulan" setelah kartu BUMDes.
+            // sesuai permintaan sebelumnya.
             const SizedBox(height: 24),
 
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildSectionHeader('Produk & Jasa Unggulan'),
-            ),
-            const SizedBox(height: 16),
+            // TAMBAHAN: section "Produk & Jasa Unggulan" cuma tampil kalau
+            // TIDAK sedang ada filter kategori / pencarian teks / AI search
+            // aktif — begitu user mulai nyari/filter, section ini hilang
+            // sementara supaya halaman fokus ke "Semua Produk" (hasil yang
+            // sebenarnya) di bawah, tanpa section duplikat di atasnya.
+            if (!_hasActiveFilter(provider)) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: _buildSectionHeader('Produk & Jasa Unggulan'),
+              ),
+              const SizedBox(height: 16),
 
-            if (provider.isLoading)
-              const ProductRowSkeleton()
-            else if (provider.featured.isEmpty)
-              const SizedBox(
-                height: 200,
-                child: Center(
-                  child: Text(
-                    'Belum ada produk tersedia',
-                    style: TextStyle(color: Colors.black54),
+              if (provider.isLoading)
+                const ProductRowSkeleton()
+              else if (provider.products.isEmpty)
+                const SizedBox(
+                  height: 200,
+                  child: Center(
+                    child: Text(
+                      'Belum ada produk tersedia',
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                  ),
+                )
+              else
+                SizedBox(
+                  height: 350,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: provider.products.take(6).length,
+                    itemBuilder: (context, index) {
+                      final product = provider.products[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 16.0),
+                        child: SizedBox(
+                          width: 220,
+                          child: ProductCard(product: product),
+                        ),
+                      );
+                    },
                   ),
                 ),
-              )
-            else
-              SizedBox(
-                height: 350,
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: provider.featured.length,
-                  itemBuilder: (context, index) {
-                    final product = provider.featured[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 16.0),
-                      child: SizedBox(
-                        width: 220,
-                        child: ProductCard(product: product),
-                      ),
-                    );
-                  },
-                ),
-              ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
+            ],
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildSectionHeader('Semua Produk'),
+                  Row(
+                    children: [
+                      _buildSectionHeader('Semua Produk'),
+                      if (provider.isAiSearchActive) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFF1B5E20,
+                            ).withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.auto_awesome,
+                                size: 11,
+                                color: Color(0xFF1B5E20),
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Hasil AI',
+                                style: TextStyle(
+                                  color: Color(0xFF1B5E20),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                   if (provider.isUsingSampleData)
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -969,7 +1196,7 @@ class _SearchTabState extends State<SearchTab> {
   }
 
   // TAMBAHAN: kirim isi kolom pencarian ke endpoint AI (Gemini) di backend.
-  // AI akan menerjemahkan kalimat bebas (mis. "sepatu murah buat lari")
+  // AI akan menerjemahkan kalimat bebas (mis. "sambal murah di Garut")
   // jadi kriteria terstruktur (kata kunci, kategori, rentang harga).
   Future<void> _runAiSearch(ProductProvider provider) async {
     final query = _searchController.text.trim();
@@ -1080,7 +1307,7 @@ class _SearchTabState extends State<SearchTab> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       hintText:
-                          'Coba tulis "sepatu murah buat lari" atau "ada nggak susu sehat"... atau tekan ikon AI',
+                          'Coba tulis "sambal murah di Garut" atau "jasa yang paling laris"... atau tekan ikon AI',
                       hintStyle: const TextStyle(color: Colors.white60),
                       prefixIcon: const Icon(
                         Icons.search,

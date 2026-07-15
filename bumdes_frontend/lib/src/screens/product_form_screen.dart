@@ -281,9 +281,24 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     }
 
     final price = double.tryParse(_priceController.text.trim()) ?? 0;
+
+    // FIX BUG: sebelumnya untuk tipe Jasa, stock SELALU dikirim sebagai 0,
+    // apapun status toggle "Tersedia/Tidak Tersedia" (_isActive).
+    // Akibatnya: di dashboard admin (yang membaca field is_active) Jasa
+    // tampil "Tersedia", tapi di halaman pembeli (yang tampaknya membaca
+    // stock > 0 untuk menentukan status ketersediaan) Jasa selalu tampil
+    // "Tidak Tersedia" karena stock memang selalu 0.
+    //
+    // Sekarang untuk Jasa, stock mengikuti _isActive: 1 kalau Tersedia,
+    // 0 kalau Tidak Tersedia. Field is_active tetap dikirim apa adanya
+    // (lihat parameter isActive di bawah) untuk sisi yang memang membaca
+    // is_active, sementara stock ikut disamakan supaya sisi manapun
+    // (baik yang membaca is_active maupun yang membaca stock) akan
+    // menampilkan status yang KONSISTEN.
     final stock = _type == 'service'
-        ? 0
+        ? (_isActive ? 1 : 0)
         : (int.tryParse(_stockController.text.trim()) ?? 0);
+
     final categoryId = _categoryMap[_category] ?? 1;
     final type = _type == 'service' ? 'jasa' : 'produk';
 
@@ -503,7 +518,10 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               // memiliki stok — sebagai gantinya, Jasa pakai toggle
               // Tersedia/Tidak Tersedia (field is_active), karena yang
               // relevan untuk Jasa bukan "berapa jumlahnya" tapi "lagi
-              // bisa diambil pesanan atau tidak".
+              // bisa diambil pesanan atau tidak". Nilai stock untuk Jasa
+              // tetap otomatis disamakan dengan status ini saat disimpan
+              // (lihat _saveProduct), supaya konsisten di mana pun status
+              // ketersediaan dibaca dari stock.
               if (_type == 'product') ...[
                 TextFormField(
                   controller: _stockController,

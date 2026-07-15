@@ -18,15 +18,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->json('tags')->nullable()->after('description');
-        });
+        if (! Schema::hasColumn('products', 'tags')) {
+            Schema::table('products', function (Blueprint $table) {
+                $table->json('tags')->nullable()->after('description');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->dropColumn('tags');
-        });
+        if (Schema::hasColumn('products', 'tags')) {
+            Schema::table('products', function (Blueprint $table) {
+                $table->dropColumn('tags');
+            });
+        }
     }
 };

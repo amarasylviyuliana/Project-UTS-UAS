@@ -116,6 +116,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
+    Route::post('/profile/telegram', [ProfileController::class, 'updateTelegram']);
     Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
     Route::delete('/profile/photo', [ProfileController::class, 'deletePhoto']);
 
