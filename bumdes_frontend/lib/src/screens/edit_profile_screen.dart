@@ -18,7 +18,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
-  final _telegramChatIdController = TextEditingController();
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -39,7 +38,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
-    _telegramChatIdController.dispose();
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
@@ -55,7 +53,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _nameController.text = user.name;
       _phoneController.text = user.phone ?? '';
       _emailController.text = user.email;
-      _telegramChatIdController.text = user.telegramChatId ?? '';
     }
   }
 
@@ -226,7 +223,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final body = {
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
-        'telegram_chat_id': _telegramChatIdController.text.trim(),
+        // TAMBAHAN: telegram_chat_id sudah tidak pernah dikirim dari app
+        // sama sekali. Notifikasi pesanan sekarang selalu masuk ke satu
+        // grup Telegram admin yang chat id-nya tetap/hardcode di sisi
+        // n8n, jadi buyer/seller tidak perlu (dan tidak bisa) mengatur
+        // apapun terkait Telegram dari profil mereka.
       };
       await service.updateProfile(auth.token!, body);
       await auth.refreshProfile();
@@ -624,40 +625,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ],
               ),
             ),
-            _sectionCard(
-              title: 'Notifikasi Telegram',
-              icon: Icons.telegram,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextFormField(
-                    controller: _telegramChatIdController,
-                    keyboardType: TextInputType.number,
-                    decoration: _inputDecoration('Telegram Chat ID (opsional)').copyWith(
-                      hintText: 'Contoh: 123456789',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _accent.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _accent.withOpacity(0.2)),
-                    ),
-                    child: const Text(
-                      'Isi ini kalau mau dapat notifikasi pesanan lewat Telegram.\n\n'
-                      'Cara dapat Chat ID:\n'
-                      '1. Cari bot BUMDes Jabar di Telegram\n'
-                      '2. Ketik /start ke bot tersebut\n'
-                      '3. Bot akan membalas dengan Chat ID kamu\n'
-                      '4. Salin nomor itu ke kolom di atas',
-                      style: TextStyle(fontSize: 12, color: Colors.black87, height: 1.5),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // DIHAPUS: section "Notifikasi Telegram" (input Chat ID) sudah
+            // tidak ada sama sekali. Notifikasi pesanan sekarang selalu
+            // dikirim ke satu grup Telegram admin yang chat id-nya tetap,
+            // diatur di sisi n8n — bukan per user. Buyer dan seller tidak
+            // perlu (dan tidak diminta) melakukan apapun terkait Telegram.
             _sectionCard(
               title: 'Keamanan Akun',
               icon: Icons.lock_outline,
