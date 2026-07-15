@@ -65,6 +65,20 @@ class ProfileController extends Controller
         ]);
     }
 
+    public function updateTelegram(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'telegram_chat_id' => 'required|string|max:50',
+        ]);
+
+        $request->user()->update($validated);
+
+        return response()->json([
+            'message' => 'Telegram chat ID berhasil disimpan',
+            'user'    => $this->formatUser($request->user()->fresh()),
+        ]);
+    }
+
     public function uploadPhoto(Request $request): JsonResponse
     {
         $validated = $request->validate([
