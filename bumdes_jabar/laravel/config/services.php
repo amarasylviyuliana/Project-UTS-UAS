@@ -44,4 +44,22 @@ return [
     'api_key' => env('GEMINI_API_KEY'),
 ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Algolia (mesin pencarian)
+    |--------------------------------------------------------------------------
+    | app_id        : Application ID Algolia.
+    | admin_key     : Write API Key (index/hapus/ubah settings). RAHASIA,
+    |                 jangan pernah dikirim ke frontend/client.
+    | search_key    : Search-only API Key (read-only, aman dipakai publik
+    |                 kalau suatu saat search langsung dari client).
+    | products_index: nama index tempat produk disimpan di Algolia.
+    */
+    'algolia' => [
+        'app_id' => env('ALGOLIA_APP_ID'),
+        'admin_key' => env('ALGOLIA_ADMIN_API_KEY'),
+        'search_key' => env('ALGOLIA_SEARCH_API_KEY'),
+        'products_index' => env('ALGOLIA_PRODUCTS_INDEX', 'bumdes_products'),
+    ],
+
 ];
