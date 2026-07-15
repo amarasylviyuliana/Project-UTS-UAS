@@ -15,7 +15,7 @@
     },
     {
       "parameters": {
-        "functionCode": "// Normalize payload and prepare messages\nconst body = $json;\nconst payload = body;\n// Prefer provided target_chat_id; fallback to pembeli/seller/group fields if present\nconst target = payload.pembeli_telegram_chat_id || payload.seller_telegram_chat_id || payload.group_chat_id || payload.target_chat_id || null;\nconst buyerChat = payload.pembeli_telegram_chat_id || null;\nconst groupChat = payload.group_chat_id || null;\n\nconst text = `Pesanan: ${payload.order_number || payload.order_id || '-'}\nProduk: ${payload.item || '-'}\nTotal: ${payload.total || '-'}\nStatus: ${payload.status || payload.event || '-'}\n`;\n\nreturn [{ json: { payload, target, buyerChat, groupChat, text } }];"
+        "functionCode": "const body = $json;\nconst payload = body;\nconst groupChat = payload.group_chat_id || null;\nconst buyerChat = payload.pembeli_telegram_chat_id || payload.buyer_chat_id || null;\nconst sellerChat = payload.seller_telegram_chat_id || null;\n\nconst orderNum = payload.order_number || payload.order_id || '-';\nconst item = payload.item || '-';\nconst total = payload.total ? Number(payload.total).toLocaleString('id-ID') : '-';\nconst status = payload.status || payload.event || '-';\nconst buyerName = payload.pembeli_nama || '-';\nconst storeName = payload.bumdes_nama || '-';\n\nconst groupText = `📦 *Pesanan Baru BUMDes Jabar*\\n\\n` +\n  `📋 Order: *${orderNum}*\\n` +\n  `👤 Pembeli: ${buyerName}\\n` +\n  `🏪 Toko: ${storeName}\\n` +\n  `🛒 Produk: ${item}\\n` +\n  `💰 Total: Rp ${total}\\n` +\n  `📊 Status: ${status}`;\n\nconst buyerText = `Halo ${buyerName}! 👋\\n\\n` +\n  `Pesanan kamu telah diterima:\\n` +\n  `📋 Order: *${orderNum}*\\n` +\n  `🛒 Produk: ${item}\\n` +\n  `💰 Total: Rp ${total}\\n` +\n  `📊 Status: ${status}\\n\\n` +\n  `Terima kasih sudah berbelanja di BUMDes Jabar! 🙏`;\n\nreturn [{\n  json: {\n    payload,\n    groupChat,\n    buyerChat,\n    groupText,\n    buyerText,\n    orderNum\n  }\n}];"
       },
       "name": "Prepare Message",
       "type": "n8n-nodes-base.function",
@@ -24,10 +24,36 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "number": [
+        "url": "=https://api.telegram.org/bot8993863404:AAHDvEroqtOpMX15DiI0G7M5ZLEuXl_gcSc/sendMessage",
+        "options": {},
+        "bodyParametersUi": {
+          "parameter": [
             {
-              "value1": "={{$json[\"buyerChat\"]}}",
+              "name": "chat_id",
+              "value": "={{ $json[\"groupChat\"] }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json[\"groupText\"] }}"
+            },
+            {
+              "name": "parse_mode",
+              "value": "Markdown"
+            }
+          ]
+        }
+      },
+      "name": "Send To Group",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [700, 350]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json[\"buyerChat\"] }}",
               "operation": "isNotEmpty"
             }
           ]
@@ -36,21 +62,25 @@
       "name": "Has Buyer Chat?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [650, 160]
+      "position": [700, 150]
     },
     {
       "parameters": {
-        "url": "=https://api.telegram.org/bot{{ $json.credentials_bot_token || $env[\"N8N_TELEGRAM_BOT_TOKEN\"] }}/sendMessage",
+        "url": "=https://api.telegram.org/bot8993863404:AAHDvEroqtOpMX15DiI0G7M5ZLEuXl_gcSc/sendMessage",
         "options": {},
         "bodyParametersUi": {
           "parameter": [
             {
               "name": "chat_id",
-              "value": "={{$json[\"buyerChat\"]}}"
+              "value": "={{ $json[\"buyerChat\"] }}"
             },
             {
               "name": "text",
-              "value": "={{$json[\"text\"]}}"
+              "value": "={{ $json[\"buyerText\"] }}"
+            },
+            {
+              "name": "parse_mode",
+              "value": "Markdown"
             }
           ]
         }
@@ -58,46 +88,7 @@
       "name": "Send To Buyer",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
-      "position": [850, 120]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{$json[\"ok\"]}}",
-              "operation": "equal",
-              "value2": "true"
-            }
-          ]
-        }
-      },
-      "name": "Buyer Send OK?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [1050, 140]
-    },
-    {
-      "parameters": {
-        "url": "=https://api.telegram.org/bot{{ $json.credentials_bot_token || $env[\"N8N_TELEGRAM_BOT_TOKEN\"] }}/sendMessage",
-        "options": {},
-        "bodyParametersUi": {
-          "parameter": [
-            {
-              "name": "chat_id",
-              "value": "= {{$json[\"groupChat\"]}}"
-            },
-            {
-              "name": "text",
-              "value": "= [GRUP] {{$json[\"text\"]}}"
-            }
-          ]
-        }
-      },
-      "name": "Send To Group",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [850, 300]
+      "position": [950, 100]
     }
   ],
   "connections": {
@@ -116,6 +107,11 @@
       "main": [
         [
           {
+            "node": "Send To Group",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "Has Buyer Chat?",
             "type": "main",
             "index": 0
@@ -132,37 +128,7 @@
             "index": 0
           }
         ],
-        [
-          {
-            "node": "Send To Group",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
-    ,
-    "Send To Buyer": {
-      "main": [
-        [
-          {
-            "node": "Buyer Send OK?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buyer Send OK?": {
-      "main": [
-        [],
-        [
-          {
-            "node": "Send To Group",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     }
   }

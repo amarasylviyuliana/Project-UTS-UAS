@@ -7,22 +7,16 @@
 1. ✅ **Menghapus Xendit Integration**
    - Dihapus: `XenditService.php`
    - Dihapus: `createInvoice()` method dari PaymentController
-   - Dihapus: `webhook()` method untuk Xendit
+   - Dihapus: `webhook()` method untuk Xenditcd bu
    - Dihapus: Route `/payments/webhook` untuk Xendit
 
 2. ✅ **Menambahkan Midtrans Configuration**
    - Di `.env`:
-<<<<<<< HEAD
      ```
      MIDTRANS_SERVER_KEY=YOUR_PRODUCTION_SERVER_KEY_HERE
      MIDTRANS_CLIENT_KEY=YOUR_PRODUCTION_CLIENT_KEY_HERE
      MIDTRANS_IS_PRODUCTION=false
      ```
-=======
- MIDTRANS_SERVER_KEY=your-midtrans-server-key
- MIDTRANS_CLIENT_KEY=your-midtrans-client-key
- MIDTRANS_IS_PRODUCTION=false
->>>>>>> 2dfedd0 (fix: add docker entrypoint with auto migration)
 
 3. ✅ **Membuat Midtrans Payment Endpoint**
    - New method: `createMidtransPayment()` di PaymentController
