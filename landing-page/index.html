@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BUMDes Jabar — Marketplace Digital Desa Jawa Barat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#142B22;
+    --paddy-deep:#0E4033;
+    --paddy:#2F6650;
+    --paddy-light:#8FB996;
+    --gold:#C99A3D;
+    --gold-soft:#E8C978;
+    --cream:#FBF6EA;
+    --cream-2:#F3ECDA;
+    --line:rgba(20,43,34,0.12);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--cream);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Fraunces',serif;
+    letter-spacing:-0.01em;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 28px;}
+  a{color:inherit;}
+
+  /* NAV */
+  nav{
+    position:sticky;top:0;z-index:50;
+    background:rgba(251,246,234,0.86);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:76px;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand img{width:38px;height:38px;border-radius:9px;object-fit:cover;box-shadow:0 2px 8px rgba(14,64,51,0.25);}
+  .brand span{font-family:'Fraunces',serif;font-weight:600;font-size:19px;}
+  .navlinks{display:flex;gap:30px;font-size:14.5px;font-weight:500;}
+  .navlinks a{opacity:0.75;text-decoration:none;transition:opacity .2s;}
+  .navlinks a:hover{opacity:1;}
+  @media (max-width:760px){.navlinks{display:none;}}
+
+  /* HERO */
+  .hero{
+    position:relative;
+    background:radial-gradient(120% 100% at 85% -10%, #17553f 0%, var(--paddy-deep) 45%, #0A2E24 100%);
+    color:var(--cream);
+    overflow:hidden;
+    padding:88px 0 0;
+  }
+  .hero .wrap{position:relative;z-index:2;}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.06em;
+    color:var(--gold-soft);
+    border:1px solid rgba(232,201,120,0.35);
+    padding:6px 14px;border-radius:999px;
+    text-transform:uppercase;
+  }
+  .eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--gold-soft);}
+  .hero h1{
+    font-size:clamp(40px,6.5vw,76px);
+    font-weight:600;
+    line-height:1.02;
+    margin:26px 0 0;
+    max-width:14ch;
+  }
+  .hero h1 em{font-style:italic;font-weight:500;color:var(--gold-soft);}
+  .hero p.lede{
+    font-size:19px;line-height:1.6;
+    max-width:52ch;color:rgba(251,246,234,0.82);
+    margin:26px 0 40px;
+  }
+  .hero-ctas{display:flex;gap:14px;flex-wrap:wrap;padding-bottom:56px;}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:13px 24px;border-radius:10px;
+    font-weight:600;font-size:14.5px;
+    text-decoration:none;transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn-gold{background:var(--gold-soft);color:#20301B;}
+  .btn-gold:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(232,201,120,0.3);}
+  .btn-ghost{border:1px solid rgba(251,246,234,0.3);color:var(--cream);}
+  .btn-ghost:hover{background:rgba(251,246,234,0.08);}
+
+  /* Terrace divider — signature element: kontur sawah berundak */
+  .terrace{display:block;width:100%;line-height:0;position:relative;z-index:2;}
+  .terrace svg{width:100%;height:auto;display:block;}
+
+  .stat-strip{
+    background:var(--paddy-deep);
+    border-top:1px solid rgba(251,246,234,0.12);
+  }
+  .stat-strip .wrap{
+    display:grid;grid-template-columns:repeat(4,1fr);
+    gap:0;padding:26px 28px;
+  }
+  .stat-strip .stat{
+    padding:0 18px;border-left:1px solid rgba(251,246,234,0.14);
+    color:var(--cream);
+  }
+  .stat-strip .stat:first-child{border-left:none;}
+  .stat .num{font-family:'Fraunces',serif;font-size:26px;font-weight:600;color:var(--gold-soft);}
+  .stat .lbl{font-size:12.5px;opacity:.72;margin-top:2px;}
+  @media (max-width:760px){.stat-strip .wrap{grid-template-columns:repeat(2,1fr);row-gap:22px;}}
+
+  /* SECTION generic */
+  section{padding:100px 0;}
+  .kicker{
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--gold);font-weight:500;
+    display:flex;align-items:center;gap:10px;
+  }
+  .kicker::before{content:"";width:22px;height:1px;background:var(--gold);}
+  .sec-title{font-size:clamp(28px,3.6vw,40px);font-weight:600;margin:14px 0 0;max-width:16ch;}
+  .sec-sub{font-size:16.5px;color:rgba(20,43,34,0.66);max-width:56ch;margin-top:16px;line-height:1.65;}
+
+  /* VISI MISI */
+  .vm-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:56px;}
+  @media (max-width:820px){.vm-grid{grid-template-columns:1fr;}}
+  .vm-card{
+    background:var(--cream-2);
+    border:1px solid var(--line);
+    border-radius:20px;padding:38px 34px;
+  }
+  .vm-card.visi{background:var(--paddy-deep);color:var(--cream);}
+  .vm-card .tag{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.6;}
+  .vm-card.visi .tag{color:var(--gold-soft);opacity:.9;}
+  .vm-card h3{font-size:24px;margin:10px 0 16px;font-weight:600;}
+  .vm-card p{font-size:16px;line-height:1.7;margin:0;opacity:.9;}
+  .misi-list{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:16px;}
+  .misi-list li{
+    display:flex;gap:14px;font-size:15.5px;line-height:1.6;color:rgba(20,43,34,0.85);
+  }
+  .misi-list .n{
+    font-family:'Fraunces',serif;font-weight:600;color:var(--gold);
+    flex:none;width:28px;
+  }
+
+  /* ABOUT / apa itu */
+  .about{background:var(--paddy-deep);color:var(--cream);position:relative;}
+  .about-grid{display:grid;grid-template-columns:1.1fr 0.9fr;gap:60px;margin-top:50px;align-items:start;}
+  @media (max-width:860px){.about-grid{grid-template-columns:1fr;gap:36px;}}
+  .about p{font-size:17px;line-height:1.75;color:rgba(251,246,234,0.82);margin:0 0 18px;}
+  .actor-card{
+    background:rgba(251,246,234,0.06);
+    border:1px solid rgba(251,246,234,0.14);
+    border-radius:16px;padding:22px 24px;margin-bottom:14px;
+  }
+  .actor-card .role{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold-soft);}
+  .actor-card h4{margin:8px 0 6px;font-size:17px;font-weight:600;font-family:'Fraunces',serif;}
+  .actor-card p{font-size:14.5px;margin:0;color:rgba(251,246,234,0.72);}
+
+  /* FITUR */
+  .feat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:54px;}
+  @media (max-width:980px){.feat-grid{grid-template-columns:1fr 1fr;}}
+  @media (max-width:560px){.feat-grid{grid-template-columns:1fr;}}
+  .feat-card{
+    border:1px solid var(--line);border-radius:18px;padding:28px 24px;
+    background:#fff;transition:border-color .2s, transform .2s;
+  }
+  .feat-card:hover{border-color:var(--gold);transform:translateY(-4px);}
+  .feat-ico{
+    width:44px;height:44px;border-radius:12px;
+    background:var(--paddy-deep);
+    display:flex;align-items:center;justify-content:center;margin-bottom:18px;
+  }
+  .feat-card h4{font-size:16.5px;font-weight:600;margin:0 0 8px;font-family:'Fraunces',serif;}
+  .feat-card p{font-size:14px;line-height:1.6;color:rgba(20,43,34,0.62);margin:0;}
+
+  /* ARSITEKTUR */
+  .stack{margin-top:54px;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:#fff;}
+  .stack-row{
+    display:grid;grid-template-columns:200px 1fr;
+    border-top:1px solid var(--line);
+  }
+  .stack-row:first-child{border-top:none;}
+  @media (max-width:640px){.stack-row{grid-template-columns:1fr;}}
+  .stack-label{
+    padding:22px 26px;background:var(--cream-2);
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.05em;text-transform:uppercase;
+    display:flex;align-items:center;color:var(--paddy-deep);font-weight:500;
+  }
+  .stack-val{padding:22px 26px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .chip{
+    background:var(--paddy-deep);color:var(--cream);
+    font-size:13.5px;padding:7px 14px;border-radius:999px;font-weight:500;
+  }
+
+  /* HARAPAN */
+  .harapan{background:var(--cream-2);}
+  .quote-block{
+    max-width:760px;margin:50px auto 0;text-align:left;
+    border-left:3px solid var(--gold);padding-left:34px;
+  }
+  .quote-block p{
+    font-family:'Fraunces',serif;font-style:italic;font-weight:500;
+    font-size:clamp(20px,2.6vw,27px);line-height:1.55;color:var(--ink);margin:0;
+  }
+  .quote-block .attr{margin-top:20px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:rgba(20,43,34,0.6);}
+
+  /* FOOTER */
+  footer{background:var(--paddy-deep);color:rgba(251,246,234,0.7);padding:56px 0 34px;}
+  .foot-top{display:flex;justify-content:space-between;align-items:flex-start;gap:30px;flex-wrap:wrap;padding-bottom:36px;border-bottom:1px solid rgba(251,246,234,0.12);}
+  .foot-brand{display:flex;align-items:center;gap:12px;}
+  .foot-brand img{width:34px;height:34px;border-radius:8px;}
+  .foot-brand span{font-family:'Fraunces',serif;color:var(--cream);font-size:17px;font-weight:600;}
+  footer .links{display:flex;gap:26px;font-size:14px;flex-wrap:wrap;}
+  footer .links a{text-decoration:none;opacity:.85;}
+  footer .links a:hover{opacity:1;color:var(--gold-soft);}
+  .foot-bottom{padding-top:24px;display:flex;justify-content:space-between;font-size:12.5px;flex-wrap:wrap;gap:10px;}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand">
+      <img src="data:image/jpeg;base64,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wxpr3Go3AM6Sag6POQ4+8jKy4yOOVH171uUUC9nHsZEXh+wilsplM4kspGlhfzP4nLFyR0O7e2f0xikh8P2cNtbwRyzqLaSOSFtwJXZuCr05A3H3rYpKB8kexk3Hh6wnm1CZ2n36hAYLkiT7684+hAJA+prX7UcUCgFFLYO1FFFBQUUUc0AFFFHegAoFHeigANFBooAKUAUlKM0AGKSlpO9ABRQaKAEpaKSgBaKKKADpSUtJQAtJRRQAtFFJQAtFGeKKAA0UUUABFHekpaACiiigAooooAPejmiigAopKWgAooooAKKOtAoAO1FH1oxQAUlLRmgApaSlGAKACig0lABRRmigA7UUUUAHegUlFAC0lFL70AJmiiigAoopaADvRRRxQAmaO9H1ooAKKWkoAKKWgUAHegUd6M0AFGKKKACiiigBKWijmgBKWij6UAHaj60c0GgAopKWgA+lKM02lzQAd80UUUAH4UUUdqADv2oooFABR2pDRQAo60UUUAJR3paSgBaO1JS9qACkpfwooASilooAKSlooAO1JS96SgBaSlpKACl70lL2oAKKKBQADpRR2o7+lACGl7UUUAFFFFABSUoooAKBRRQAUUUUAFFFBoAKKSigAo7UUUAApaKKACkoPWloAKSl70lAC0UUlAC0UlFABS0lLQAUUUUAFJRRQAUtJS0AFFJSigA6ij8aKKACiig0AHaigUUAJRS/WkoAWlptKBmgA70Ud6PwoAOKDRSYoAKUUUdqACkoooAKWkpaAEpaQ0UALSUUUALRRRQAUUUUAJS9qKKACkopaACkopaAD6UYooxQAlLRRQAUUCigBDS0UUAFFFFACUUtJQAUvFB6Uo6UAJzQacRzSdaAEopegoI4oATiijHOKByaACg0uOKTvQAUUYoxxQAfWkFKaXHNADaKXtQetABRRRQAcUUe9LigBO9FKKQigAopcUh4NABRS96O9AAaSlPSgUAJR2o9KB1NAB0pe9Hc0d6AE7UUuOKDQAgpaMUYoAQ0Zo7Ud6ADrS0elAoA/9k=" alt="Logo BUMDes Jabar">
+      <span>BUMDes Jabar</span>
+    </div>
+    <div class="navlinks">
+      <a href="#visi-misi">Visi & Misi</a>
+      <a href="#tentang">Tentang</a>
+      <a href="#fitur">Fitur</a>
+      <a href="#teknologi">Teknologi</a>
+      <a href="#harapan">Cerita Kami</a>
+    </div>
+    <a href="#fitur" class="btn btn-gold" style="padding:10px 18px;">Jelajahi Aplikasi</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">Marketplace Digital Desa Jawa Barat</span>
+    <h1>Sawah, warung, dan <em>karya desa</em><br>kini satu genggaman.</h1>
+    <p class="lede">BUMDes Jabar mempertemukan produk dan jasa unggulan Badan Usaha Milik Desa di seluruh Jawa Barat dengan pembeli di mana saja — cukup lewat percakapan sehari-hari di kolom pencarian.</p>
+    <div class="hero-ctas">
+      <a href="#fitur" class="btn btn-gold">Lihat Fitur Unggulan</a>
+      <a href="#teknologi" class="btn btn-ghost">Cek Arsitektur Sistem</a>
+    </div>
+  </div>
+
+  <!-- signature terrace divider -->
+  <div class="terrace">
+    <svg viewBox="0 0 1200 140" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,90 C150,40 300,110 450,70 C600,30 750,100 900,60 C1050,30 1150,70 1200,50 L1200,140 L0,140 Z" fill="#8FB996" opacity="0.35"/>
+      <path d="M0,105 C180,60 340,125 500,90 C660,55 800,115 960,80 C1080,55 1150,90 1200,75 L1200,140 L0,140 Z" fill="#3E7052" opacity="0.55"/>
+      <path d="M0,122 C220,95 420,138 620,108 C820,78 960,128 1200,100 L1200,140 L0,140 Z" fill="#FBF6EA"/>
+    </svg>
+  </div>
+</header>
+
+<div class="stat-strip">
+  <div class="wrap">
+    <div class="stat"><div class="num">27</div><div class="lbl">Kabupaten/Kota Jawa Barat berpotensi terjangkau</div></div>
+    <div class="stat"><div class="num">3</div><div class="lbl">Peran pengguna — Pembeli, Penjual, Admin</div></div>
+    <div class="stat"><div class="num">AI</div><div class="lbl">Pencarian produk dengan bahasa natural</div></div>
+    <div class="stat"><div class="num">1</div><div class="lbl">Aplikasi untuk jual-beli hingga laporan toko</div></div>
+  </div>
+</div>
+
+<section id="visi-misi">
+  <div class="wrap">
+    <span class="kicker">Arah Kami</span>
+    <h2 class="sec-title">Visi & Misi</h2>
+    <p class="sec-sub">Titik tolak dari semuanya: produk desa yang baik terlalu sering berhenti di batas kecamatan. BUMDes Jabar dibangun untuk mengubah itu.</p>
+
+    <div class="vm-grid">
+      <div class="vm-card visi">
+        <span class="tag">Visi</span>
+        <h3>Gerbang digital untuk potensi desa</h3>
+        <p>Menjadi platform yang mendekatkan produk dan jasa unggulan BUMDes di seluruh Jawa Barat dengan pasar yang lebih luas, sehingga ekonomi desa dapat tumbuh setara dengan ekonomi kota — didukung teknologi yang sederhana untuk dipakai siapa saja.</p>
+      </div>
+      <div class="vm-card">
+        <span class="tag">Misi</span>
+        <ul class="misi-list">
+          <li><span class="n">01</span><span>Menghadirkan marketplace yang mudah diakses, dari penjual di balai desa hingga pembeli di kota besar.</span></li>
+          <li><span class="n">02</span><span>Memudahkan pencarian produk lewat bahasa natural, agar pembeli tak perlu tahu istilah teknis untuk menemukan barang yang dicari.</span></li>
+          <li><span class="n">03</span><span>Membekali penjual BUMDes dengan alat kelola toko, stok, dan laporan yang ringkas tapi lengkap.</span></li>
+          <li><span class="n">04</span><span>Membuka lapangan kerja dan pendapatan baru di desa lewat kanal penjualan digital yang terpercaya.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tentang" class="about">
+  <div class="wrap">
+    <span class="kicker" style="color:var(--gold-soft);">Tentang Aplikasi</span>
+    <h2 class="sec-title" style="color:var(--cream);">Satu aplikasi, tiga peran yang saling terhubung</h2>
+
+    <div class="about-grid">
+      <div>
+        <p>BUMDes Jabar adalah marketplace digital untuk produk dan jasa Badan Usaha Milik Desa (BUMDes) se-Jawa Barat. Lewat aplikasi mobile dan panel web, penjual bisa membuka toko dan mengelola produknya sendiri, sementara pembeli bisa mencari, memesan, dan membayar tanpa harus datang langsung ke desa.</p>
+        <p>Yang membedakan BUMDes Jabar dari marketplace pada umumnya adalah kolom pencarian pintar berbasis AI — pembeli cukup mengetik seperti sedang bicara dengan orang, misalnya "kopi arabika asli Pangalengan", dan sistem akan memahami maksudnya, bukan sekadar mencocokkan kata kunci.</p>
+        <p>Seluruh alur, dari keranjang belanja, checkout, pembayaran, hingga status pesanan dan ulasan, dirancang agar sesederhana berbelanja di aplikasi manapun yang sudah akrab dipakai sehari-hari.</p>
+      </div>
+      <div>
+        <div class="actor-card">
+          <span class="role">Pembeli</span>
+          <h4>Menemukan produk desa lebih cepat</h4>
+          <p>Cari lewat AI Smart Search, tambah ke keranjang, bayar online, lalu pantau pesanan sampai memberi ulasan.</p>
+        </div>
+        <div class="actor-card">
+          <span class="role">Penjual / BUMDes</span>
+          <h4>Mengelola toko dari genggaman</h4>
+          <p>Atur profil toko, tambah dan perbarui produk, proses pesanan masuk, serta pantau laporan penjualan.</p>
+        </div>
+        <div class="actor-card">
+          <span class="role">Admin</span>
+          <h4>Menjaga kualitas platform</h4>
+          <p>Moderasi toko dan produk, kelola pengguna, dan memantau laporan performa di seluruh platform.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="terrace" style="transform:rotate(180deg);">
+    <svg viewBox="0 0 1200 90" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,60 C200,30 400,75 600,45 C800,20 1000,65 1200,40 L1200,90 L0,90 Z" fill="#FBF6EA"/>
+    </svg>
+  </div>
+</section>
+
+<section id="fitur">
+  <div class="wrap">
+    <span class="kicker">Isi Aplikasi</span>
+    <h2 class="sec-title">Fitur unggulan</h2>
+    <p class="sec-sub">Empat kemampuan inti yang menopang seluruh perjalanan belanja — dari mencari produk sampai mengelola toko.</p>
+
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="feat-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8C978" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </div>
+        <h4>AI Smart Search</h4>
+        <p>Kolom pencarian yang memahami bahasa sehari-hari, sehingga pembeli tidak perlu tahu nama kategori atau istilah teknis produk.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8C978" stroke-width="2" stroke-linecap="round"><path d="M3 7h18l-1.5 12.5a2 2 0 0 1-2 1.5H6.5a2 2 0 0 1-2-1.5L3 7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>
+        </div>
+        <h4>Manajemen Toko & Produk</h4>
+        <p>Penjual mengatur profil toko, menambah, mengedit, dan menghapus produk atau jasa langsung dari aplikasi.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8C978" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.5 3h2l2.7 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21.5 7H6"/></svg>
+        </div>
+        <h4>Keranjang & Pembayaran</h4>
+        <p>Checkout satu alur dengan pembayaran online lewat Midtrans, lengkap dengan opsi unggah bukti transfer manual.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-ico">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8C978" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        </div>
+        <h4>Dashboard, Laporan & Wallet</h4>
+        <p>Penjual dan admin memantau performa toko, riwayat transaksi, dan saldo dalam satu panel yang ringkas.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="teknologi" style="background:var(--cream-2);">
+  <div class="wrap">
+    <span class="kicker">Di Balik Layar</span>
+    <h2 class="sec-title">Arsitektur & teknologi</h2>
+    <p class="sec-sub">Ditata berlapis, seperti sengkedan sawah — tiap lapisan menopang lapisan di atasnya.</p>
+
+    <div class="stack">
+      <div class="stack-row">
+        <div class="stack-label">Frontend</div>
+        <div class="stack-val"><span class="chip">Flutter</span><span style="font-size:13.5px;color:rgba(20,43,34,0.55);">— satu basis kode untuk mobile & web</span></div>
+      </div>
+      <div class="stack-row">
+        <div class="stack-label">Backend</div>
+        <div class="stack-val"><span class="chip">Laravel</span><span class="chip">MySQL</span></div>
+      </div>
+      <div class="stack-row">
+        <div class="stack-label">Otomasi & AI</div>
+        <div class="stack-val"><span class="chip">n8n</span><span class="chip">Gemini AI</span></div>
+      </div>
+      <div class="stack-row">
+        <div class="stack-label">Pembayaran</div>
+        <div class="stack-val"><span class="chip">Midtrans</span></div>
+      </div>
+      <div class="stack-row">
+        <div class="stack-label">Deployment</div>
+        <div class="stack-val"><span class="chip">Docker</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="harapan" class="harapan">
+  <div class="wrap" style="text-align:center;">
+    <span class="kicker" style="justify-content:center;">Cerita Kami</span>
+    <h2 class="sec-title" style="margin-left:auto;margin-right:auto;">Kenapa aplikasi ini dibuat</h2>
+    <div class="quote-block">
+      <p>Banyak produk desa yang sebenarnya bagus, tapi sulit menjangkau pembeli di luar daerahnya sendiri. BUMDes Jabar adalah upaya kecil kami untuk membuka jalan itu — mewadahi produk desa agar dikenal lebih luas, sambil ikut mendorong kualitas dan lapangan pekerjaan di kampung halaman.</p>
+      <div class="attr">— Tim Pengembang BUMDes Jabar</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <div class="foot-brand">
+        <img src="data:image/jpeg;base64,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wxpr3Go3AM6Sag6POQ4+8jKy4yOOVH171uUUC9nHsZEXh+wilsplM4kspGlhfzP4nLFyR0O7e2f0xikh8P2cNtbwRyzqLaSOSFtwJXZuCr05A3H3rYpKB8kexk3Hh6wnm1CZ2n36hAYLkiT7684+hAJA+prX7UcUCgFFLYO1FFFBQUUUc0AFFFHegAoFHeigANFBooAKUAUlKM0AGKSlpO9ABRQaKAEpaKSgBaKKKADpSUtJQAtJRRQAtFFJQAtFGeKKAA0UUUABFHekpaACiiigAooooAPejmiigAopKWgAooooAKKOtAoAO1FH1oxQAUlLRmgApaSlGAKACig0lABRRmigA7UUUUAHegUlFAC0lFL70AJmiiigAoopaADvRRRxQAmaO9H1ooAKKWkoAKKWgUAHegUd6M0AFGKKKACiiigBKWijmgBKWij6UAHaj60c0GgAopKWgA+lKM02lzQAd80UUUAH4UUUdqADv2oooFABR2pDRQAo60UUUAJR3paSgBaO1JS9qACkpfwooASilooAKSlooAO1JS96SgBaSlpKACl70lL2oAKKKBQADpRR2o7+lACGl7UUUAFFFFABSUoooAKBRRQAUUUUAFFFBoAKKSigAo7UUUAApaKKACkoPWloAKSl70lAC0UUlAC0UlFABS0lLQAUUUUAFJRRQAUtJS0AFFJSigA6ij8aKKACiig0AHaigUUAJRS/WkoAWlptKBmgA70Ud6PwoAOKDRSYoAKUUUdqACkoooAKWkpaAEpaQ0UALSUUUALRRRQAUUUUAJS9qKKACkopaACkopaAD6UYooxQAlLRRQAUUCigBDS0UUAFFFFACUUtJQAUvFB6Uo6UAJzQacRzSdaAEopegoI4oATiijHOKByaACg0uOKTvQAUUYoxxQAfWkFKaXHNADaKXtQetABRRRQAcUUe9LigBO9FKKQigAopcUh4NABRS96O9AAaSlPSgUAJR2o9KB1NAB0pe9Hc0d6AE7UUuOKDQAgpaMUYoAQ0Zo7Ud6ADrS0elAoA/9k=" alt="Logo BUMDes Jabar">
+        <span>BUMDes Jabar</span>
+      </div>
+      <div class="links">
+        <a href="#visi-misi">Visi & Misi</a>
+        <a href="#tentang">Tentang</a>
+        <a href="#fitur">Fitur</a>
+        <a href="#teknologi">Teknologi</a>
+        <a href="https://github.com/amarasylviyuliana/Project-UTS-UAS" target="_blank" rel="noopener">Repositori GitHub</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 BUMDes Jabar — Proyek UTS/UAS.</span>
+      <span class="mono">Dibangun dengan Flutter · Laravel · n8n · Gemini AI</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
