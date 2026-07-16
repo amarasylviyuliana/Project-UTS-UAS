@@ -40,11 +40,26 @@ test.describe.serial('Admin Dashboard - BUMDes Jabar', () => {
 
     await fillField(page, 'Email', ADMIN_EMAIL);
     await fillField(page, 'Password', ADMIN_PASSWORD, true);
-    await page.getByRole('button', { name: 'LOGIN' }).click();
 
-    // Dashboard admin menampilkan header "Dashboard Admin" (desktop)
-    // atau "Admin Platform" (mobile) — tunggu salah satu ringkasan platform muncul.
-    await expect(page.getByText('Ringkasan Platform')).toBeVisible({ timeout: 30000 });
+    const loginBtn = page.getByRole('button', { name: 'LOGIN' });
+    await expect(loginBtn).toBeEnabled();
+    await loginBtn.click();
+
+    // Tunggu SALAH SATU: dashboard admin muncul, atau pesan error login muncul
+    const dashboardMarker = page.getByText('Ringkasan Platform');
+    const loginError = page.getByText(/Email atau password salah|Login gagal|Invalid credentials/i);
+
+    await expect(async () => {
+      const success = await dashboardMarker.isVisible().catch(() => false);
+      const failed = await loginError.isVisible().catch(() => false);
+      expect(success || failed).toBe(true);
+    }).toPass({ timeout: 45000, intervals: [500, 1000, 2000] });
+
+    if (await loginError.isVisible().catch(() => false)) {
+      throw new Error('Login gagal: kredensial admin ditolak server.');
+    }
+
+    await expect(dashboardMarker).toBeVisible({ timeout: 10000 });
   });
 
   test('menampilkan kartu statistik ringkasan platform', async () => {
@@ -113,11 +128,14 @@ test.describe.serial('Admin Dashboard - BUMDes Jabar', () => {
   test('menolak akses dashboard admin untuk role non-admin', async () => {
     // Skenario negatif: pastikan buyer/seller yang login TIDAK bisa masuk dashboard admin.
     // Dites di context/page terpisah supaya tidak mengganggu sesi admin di atas.
-    test.setTimeout(60000);
+    // Timeout dinaikkan karena context baru butuh cold-start render Flutter Web lagi.
+    // Cold-start context baru bisa jauh lebih lambat (compile ulang Flutter Web),
+    // beri timeout jauh lebih longgar dibanding context pertama.
+    test.setTimeout(180000);
     const context = await page.context().browser()!.newContext();
     const buyerPage = await context.newPage();
 
-    await openAndEnableAccessibility(buyerPage, `${BASE_URL}/#/login`, 60000);
+    await openAndEnableAccessibility(buyerPage, `${BASE_URL}/#/login`, 120000);
     await expect(buyerPage.getByRole('button', { name: 'LOGIN' })).toBeVisible({ timeout: 60000 });
 
     // Akun buyer
