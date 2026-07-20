@@ -10,15 +10,16 @@ BUMDes Jabar adalah platform marketplace digital berbasis web dan mobile yang me
 - **Kelola Produk & Jasa**: Seller dapat menambah, mengubah, dan menghapus katalog
 - **Pencarian & Kategori**: Pembeli dapat mencari produk dengan filter kategori dan harga
 - **Keranjang & Pemesanan**: Proses checkout dengan keranjang belanja
-- **Pembayaran Manual**: Sistem pembayaran berbasis transfer bank dengan upload bukti
+- **Pembayaran Gateway**: Dukungan pembayaran melalui Midtrans  untuk transaksi digital
 - **Riwayat Transaksi & Laporan**: Histori pesanan dan laporan untuk semua pengguna
 
 ## Tech Stack
 
-- **Backend**: Laravel 11 (PHP 8.2)
+- **Backend**: Laravel 10.10 (PHP 8.1)
 - **Database**: MySQL 8.0
-- **Authentication**: JWT Token via Laravel Sanctum
-- **File Storage**: Local filesystem with public disk
+- **Authentication**: Laravel Sanctum
+- **File Storage**: Public disk dengan image proxy route untuk akses gambar
+- **Payments**: Midtrans dan Xendit
 - **API Format**: RESTful JSON API
 
 ## Project Structure
@@ -34,7 +35,14 @@ app/
 │       ├── OrderController.php
 │       ├── PaymentController.php
 │       ├── ReviewController.php
-│       └── ReportController.php
+│       ├── ReportController.php
+│       ├── WalletController.php
+│       ├── MidtransController.php
+│       ├── ProductAISearchController.php
+│       ├── ImageProxyController.php
+│       └── Admin/
+│           ├── AdminController.php
+│           └── ApprovalController.php
 └── Models/
     ├── User.php
     ├── Store.php
@@ -44,7 +52,8 @@ app/
     ├── Order.php
     ├── OrderItem.php
     ├── Payment.php
-    └── Review.php
+    ├── Review.php
+    └── Wallet.php
 
 database/
 ├── migrations/
@@ -60,22 +69,16 @@ config/
 ├── database.php
 └── filesystems.php
 
-docker/
-├── nginx/
-│   └── default.conf
-└── php/
-    └── Dockerfile
-
 docker-compose.yml
 ```
 
 ## Installation
 
 ### Prerequisites
-- PHP 8.2+
+- PHP 8.1+
 - Composer
 - MySQL 8.0+ (untuk setup lokal)
-- Docker Desktop + Docker Compose (opsional, untuk deployment container)
+- Docker Desktop + Docker Compose (opsional)
 - Git
 
 ### Opsi 1: Jalankan Secara Lokal (Laragon / XAMPP)
@@ -100,7 +103,7 @@ docker-compose.yml
    php artisan key:generate
    ```
 
-5. **Configure database in .env**
+5. **Configure database di .env**
    ```env
    DB_CONNECTION=mysql
    DB_HOST=127.0.0.1
@@ -110,32 +113,33 @@ docker-compose.yml
    DB_PASSWORD=
    ```
 
-6. **Create database**
+6. **Buat database**
    ```bash
    mysql -u root -e "CREATE DATABASE bumdes_jabar;"
    ```
 
-7. **Run migrations**
+7. **Jalankan migrasi**
    ```bash
    php artisan migrate
    ```
 
-8. **Seed database with initial categories**
+8. **Isi data awal**
    ```bash
    php artisan db:seed
    ```
 
-9. **Create storage symlink for file uploads**
+9. **Buat storage symlink untuk upload file**
    ```bash
    php artisan storage:link
    ```
 
-10. **Start development server**
+10. **Jalankan server development**
     ```bash
     php artisan serve
     ```
 
-Server akan berjalan di `https://bumdes-api-production.up.railway.app`
+Server lokal akan berjalan di `http://127.0.0.1:8000`.
+Untuk environment production/staging, project ini juga bisa dipakai dengan URL backend yang disediakan oleh platform deployment.
 
 ### Opsi 2: Jalankan dengan Docker Compose
 
@@ -150,7 +154,7 @@ Server akan berjalan di `https://bumdes-api-production.up.railway.app`
    ```
 
 3. **Akses layanan**
-   - Backend API: https://bumdes-api-production.up.railway.app
+   - Backend API: http://localhost:8000
    - phpMyAdmin: http://localhost:8080
    - Database MySQL: localhost:3306
 
@@ -167,8 +171,9 @@ Server akan berjalan di `https://bumdes-api-production.up.railway.app`
 ## API Usage
 
 ### Base URL
-```
-https://bumdes-api-production.up.railway.app/api
+```text
+Local: http://127.0.0.1:8000/api
+Production/Staging: https://bumdes-api-production.up.railway.app/api
 ```
 
 ### Authentication
@@ -284,10 +289,10 @@ php artisan test --filter=AuthTest  # Run specific test
 Files are stored in `storage/app/public/` and served via `{APP_URL}/storage/{path}`
 
 ### Upload Directories
-- **payment-proofs/**: Bukti transfer pembayaran
-- **products/**: Foto produk (untuk future use)
-- **profiles/**: Foto profil pengguna (untuk future use)
-- **stores/**: Foto toko (untuk future use)
+- **payment-proofs/**: Berkas bukti pembayaran atau dokumen pendukung terkait transaksi
+- **products/**: Foto produk (untuk kebutuhan katalog)
+- **profiles/**: Foto profil pengguna
+- **stores/**: Foto toko atau dokumentasi toko
 
 ### Upload Constraints
 - Max file size: 5 MB
